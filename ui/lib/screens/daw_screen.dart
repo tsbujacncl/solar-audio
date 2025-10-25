@@ -5,6 +5,7 @@ import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
 import '../widgets/file_drop_zone.dart';
+import '../widgets/virtual_piano.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -34,6 +35,10 @@ class _DAWScreenState extends State<DAWScreen> {
   bool _isCountingIn = false;
   bool _metronomeEnabled = true;
   double _tempo = 120.0;
+
+  // M3: Virtual piano state
+  bool _virtualPianoEnabled = false;
+  bool _virtualPianoVisible = false;
 
   @override
   void initState() {
@@ -380,6 +385,40 @@ class _DAWScreenState extends State<DAWScreen> {
     }
   }
 
+  // M3: Virtual piano methods
+  void _toggleVirtualPiano() {
+    if (_audioEngine == null) return;
+
+    setState(() {
+      _virtualPianoEnabled = !_virtualPianoEnabled;
+
+      if (_virtualPianoEnabled) {
+        // Enable: Initialize MIDI, start audio stream, and show panel
+        try {
+          _audioEngine!.startMidiInput();
+
+          // CRITICAL: Start audio output stream so synthesizer can be heard
+          // The synthesizer generates audio but needs the stream running to output it
+          _audioEngine!.transportPlay();
+
+          _virtualPianoVisible = true;
+          _statusMessage = 'Virtual piano enabled - Press keys to play!';
+          debugPrint('✅ Virtual piano enabled');
+        } catch (e) {
+          debugPrint('❌ Virtual piano enable error: $e');
+          _statusMessage = 'Virtual piano error: $e';
+          _virtualPianoEnabled = false;
+          _virtualPianoVisible = false;
+        }
+      } else {
+        // Disable: Hide panel
+        _virtualPianoVisible = false;
+        _statusMessage = 'Virtual piano disabled';
+        debugPrint('🎹 Virtual piano disabled');
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -416,12 +455,14 @@ class _DAWScreenState extends State<DAWScreen> {
             onStop: _loadedClipId != null ? _stopPlayback : null,
             onRecord: _toggleRecording,
             onMetronomeToggle: _toggleMetronome,
+            onPianoToggle: _toggleVirtualPiano,
             playheadPosition: _playheadPosition,
             isPlaying: _isPlaying,
             canPlay: _loadedClipId != null,
             isRecording: _isRecording,
             isCountingIn: _isCountingIn,
             metronomeEnabled: _metronomeEnabled,
+            virtualPianoEnabled: _virtualPianoEnabled,
             tempo: _tempo,
           ),
 
@@ -434,6 +475,14 @@ class _DAWScreenState extends State<DAWScreen> {
 
           // Status bar
           _buildStatusBar(),
+
+          // Virtual piano keyboard (M3)
+          if (_virtualPianoVisible)
+            VirtualPiano(
+              audioEngine: _audioEngine,
+              isEnabled: _virtualPianoEnabled,
+              onClose: _toggleVirtualPiano,
+            ),
         ],
       ),
     );

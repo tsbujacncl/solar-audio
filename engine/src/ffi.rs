@@ -252,3 +252,61 @@ pub extern "C" fn is_metronome_enabled_ffi() -> i32 {
     if api::is_metronome_enabled().unwrap_or(true) { 1 } else { 0 }
 }
 
+// ============================================================================
+// M3: MIDI FFI
+// ============================================================================
+
+/// Start MIDI input
+#[no_mangle]
+pub extern "C" fn start_midi_input_ffi() -> *mut c_char {
+    match api::start_midi_input() {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Stop MIDI input
+#[no_mangle]
+pub extern "C" fn stop_midi_input_ffi() -> *mut c_char {
+    match api::stop_midi_input() {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set synthesizer oscillator type (0=Sine, 1=Saw, 2=Square)
+#[no_mangle]
+pub extern "C" fn set_synth_oscillator_type_ffi(osc_type: i32) -> *mut c_char {
+    match api::set_synth_oscillator_type(osc_type) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set synthesizer volume (0.0 to 1.0)
+#[no_mangle]
+pub extern "C" fn set_synth_volume_ffi(volume: f32) -> *mut c_char {
+    match api::set_synth_volume(volume) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Send MIDI note on event to synthesizer (for virtual piano)
+#[no_mangle]
+pub extern "C" fn send_midi_note_on_ffi(note: u8, velocity: u8) -> *mut c_char {
+    match api::send_midi_note_on(note, velocity) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Send MIDI note off event to synthesizer (for virtual piano)
+#[no_mangle]
+pub extern "C" fn send_midi_note_off_ffi(note: u8, velocity: u8) -> *mut c_char {
+    match api::send_midi_note_off(note, velocity) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+

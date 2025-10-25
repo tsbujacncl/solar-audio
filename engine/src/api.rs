@@ -472,7 +472,214 @@ pub fn is_metronome_enabled() -> Result<bool, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
+
     Ok(graph.recorder.is_metronome_enabled())
+}
+
+// ============================================================================
+// M3: MIDI API
+// ============================================================================
+
+/// Get list of available MIDI input devices
+pub fn get_midi_input_devices() -> Result<Vec<(String, String, bool)>, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let midi_manager = graph.midi_input_manager.lock().map_err(|e| e.to_string())?;
+    let devices = midi_manager.get_devices();
+
+    // Convert to tuple format: (id, name, is_default)
+    let device_list: Vec<(String, String, bool)> = devices
+        .into_iter()
+        .map(|d| (d.id, d.name, d.is_default))
+        .collect();
+
+    Ok(device_list)
+}
+
+/// Select a MIDI input device by index
+pub fn select_midi_input_device(device_index: i32) -> Result<String, String> {
+    if device_index < 0 {
+        return Err("Invalid device index".to_string());
+    }
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut midi_manager = graph.midi_input_manager.lock().map_err(|e| e.to_string())?;
+    midi_manager.select_device(device_index as usize).map_err(|e| e.to_string())?;
+
+    Ok(format!("Selected MIDI input device {}", device_index))
+}
+
+/// Start capturing MIDI input
+pub fn start_midi_input() -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut midi_manager = graph.midi_input_manager.lock().map_err(|e| e.to_string())?;
+
+    // Set up event callback to forward to MIDI recorder and synthesizer
+    let midi_recorder = graph.midi_recorder.clone();
+    let synthesizer = graph.synthesizer.clone();
+
+    midi_manager.set_event_callback(move |event| {
+        // Send to recorder if recording
+        if let Ok(mut recorder) = midi_recorder.lock() {
+            if recorder.is_recording() {
+                recorder.record_event(event);
+            }
+        }
+
+        // Send to synthesizer for live playback
+        if let Ok(mut synth) = synthesizer.lock() {
+            synth.process_event(&event);
+        }
+    });
+
+    midi_manager.start_capture().map_err(|e| e.to_string())?;
+
+    Ok("MIDI input started".to_string())
+}
+
+/// Stop capturing MIDI input
+pub fn stop_midi_input() -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut midi_manager = graph.midi_input_manager.lock().map_err(|e| e.to_string())?;
+    midi_manager.stop_capture().map_err(|e| e.to_string())?;
+
+    Ok("MIDI input stopped".to_string())
+}
+
+/// Start recording MIDI
+pub fn start_midi_recording() -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut midi_recorder = graph.midi_recorder.lock().map_err(|e| e.to_string())?;
+    midi_recorder.start_recording()?;
+
+    Ok("MIDI recording started".to_string())
+}
+
+/// Stop recording MIDI and return the clip ID
+pub fn stop_midi_recording() -> Result<Option<u64>, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut midi_recorder = graph.midi_recorder.lock().map_err(|e| e.to_string())?;
+    let clip_option = midi_recorder.stop_recording()?;
+
+    if let Some(clip) = clip_option {
+        let clip_arc = Arc::new(clip);
+        let clip_id = graph.add_midi_clip(clip_arc, 0.0);
+
+        eprintln!("✅ [API] MIDI clip recorded with ID: {}", clip_id);
+        Ok(Some(clip_id))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Get current MIDI recording state (0=Idle, 1=Recording)
+pub fn get_midi_recording_state() -> Result<i32, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let midi_recorder = graph.midi_recorder.lock().map_err(|e| e.to_string())?;
+
+    use crate::midi_recorder::MidiRecordingState;
+    let state = match midi_recorder.get_state() {
+        MidiRecordingState::Idle => 0,
+        MidiRecordingState::Recording => 1,
+    };
+
+    Ok(state)
+}
+
+/// Set synthesizer oscillator type (0=Sine, 1=Saw, 2=Square)
+pub fn set_synth_oscillator_type(osc_type: i32) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
+
+    use crate::synth::OscillatorType;
+    let osc = match osc_type {
+        0 => OscillatorType::Sine,
+        1 => OscillatorType::Saw,
+        2 => OscillatorType::Square,
+        _ => return Err("Invalid oscillator type".to_string()),
+    };
+
+    synth.set_oscillator_type(osc);
+    Ok(format!("Oscillator type set to {:?}", osc))
+}
+
+/// Set synthesizer master volume (0.0 to 1.0)
+pub fn set_synth_volume(volume: f32) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
+    synth.set_master_volume(volume);
+
+    Ok(format!("Synth volume set to {:.2}", volume))
+}
+
+/// Get number of MIDI clips on timeline
+pub fn get_midi_clip_count() -> Result<usize, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    Ok(graph.midi_clip_count())
+}
+
+/// Send MIDI note on event directly to synthesizer (for virtual piano)
+pub fn send_midi_note_on(note: u8, velocity: u8) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
+
+    use crate::midi::{MidiEvent, MidiEventType};
+    let event = MidiEvent {
+        event_type: MidiEventType::NoteOn { note, velocity },
+        timestamp_samples: 0, // Immediate playback
+    };
+
+    synth.process_event(&event);
+    Ok(format!("Note On: {} (velocity: {})", note, velocity))
+}
+
+/// Send MIDI note off event directly to synthesizer (for virtual piano)
+pub fn send_midi_note_off(note: u8, velocity: u8) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
+
+    use crate::midi::{MidiEvent, MidiEventType};
+    let event = MidiEvent {
+        event_type: MidiEventType::NoteOff { note, velocity },
+        timestamp_samples: 0, // Immediate playback
+    };
+
+    synth.process_event(&event);
+    Ok(format!("Note Off: {} (velocity: {})", note, velocity))
 }
 

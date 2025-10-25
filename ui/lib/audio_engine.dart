@@ -36,6 +36,14 @@ class AudioEngine {
   late final _SetMetronomeEnabledFfi _setMetronomeEnabled;
   late final _IsMetronomeEnabledFfi _isMetronomeEnabled;
 
+  // M3 functions - MIDI
+  late final _StartMidiInputFfi _startMidiInput;
+  late final _StopMidiInputFfi _stopMidiInput;
+  late final _SetSynthOscillatorTypeFfi _setSynthOscillatorType;
+  late final _SetSynthVolumeFfi _setSynthVolume;
+  late final _SendMidiNoteOnFfi _sendMidiNoteOn;
+  late final _SendMidiNoteOffFfi _sendMidiNoteOff;
+
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
@@ -214,7 +222,44 @@ class AudioEngine {
               'is_metronome_enabled_ffi')
           .asFunction();
       print('  ✅ is_metronome_enabled_ffi bound');
-      
+
+      // Bind M3 functions
+      _startMidiInput = _lib
+          .lookup<ffi.NativeFunction<_StartMidiInputFfiNative>>(
+              'start_midi_input_ffi')
+          .asFunction();
+      print('  ✅ start_midi_input_ffi bound');
+
+      _stopMidiInput = _lib
+          .lookup<ffi.NativeFunction<_StopMidiInputFfiNative>>(
+              'stop_midi_input_ffi')
+          .asFunction();
+      print('  ✅ stop_midi_input_ffi bound');
+
+      _setSynthOscillatorType = _lib
+          .lookup<ffi.NativeFunction<_SetSynthOscillatorTypeFfiNative>>(
+              'set_synth_oscillator_type_ffi')
+          .asFunction();
+      print('  ✅ set_synth_oscillator_type_ffi bound');
+
+      _setSynthVolume = _lib
+          .lookup<ffi.NativeFunction<_SetSynthVolumeFfiNative>>(
+              'set_synth_volume_ffi')
+          .asFunction();
+      print('  ✅ set_synth_volume_ffi bound');
+
+      _sendMidiNoteOn = _lib
+          .lookup<ffi.NativeFunction<_SendMidiNoteOnFfiNative>>(
+              'send_midi_note_on_ffi')
+          .asFunction();
+      print('  ✅ send_midi_note_on_ffi bound');
+
+      _sendMidiNoteOff = _lib
+          .lookup<ffi.NativeFunction<_SendMidiNoteOffFfiNative>>(
+              'send_midi_note_off_ffi')
+          .asFunction();
+      print('  ✅ send_midi_note_off_ffi bound');
+
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
       print('❌ [AudioEngine] Failed to bind functions: $e');
@@ -543,6 +588,96 @@ class AudioEngine {
       return true;
     }
   }
+
+  // ========================================================================
+  // M3 API - MIDI
+  // ========================================================================
+
+  /// Start MIDI input (initializes MIDI system and synthesizer)
+  String startMidiInput() {
+    print('🎹 [AudioEngine] Starting MIDI input...');
+    try {
+      final resultPtr = _startMidiInput();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Start MIDI input failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Stop MIDI input
+  String stopMidiInput() {
+    print('🎹 [AudioEngine] Stopping MIDI input...');
+    try {
+      final resultPtr = _stopMidiInput();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Stop MIDI input failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Set synthesizer oscillator type (0=Sine, 1=Saw, 2=Square)
+  String setSynthOscillatorType(int oscType) {
+    print('🎹 [AudioEngine] Setting synth oscillator type to $oscType...');
+    try {
+      final resultPtr = _setSynthOscillatorType(oscType);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set synth oscillator type failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Set synthesizer volume (0.0 to 1.0)
+  String setSynthVolume(double volume) {
+    print('🎹 [AudioEngine] Setting synth volume to $volume...');
+    try {
+      final resultPtr = _setSynthVolume(volume);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set synth volume failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Send MIDI note on event to synthesizer (for virtual piano)
+  String sendMidiNoteOn(int note, int velocity) {
+    try {
+      final resultPtr = _sendMidiNoteOn(note, velocity);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Send MIDI note on failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Send MIDI note off event to synthesizer (for virtual piano)
+  String sendMidiNoteOff(int note, int velocity) {
+    try {
+      final resultPtr = _sendMidiNoteOff(note, velocity);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Send MIDI note off failed: $e');
+      rethrow;
+    }
+  }
 }
 
 // ==========================================================================
@@ -628,3 +763,22 @@ typedef _SetMetronomeEnabledFfi = ffi.Pointer<Utf8> Function(int);
 
 typedef _IsMetronomeEnabledFfiNative = ffi.Int32 Function();
 typedef _IsMetronomeEnabledFfi = int Function();
+
+// M3 types - MIDI
+typedef _StartMidiInputFfiNative = ffi.Pointer<Utf8> Function();
+typedef _StartMidiInputFfi = ffi.Pointer<Utf8> Function();
+
+typedef _StopMidiInputFfiNative = ffi.Pointer<Utf8> Function();
+typedef _StopMidiInputFfi = ffi.Pointer<Utf8> Function();
+
+typedef _SetSynthOscillatorTypeFfiNative = ffi.Pointer<Utf8> Function(ffi.Int32);
+typedef _SetSynthOscillatorTypeFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _SetSynthVolumeFfiNative = ffi.Pointer<Utf8> Function(ffi.Float);
+typedef _SetSynthVolumeFfi = ffi.Pointer<Utf8> Function(double);
+
+typedef _SendMidiNoteOnFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint8, ffi.Uint8);
+typedef _SendMidiNoteOnFfi = ffi.Pointer<Utf8> Function(int, int);
+
+typedef _SendMidiNoteOffFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint8, ffi.Uint8);
+typedef _SendMidiNoteOffFfi = ffi.Pointer<Utf8> Function(int, int);

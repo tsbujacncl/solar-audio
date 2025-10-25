@@ -37,3 +37,6 @@ cache/
 .DS_Store
 Thumbs.db
 
+# Docs
+docs/COMPETITIVE_ANALYSIS.md
+

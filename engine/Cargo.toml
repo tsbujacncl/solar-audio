@@ -13,6 +13,9 @@ symphonia = { version = "0.5", features = ["aac", "mp3", "isomp4", "alac"] }  # 
 rubato = "0.15"                  # Sample rate conversion
 ringbuf = "0.4"                  # Lock-free audio buffers
 
+# MIDI I/O
+midir = "0.9"                    # Cross-platform MIDI I/O
+
 # Utilities
 anyhow = "1.0"                   # Error handling
 

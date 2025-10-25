@@ -2,14 +2,18 @@
 use crate::audio_file::{AudioClip, TARGET_SAMPLE_RATE};
 use crate::audio_input::AudioInputManager;
 use crate::recorder::Recorder;
+use crate::midi::MidiClip;
+use crate::midi_input::MidiInputManager;
+use crate::midi_recorder::MidiRecorder;
+use crate::synth::Synthesizer;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-/// Unique identifier for audio clips
+/// Unique identifier for clips (both audio and MIDI)
 pub type ClipId = u64;
 
-/// Represents a clip placed on the timeline
+/// Represents an audio clip placed on the timeline
 #[derive(Clone)]
 pub struct TimelineClip {
     pub id: ClipId,
@@ -22,6 +26,15 @@ pub struct TimelineClip {
     pub duration: Option<f64>,
 }
 
+/// Represents a MIDI clip placed on the timeline
+#[derive(Clone)]
+pub struct TimelineMidiClip {
+    pub id: ClipId,
+    pub clip: Arc<MidiClip>,
+    /// Position on timeline in seconds
+    pub start_time: f64,
+}
+
 /// Transport state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportState {
@@ -32,8 +45,10 @@ pub enum TransportState {
 
 /// The main audio graph that manages playback
 pub struct AudioGraph {
-    /// All clips on the timeline
+    /// All audio clips on the timeline
     clips: Arc<Mutex<Vec<TimelineClip>>>,
+    /// All MIDI clips on the timeline
+    midi_clips: Arc<Mutex<Vec<TimelineMidiClip>>>,
     /// Current playhead position in samples
     playhead_samples: Arc<AtomicU64>,
     /// Transport state
@@ -44,8 +59,14 @@ pub struct AudioGraph {
     next_clip_id: Arc<Mutex<ClipId>>,
     /// Audio input manager
     pub input_manager: Arc<Mutex<AudioInputManager>>,
-    /// Recorder
+    /// Audio recorder
     pub recorder: Arc<Recorder>,
+    /// MIDI input manager
+    pub midi_input_manager: Arc<Mutex<MidiInputManager>>,
+    /// MIDI recorder
+    pub midi_recorder: Arc<Mutex<MidiRecorder>>,
+    /// Built-in synthesizer
+    pub synthesizer: Arc<Mutex<Synthesizer>>,
 }
 
 // SAFETY: AudioGraph is only accessed through a Mutex in the API layer,
@@ -59,15 +80,26 @@ impl AudioGraph {
         let mut input_manager = AudioInputManager::new()?;
         // Enumerate devices on creation
         let _ = input_manager.enumerate_devices();
-        
+
+        // Create MIDI input manager
+        let midi_input_manager = MidiInputManager::new()?;
+
+        // Create playhead for MIDI recorder
+        let playhead_samples = Arc::new(AtomicU64::new(0));
+        let midi_recorder = MidiRecorder::new(playhead_samples.clone());
+
         Ok(Self {
             clips: Arc::new(Mutex::new(Vec::new())),
-            playhead_samples: Arc::new(AtomicU64::new(0)),
+            midi_clips: Arc::new(Mutex::new(Vec::new())),
+            playhead_samples,
             state: Arc::new(Mutex::new(TransportState::Stopped)),
             stream: None,
             next_clip_id: Arc::new(Mutex::new(0)),
             input_manager: Arc::new(Mutex::new(input_manager)),
             recorder: Arc::new(Recorder::new()),
+            midi_input_manager: Arc::new(Mutex::new(midi_input_manager)),
+            midi_recorder: Arc::new(Mutex::new(midi_recorder)),
+            synthesizer: Arc::new(Mutex::new(Synthesizer::new())),
         })
     }
 
@@ -92,15 +124,48 @@ impl AudioGraph {
         id
     }
 
-    /// Remove a clip from the timeline
+    /// Add a MIDI clip to the timeline
+    pub fn add_midi_clip(&self, clip: Arc<MidiClip>, start_time: f64) -> ClipId {
+        let mut midi_clips = self.midi_clips.lock().unwrap();
+        let id = {
+            let mut next_id = self.next_clip_id.lock().unwrap();
+            let id = *next_id;
+            *next_id += 1;
+            id
+        };
+
+        midi_clips.push(TimelineMidiClip {
+            id,
+            clip,
+            start_time,
+        });
+
+        eprintln!("🎹 [AudioGraph] Added MIDI clip {} at time {:.2}s", id, start_time);
+
+        id
+    }
+
+    /// Remove a clip from the timeline (audio or MIDI)
     pub fn remove_clip(&self, clip_id: ClipId) -> bool {
-        let mut clips = self.clips.lock().unwrap();
-        if let Some(pos) = clips.iter().position(|c| c.id == clip_id) {
-            clips.remove(pos);
-            true
-        } else {
-            false
+        // Try to remove from audio clips
+        {
+            let mut clips = self.clips.lock().unwrap();
+            if let Some(pos) = clips.iter().position(|c| c.id == clip_id) {
+                clips.remove(pos);
+                return true;
+            }
         }
+
+        // Try to remove from MIDI clips
+        {
+            let mut midi_clips = self.midi_clips.lock().unwrap();
+            if let Some(pos) = midi_clips.iter().position(|c| c.id == clip_id) {
+                midi_clips.remove(pos);
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Get the current playhead position in seconds
@@ -187,10 +252,12 @@ impl AudioGraph {
         
         // Clone Arcs for the audio callback
         let clips = self.clips.clone();
+        let midi_clips = self.midi_clips.clone();
         let playhead_samples = self.playhead_samples.clone();
         let state = self.state.clone();
         let input_manager = self.input_manager.clone();
         let recorder_refs = self.recorder.get_callback_refs();
+        let synthesizer = self.synthesizer.clone();
 
         let stream = device.build_output_stream(
             &config.into(),
@@ -262,12 +329,48 @@ impl AudioGraph {
                     clips_lock.clone()
                 };
 
+                // Get MIDI clips (lock briefly)
+                let midi_clips_snapshot = {
+                    let midi_clips_lock = midi_clips.lock().unwrap();
+                    midi_clips_lock.clone()
+                };
+
                 // Debug: Log clip count periodically
                 static PLAYBACK_FRAME_COUNTER: AtomicU64 = AtomicU64::new(0);
                 let frame_count = PLAYBACK_FRAME_COUNTER.fetch_add(1, Ordering::Relaxed);
                 if frame_count % 4800 == 0 {  // Log every ~0.1s
-                    eprintln!("🔊 [Playback] {} clips on timeline, playhead: {:.2}s",
-                        clips_snapshot.len(), current_playhead as f64 / TARGET_SAMPLE_RATE as f64);
+                    eprintln!("🔊 [Playback] {} audio clips, {} MIDI clips on timeline, playhead: {:.2}s",
+                        clips_snapshot.len(), midi_clips_snapshot.len(), current_playhead as f64 / TARGET_SAMPLE_RATE as f64);
+                }
+
+                // Process MIDI events for this buffer
+                // We need to check all MIDI clips for events in this time range
+                for timeline_midi_clip in &midi_clips_snapshot {
+                    let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
+
+                    // Get events for this buffer range
+                    let buffer_start = current_playhead;
+                    let buffer_end = current_playhead + frames as u64;
+
+                    // Check if clip is active in this buffer
+                    let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
+                    if clip_end_samples <= buffer_start || clip_start_samples >= buffer_end {
+                        continue; // Clip not active in this buffer
+                    }
+
+                    // Process events within the clip
+                    for event in &timeline_midi_clip.clip.events {
+                        // Convert event timestamp from clip-relative to absolute timeline
+                        let event_absolute_samples = clip_start_samples + event.timestamp_samples;
+
+                        // Check if event is in this buffer
+                        if event_absolute_samples >= buffer_start && event_absolute_samples < buffer_end {
+                            // Send event to synthesizer
+                            if let Ok(mut synth) = synthesizer.lock() {
+                                synth.process_event(event);
+                            }
+                        }
+                    }
                 }
 
                 // Mix all clips into the output buffer
@@ -278,15 +381,15 @@ impl AudioGraph {
                     let mut left = 0.0;
                     let mut right = 0.0;
 
-                    // Mix all active clips
+                    // Mix all active audio clips
                     for timeline_clip in &clips_snapshot {
                         // Check if this clip is active at current playhead
                         let clip_duration = timeline_clip.duration
                             .unwrap_or(timeline_clip.clip.duration_seconds);
                         let clip_end = timeline_clip.start_time + clip_duration;
 
-                        if playhead_seconds >= timeline_clip.start_time 
-                            && playhead_seconds < clip_end 
+                        if playhead_seconds >= timeline_clip.start_time
+                            && playhead_seconds < clip_end
                         {
                             // Calculate position within the clip
                             let time_in_clip = playhead_seconds - timeline_clip.start_time + timeline_clip.offset;
@@ -307,6 +410,13 @@ impl AudioGraph {
                                 }
                             }
                         }
+                    }
+
+                    // Generate and mix synthesizer output
+                    if let Ok(mut synth) = synthesizer.lock() {
+                        let synth_sample = synth.process_sample();
+                        left += synth_sample;
+                        right += synth_sample; // Synth is mono, mix to both channels
                     }
 
                     // Get input samples (if recording)
@@ -363,9 +473,19 @@ impl AudioGraph {
         Ok(stream)
     }
 
-    /// Get number of clips
+    /// Get number of audio clips
     pub fn clip_count(&self) -> usize {
         self.clips.lock().unwrap().len()
+    }
+
+    /// Get number of MIDI clips
+    pub fn midi_clip_count(&self) -> usize {
+        self.midi_clips.lock().unwrap().len()
+    }
+
+    /// Get total number of clips (audio + MIDI)
+    pub fn total_clip_count(&self) -> usize {
+        self.clip_count() + self.midi_clip_count()
     }
 }
 

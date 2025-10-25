@@ -7,12 +7,14 @@ class TransportBar extends StatelessWidget {
   final VoidCallback? onStop;
   final VoidCallback? onRecord;
   final VoidCallback? onMetronomeToggle;
+  final VoidCallback? onPianoToggle;
   final double playheadPosition; // in seconds
   final bool isPlaying;
   final bool canPlay;
   final bool isRecording;
   final bool isCountingIn;
   final bool metronomeEnabled;
+  final bool virtualPianoEnabled;
   final double tempo;
 
   const TransportBar({
@@ -22,12 +24,14 @@ class TransportBar extends StatelessWidget {
     this.onStop,
     this.onRecord,
     this.onMetronomeToggle,
+    this.onPianoToggle,
     required this.playheadPosition,
     this.isPlaying = false,
     this.canPlay = false,
     this.isRecording = false,
     this.isCountingIn = false,
     this.metronomeEnabled = true,
+    this.virtualPianoEnabled = false,
     this.tempo = 120.0,
   });
 
@@ -89,9 +93,17 @@ class TransportBar extends StatelessWidget {
             enabled: metronomeEnabled,
             onPressed: onMetronomeToggle,
           ),
-          
+
           const SizedBox(width: 8),
-          
+
+          // Virtual piano toggle
+          _PianoButton(
+            enabled: virtualPianoEnabled,
+            onPressed: onPianoToggle,
+          ),
+
+          const SizedBox(width: 8),
+
           // Tempo display
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -295,12 +307,12 @@ class _MetronomeButton extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: enabled 
+              color: enabled
                   ? const Color(0xFF2196F3).withOpacity(0.2)
                   : const Color(0xFF1E1E1E),
               shape: BoxShape.circle,
               border: Border.all(
-                color: enabled 
+                color: enabled
                     ? const Color(0xFF2196F3)
                     : const Color(0xFF404040),
                 width: 2,
@@ -309,8 +321,56 @@ class _MetronomeButton extends StatelessWidget {
             child: Icon(
               Icons.graphic_eq,
               size: 20,
-              color: enabled 
+              color: enabled
                   ? const Color(0xFF2196F3)
+                  : const Color(0xFF808080),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Virtual piano toggle button widget
+class _PianoButton extends StatelessWidget {
+  final bool enabled;
+  final VoidCallback? onPressed;
+
+  const _PianoButton({
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: enabled ? 'Virtual Piano On (z,x,c,w,e,r...)' : 'Virtual Piano Off',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: enabled
+                  ? const Color(0xFF4CAF50).withOpacity(0.2)
+                  : const Color(0xFF1E1E1E),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: enabled
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFF404040),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              Icons.piano,
+              size: 20,
+              color: enabled
+                  ? const Color(0xFF4CAF50)
                   : const Color(0xFF808080),
             ),
           ),
