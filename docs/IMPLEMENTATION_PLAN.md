@@ -25,7 +25,7 @@ This document breaks the MVP into **7 actionable milestones** (M1–M7), each re
 |-----------|-----------------------------|----------|-------------|
 | **M0**    | Project Setup               | 1 week   | ✅ Complete |
 | **M1**    | Audio Playback Foundation   | 3 weeks  | ✅ Complete |
-| **M2**    | Recording & Input           | 3 weeks  | 📋 Ready    |
+| **M2**    | Recording & Input           | 3 weeks  | ✅ Complete |
 | **M3**    | MIDI Editing                | 3 weeks  | 📋 Ready    |
 | **M4**    | Mixing & Effects            | 4 weeks  | 📋 Ready    |
 | **M5**    | Save & Export               | 2 weeks  | 📋 Ready    |
@@ -828,4 +828,4 @@ This plan is **aggressive but achievable** if you work consistently (~15-20 hour
 
 **Document Version:** 1.0  
 **Last Updated:** October 25, 2025  
-**Next Review:** After M1 completion
+**Next Review:** After M2 completion (✅ Complete - Ready for M3)

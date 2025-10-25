@@ -266,3 +266,213 @@ pub fn get_clip_duration(clip_id: u64) -> Result<f64, String> {
     Ok(clip.duration_seconds)
 }
 
+// ============================================================================
+// M2: Recording & Input API
+// ============================================================================
+
+/// Get list of available audio input devices
+pub fn get_audio_input_devices() -> Result<Vec<(String, String, bool)>, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    let input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
+    let devices = input_manager.get_devices();
+    
+    // Convert to tuple format: (id, name, is_default)
+    let device_list: Vec<(String, String, bool)> = devices
+        .into_iter()
+        .map(|d| (d.id, d.name, d.is_default))
+        .collect();
+    
+    Ok(device_list)
+}
+
+/// Select an audio input device by index
+pub fn set_audio_input_device(device_index: i32) -> Result<String, String> {
+    if device_index < 0 {
+        return Err("Invalid device index".to_string());
+    }
+    
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    let mut input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
+    input_manager.select_device(device_index as usize).map_err(|e| e.to_string())?;
+    
+    Ok(format!("Selected input device {}", device_index))
+}
+
+/// Start capturing audio from the selected input device
+pub fn start_audio_input() -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    let mut input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
+    
+    // Start capturing with 10 seconds of buffer
+    input_manager.start_capture(10.0).map_err(|e| e.to_string())?;
+    
+    Ok("Audio input started".to_string())
+}
+
+/// Stop capturing audio
+pub fn stop_audio_input() -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    let mut input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
+    input_manager.stop_capture().map_err(|e| e.to_string())?;
+    
+    Ok("Audio input stopped".to_string())
+}
+
+/// Start recording audio
+pub fn start_recording() -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let mut graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Start audio input if not already started
+    {
+        let mut input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
+        if !input_manager.is_capturing() {
+            input_manager.start_capture(10.0).map_err(|e| e.to_string())?;
+        }
+    }
+
+    // CRITICAL: Ensure output stream is running so audio callback processes recording
+    // If not playing, we need to start the output stream for metronome and recording
+    // Note: play() checks internally if already playing and returns early if so
+    eprintln!("🔊 [API] Ensuring output stream is running for recording...");
+    graph.play().map_err(|e| e.to_string())?;
+
+    graph.recorder.start_recording()?;
+
+    let state = graph.recorder.get_state();
+    Ok(format!("Recording started: {:?}", state))
+}
+
+/// Stop recording and return the recorded clip ID
+pub fn stop_recording() -> Result<Option<u64>, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let clip_option = graph.recorder.stop_recording()?;
+
+    // Stop audio input to prevent buffer overflow
+    {
+        let mut input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
+        if input_manager.is_capturing() {
+            eprintln!("🛑 [API] Stopping audio input after recording...");
+            input_manager.stop_capture().map_err(|e| e.to_string())?;
+        }
+    }
+
+    if let Some(clip) = clip_option {
+        // Store the recorded clip and add to timeline at position 0.0
+        let clip_arc = Arc::new(clip);
+
+        // Add to timeline first to get the ID
+        let clip_id = graph.add_clip(clip_arc.clone(), 0.0);
+
+        // Store in AUDIO_CLIPS map with the same ID
+        let clips_mutex = AUDIO_CLIPS.get()
+            .ok_or("Audio clips not initialized")?;
+        let mut clips_map = clips_mutex.lock().map_err(|e| e.to_string())?;
+        clips_map.insert(clip_id, clip_arc);
+
+        eprintln!("✅ [API] Recorded clip stored with ID: {}, added to timeline at position 0.0", clip_id);
+
+        Ok(Some(clip_id))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Get current recording state (0=Idle, 1=CountingIn, 2=Recording)
+pub fn get_recording_state() -> Result<i32, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    use crate::recorder::RecordingState;
+    let state = match graph.recorder.get_state() {
+        RecordingState::Idle => 0,
+        RecordingState::CountingIn => 1,
+        RecordingState::Recording => 2,
+    };
+    
+    Ok(state)
+}
+
+/// Get recorded duration in seconds
+pub fn get_recorded_duration() -> Result<f64, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    Ok(graph.recorder.get_recorded_duration())
+}
+
+/// Set count-in duration in bars
+pub fn set_count_in_bars(bars: u32) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    graph.recorder.set_count_in_bars(bars);
+    Ok(format!("Count-in set to {} bars", bars))
+}
+
+/// Get count-in duration in bars
+pub fn get_count_in_bars() -> Result<u32, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    Ok(graph.recorder.get_count_in_bars())
+}
+
+/// Set tempo in BPM
+pub fn set_tempo(bpm: f64) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    graph.recorder.set_tempo(bpm);
+    Ok(format!("Tempo set to {:.1} BPM", bpm))
+}
+
+/// Get tempo in BPM
+pub fn get_tempo() -> Result<f64, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    Ok(graph.recorder.get_tempo())
+}
+
+/// Enable or disable metronome
+pub fn set_metronome_enabled(enabled: bool) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    graph.recorder.set_metronome_enabled(enabled);
+    Ok(format!("Metronome {}", if enabled { "enabled" } else { "disabled" }))
+}
+
+/// Check if metronome is enabled
+pub fn is_metronome_enabled() -> Result<bool, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    
+    Ok(graph.recorder.is_metronome_enabled())
+}
+

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:file_picker/file_picker.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
@@ -16,7 +17,8 @@ class DAWScreen extends StatefulWidget {
 class _DAWScreenState extends State<DAWScreen> {
   AudioEngine? _audioEngine;
   Timer? _playheadTimer;
-  
+  Timer? _recordingStateTimer;
+
   // State
   double _playheadPosition = 0.0;
   int? _loadedClipId;
@@ -27,6 +29,12 @@ class _DAWScreenState extends State<DAWScreen> {
   String _statusMessage = '';
   bool _isLoading = false;
 
+  // M2: Recording state
+  bool _isRecording = false;
+  bool _isCountingIn = false;
+  bool _metronomeEnabled = true;
+  double _tempo = 120.0;
+
   @override
   void initState() {
     super.initState();
@@ -35,8 +43,13 @@ class _DAWScreenState extends State<DAWScreen> {
 
   @override
   void dispose() {
+    // Clean up timers
     _playheadTimer?.cancel();
+    _recordingStateTimer?.cancel();
+
+    // Stop playback
     _stopPlayback();
+
     super.dispose();
   }
 
@@ -47,9 +60,30 @@ class _DAWScreenState extends State<DAWScreen> {
       
       // Initialize audio graph immediately
       final result = _audioEngine!.initAudioGraph();
+      
+      // Initialize recording settings
+      try {
+        _audioEngine!.setCountInBars(2); // Default: 2 bars
+        _audioEngine!.setTempo(120.0);   // Default: 120 BPM
+        _audioEngine!.setMetronomeEnabled(true); // Default: enabled
+        
+        // Get initial values
+        final tempo = _audioEngine!.getTempo();
+        final metronome = _audioEngine!.isMetronomeEnabled();
+        
+        debugPrint('🎵 Recording settings initialized:');
+        debugPrint('   - Count-in: 2 bars');
+        debugPrint('   - Tempo: $tempo BPM');
+        debugPrint('   - Metronome: ${metronome ? "ON" : "OFF"}');
+      } catch (e) {
+        debugPrint('⚠️  Failed to initialize recording settings: $e');
+      }
+      
       setState(() {
         _audioGraphInitialized = true;
-        _statusMessage = 'Ready to load audio files';
+        _statusMessage = 'Ready to record or load audio files';
+        _tempo = 120.0;
+        _metronomeEnabled = true;
       });
       
       debugPrint('✅ Audio graph initialized: $result');
@@ -178,6 +212,174 @@ class _DAWScreenState extends State<DAWScreen> {
     }
   }
 
+  // File picking method
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['wav', 'mp3', 'flac', 'aif', 'aiff'],
+      dialogTitle: 'Select Audio File',
+    );
+
+    if (result != null && result.files.single.path != null) {
+      _loadAudioFile(result.files.single.path!);
+    }
+  }
+
+  // M2: Recording methods
+  void _toggleRecording() {
+    if (_audioEngine == null) return;
+
+    if (_isRecording || _isCountingIn) {
+      // Stop recording
+      _stopRecording();
+    } else {
+      // Start recording
+      _startRecording();
+    }
+  }
+
+  void _startRecording() {
+    if (_audioEngine == null) return;
+
+    try {
+      // Check current settings
+      final countInBars = _audioEngine!.getCountInBars();
+      final tempo = _audioEngine!.getTempo();
+      final metronomeEnabled = _audioEngine!.isMetronomeEnabled();
+      
+      debugPrint('🎙️  Starting recording with:');
+      debugPrint('   - Count-in: $countInBars bars');
+      debugPrint('   - Tempo: $tempo BPM');
+      debugPrint('   - Metronome: ${metronomeEnabled ? "ON" : "OFF"}');
+      
+      final result = _audioEngine!.startRecording();
+      debugPrint('   - Result: $result');
+      
+      setState(() {
+        _isCountingIn = true;
+        _statusMessage = 'Count-in... ($countInBars bars at $tempo BPM)';
+        _tempo = tempo;
+      });
+      
+      // Start timer to poll recording state
+      _startRecordingStateTimer();
+    } catch (e) {
+      debugPrint('❌ Recording error: $e');
+      setState(() {
+        _statusMessage = 'Recording error: $e';
+      });
+    }
+  }
+
+  void _stopRecording() {
+    if (_audioEngine == null) return;
+
+    try {
+      final clipId = _audioEngine!.stopRecording();
+      
+      setState(() {
+        _isRecording = false;
+        _isCountingIn = false;
+      });
+      
+      if (clipId >= 0) {
+        // Recording successful - get clip info
+        final duration = _audioEngine!.getClipDuration(clipId);
+        final peaks = _audioEngine!.getWaveformPeaks(clipId, 2000);
+        
+        setState(() {
+          _loadedClipId = clipId;
+          _clipDuration = duration;
+          _waveformPeaks = peaks;
+          _statusMessage = 'Recorded ${duration.toStringAsFixed(2)}s';
+        });
+      } else {
+        setState(() {
+          _statusMessage = 'No recording captured';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Stop recording error: $e';
+        _isRecording = false;
+        _isCountingIn = false;
+      });
+    }
+  }
+
+  void _startRecordingStateTimer() {
+    // Cancel any existing timer to prevent leaks
+    _recordingStateTimer?.cancel();
+
+    _recordingStateTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (_audioEngine == null || (!_isRecording && !_isCountingIn)) {
+        timer.cancel();
+        _recordingStateTimer = null;
+        return;
+      }
+
+      final state = _audioEngine!.getRecordingState();
+      final duration = _audioEngine!.getRecordedDuration();
+
+      // Debug: Log state changes
+      if (state == 1 && !_isCountingIn) {
+        debugPrint('📊 State: Counting In');
+      } else if (state == 2 && !_isRecording) {
+        debugPrint('📊 State: Recording (duration: ${duration.toStringAsFixed(1)}s)');
+      } else if (state == 0 && (_isRecording || _isCountingIn)) {
+        debugPrint('📊 State: Stopped');
+      }
+
+      if (state == 1 && !_isCountingIn) {
+        // Transitioned to count-in
+        setState(() {
+          _isCountingIn = true;
+          _statusMessage = 'Count-in...';
+        });
+      } else if (state == 2 && !_isRecording) {
+        // Transitioned to recording
+        setState(() {
+          _isCountingIn = false;
+          _isRecording = true;
+          _statusMessage = 'Recording... ${duration.toStringAsFixed(1)}s';
+        });
+      } else if (state == 2 && _isRecording) {
+        // Update recording duration display
+        setState(() {
+          _statusMessage = 'Recording... ${duration.toStringAsFixed(1)}s';
+        });
+      } else if (state == 0 && (_isRecording || _isCountingIn)) {
+        // Recording stopped
+        timer.cancel();
+        _recordingStateTimer = null;
+        setState(() {
+          _isRecording = false;
+          _isCountingIn = false;
+        });
+      }
+    });
+  }
+
+  void _toggleMetronome() {
+    if (_audioEngine == null) return;
+
+    try {
+      final newState = !_metronomeEnabled;
+      debugPrint('🎵 Toggling metronome: ${newState ? "ON" : "OFF"}');
+      _audioEngine!.setMetronomeEnabled(newState);
+      setState(() {
+        _metronomeEnabled = newState;
+        _statusMessage = newState ? 'Metronome enabled' : 'Metronome disabled';
+      });
+      debugPrint('✅ Metronome toggled successfully');
+    } catch (e) {
+      debugPrint('❌ Metronome toggle error: $e');
+      setState(() {
+        _statusMessage = 'Metronome toggle error: $e';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,9 +414,15 @@ class _DAWScreenState extends State<DAWScreen> {
             onPlay: _loadedClipId != null ? _play : null,
             onPause: _loadedClipId != null ? _pause : null,
             onStop: _loadedClipId != null ? _stopPlayback : null,
+            onRecord: _toggleRecording,
+            onMetronomeToggle: _toggleMetronome,
             playheadPosition: _playheadPosition,
             isPlaying: _isPlaying,
             canPlay: _loadedClipId != null,
+            isRecording: _isRecording,
+            isCountingIn: _isCountingIn,
+            metronomeEnabled: _metronomeEnabled,
+            tempo: _tempo,
           ),
 
           // Main content area
@@ -275,17 +483,7 @@ class _DAWScreenState extends State<DAWScreen> {
                 ),
               ),
               TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _loadedClipId = null;
-                    _clipDuration = null;
-                    _waveformPeaks = [];
-                    _playheadPosition = 0.0;
-                    _isPlaying = false;
-                    _statusMessage = 'Ready to load audio files';
-                  });
-                  _stopPlayback();
-                },
+                onPressed: _pickFile,
                 icon: const Icon(Icons.folder_open, size: 16),
                 label: const Text('Load Different File'),
                 style: TextButton.styleFrom(

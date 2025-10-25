@@ -23,6 +23,18 @@ class AudioEngine {
   late final _GetClipDurationFfi _getClipDuration;
   late final _GetWaveformPeaksFfi _getWaveformPeaks;
   late final _FreeWaveformPeaksFfi _freeWaveformPeaks;
+  
+  // M2 functions - Recording & Input
+  late final _StartRecordingFfi _startRecording;
+  late final _StopRecordingFfi _stopRecording;
+  late final _GetRecordingStateFfi _getRecordingState;
+  late final _GetRecordedDurationFfi _getRecordedDuration;
+  late final _SetCountInBarsFfi _setCountInBars;
+  late final _GetCountInBarsFfi _getCountInBars;
+  late final _SetTempoFfi _setTempo;
+  late final _GetTempoFfi _getTempo;
+  late final _SetMetronomeEnabledFfi _setMetronomeEnabled;
+  late final _IsMetronomeEnabledFfi _isMetronomeEnabled;
 
   AudioEngine() {
     // Load the native library
@@ -141,6 +153,67 @@ class AudioEngine {
               'free_waveform_peaks_ffi')
           .asFunction();
       print('  ✅ free_waveform_peaks_ffi bound');
+      
+      // Bind M2 functions
+      _startRecording = _lib
+          .lookup<ffi.NativeFunction<_StartRecordingFfiNative>>(
+              'start_recording_ffi')
+          .asFunction();
+      print('  ✅ start_recording_ffi bound');
+      
+      _stopRecording = _lib
+          .lookup<ffi.NativeFunction<_StopRecordingFfiNative>>(
+              'stop_recording_ffi')
+          .asFunction();
+      print('  ✅ stop_recording_ffi bound');
+      
+      _getRecordingState = _lib
+          .lookup<ffi.NativeFunction<_GetRecordingStateFfiNative>>(
+              'get_recording_state_ffi')
+          .asFunction();
+      print('  ✅ get_recording_state_ffi bound');
+      
+      _getRecordedDuration = _lib
+          .lookup<ffi.NativeFunction<_GetRecordedDurationFfiNative>>(
+              'get_recorded_duration_ffi')
+          .asFunction();
+      print('  ✅ get_recorded_duration_ffi bound');
+      
+      _setCountInBars = _lib
+          .lookup<ffi.NativeFunction<_SetCountInBarsFfiNative>>(
+              'set_count_in_bars_ffi')
+          .asFunction();
+      print('  ✅ set_count_in_bars_ffi bound');
+      
+      _getCountInBars = _lib
+          .lookup<ffi.NativeFunction<_GetCountInBarsFfiNative>>(
+              'get_count_in_bars_ffi')
+          .asFunction();
+      print('  ✅ get_count_in_bars_ffi bound');
+      
+      _setTempo = _lib
+          .lookup<ffi.NativeFunction<_SetTempoFfiNative>>(
+              'set_tempo_ffi')
+          .asFunction();
+      print('  ✅ set_tempo_ffi bound');
+      
+      _getTempo = _lib
+          .lookup<ffi.NativeFunction<_GetTempoFfiNative>>(
+              'get_tempo_ffi')
+          .asFunction();
+      print('  ✅ get_tempo_ffi bound');
+      
+      _setMetronomeEnabled = _lib
+          .lookup<ffi.NativeFunction<_SetMetronomeEnabledFfiNative>>(
+              'set_metronome_enabled_ffi')
+          .asFunction();
+      print('  ✅ set_metronome_enabled_ffi bound');
+      
+      _isMetronomeEnabled = _lib
+          .lookup<ffi.NativeFunction<_IsMetronomeEnabledFfiNative>>(
+              'is_metronome_enabled_ffi')
+          .asFunction();
+      print('  ✅ is_metronome_enabled_ffi bound');
       
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
@@ -343,6 +416,133 @@ class AudioEngine {
       return [];
     }
   }
+
+  // ========================================================================
+  // M2 API - Recording & Input
+  // ========================================================================
+
+  /// Start recording audio
+  String startRecording() {
+    print('⏺️  [AudioEngine] Starting recording...');
+    try {
+      final resultPtr = _startRecording();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Start recording failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Stop recording and return clip ID (-1 if no recording)
+  int stopRecording() {
+    print('⏹️  [AudioEngine] Stopping recording...');
+    try {
+      final clipId = _stopRecording();
+      print('✅ [AudioEngine] Recording stopped, clip ID: $clipId');
+      return clipId;
+    } catch (e) {
+      print('❌ [AudioEngine] Stop recording failed: $e');
+      return -1;
+    }
+  }
+
+  /// Get recording state (0=Idle, 1=CountingIn, 2=Recording)
+  int getRecordingState() {
+    try {
+      return _getRecordingState();
+    } catch (e) {
+      print('❌ [AudioEngine] Get recording state failed: $e');
+      return 0;
+    }
+  }
+
+  /// Get recorded duration in seconds
+  double getRecordedDuration() {
+    try {
+      return _getRecordedDuration();
+    } catch (e) {
+      print('❌ [AudioEngine] Get recorded duration failed: $e');
+      return 0.0;
+    }
+  }
+
+  /// Set count-in duration in bars
+  String setCountInBars(int bars) {
+    print('🎵 [AudioEngine] Setting count-in to $bars bars...');
+    try {
+      final resultPtr = _setCountInBars(bars);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set count-in failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get count-in duration in bars
+  int getCountInBars() {
+    try {
+      return _getCountInBars();
+    } catch (e) {
+      print('❌ [AudioEngine] Get count-in bars failed: $e');
+      return 2;
+    }
+  }
+
+  /// Set tempo in BPM
+  String setTempo(double bpm) {
+    print('🎵 [AudioEngine] Setting tempo to $bpm BPM...');
+    try {
+      final resultPtr = _setTempo(bpm);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set tempo failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get tempo in BPM
+  double getTempo() {
+    try {
+      return _getTempo();
+    } catch (e) {
+      print('❌ [AudioEngine] Get tempo failed: $e');
+      return 120.0;
+    }
+  }
+
+  /// Enable or disable metronome
+  String setMetronomeEnabled(bool enabled) {
+    print('🎵 [AudioEngine] ${enabled ? "Enabling" : "Disabling"} metronome...');
+    try {
+      final resultPtr = _setMetronomeEnabled(enabled ? 1 : 0);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set metronome enabled failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Check if metronome is enabled
+  bool isMetronomeEnabled() {
+    try {
+      return _isMetronomeEnabled() != 0;
+    } catch (e) {
+      print('❌ [AudioEngine] Is metronome enabled failed: $e');
+      return true;
+    }
+  }
 }
 
 // ==========================================================================
@@ -397,3 +597,34 @@ typedef _GetWaveformPeaksFfi = ffi.Pointer<ffi.Float> Function(
 typedef _FreeWaveformPeaksFfiNative = ffi.Void Function(
     ffi.Pointer<ffi.Float>, ffi.Size);
 typedef _FreeWaveformPeaksFfi = void Function(ffi.Pointer<ffi.Float>, int);
+
+// M2 types - Recording & Input
+typedef _StartRecordingFfiNative = ffi.Pointer<Utf8> Function();
+typedef _StartRecordingFfi = ffi.Pointer<Utf8> Function();
+
+typedef _StopRecordingFfiNative = ffi.Int64 Function();
+typedef _StopRecordingFfi = int Function();
+
+typedef _GetRecordingStateFfiNative = ffi.Int32 Function();
+typedef _GetRecordingStateFfi = int Function();
+
+typedef _GetRecordedDurationFfiNative = ffi.Double Function();
+typedef _GetRecordedDurationFfi = double Function();
+
+typedef _SetCountInBarsFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint32);
+typedef _SetCountInBarsFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _GetCountInBarsFfiNative = ffi.Uint32 Function();
+typedef _GetCountInBarsFfi = int Function();
+
+typedef _SetTempoFfiNative = ffi.Pointer<Utf8> Function(ffi.Double);
+typedef _SetTempoFfi = ffi.Pointer<Utf8> Function(double);
+
+typedef _GetTempoFfiNative = ffi.Double Function();
+typedef _GetTempoFfi = double Function();
+
+typedef _SetMetronomeEnabledFfiNative = ffi.Pointer<Utf8> Function(ffi.Int32);
+typedef _SetMetronomeEnabledFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _IsMetronomeEnabledFfiNative = ffi.Int32 Function();
+typedef _IsMetronomeEnabledFfi = int Function();

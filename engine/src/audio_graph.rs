@@ -1,8 +1,10 @@
 /// Audio graph and playback engine
 use crate::audio_file::{AudioClip, TARGET_SAMPLE_RATE};
+use crate::audio_input::AudioInputManager;
+use crate::recorder::Recorder;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 /// Unique identifier for audio clips
 pub type ClipId = u64;
@@ -40,6 +42,10 @@ pub struct AudioGraph {
     stream: Option<cpal::Stream>,
     /// Next clip ID
     next_clip_id: Arc<Mutex<ClipId>>,
+    /// Audio input manager
+    pub input_manager: Arc<Mutex<AudioInputManager>>,
+    /// Recorder
+    pub recorder: Arc<Recorder>,
 }
 
 // SAFETY: AudioGraph is only accessed through a Mutex in the API layer,
@@ -50,12 +56,18 @@ unsafe impl Send for AudioGraph {}
 impl AudioGraph {
     /// Create a new audio graph
     pub fn new() -> anyhow::Result<Self> {
+        let mut input_manager = AudioInputManager::new()?;
+        // Enumerate devices on creation
+        let _ = input_manager.enumerate_devices();
+        
         Ok(Self {
             clips: Arc::new(Mutex::new(Vec::new())),
             playhead_samples: Arc::new(AtomicU64::new(0)),
             state: Arc::new(Mutex::new(TransportState::Stopped)),
             stream: None,
             next_clip_id: Arc::new(Mutex::new(0)),
+            input_manager: Arc::new(Mutex::new(input_manager)),
+            recorder: Arc::new(Recorder::new()),
         })
     }
 
@@ -177,6 +189,8 @@ impl AudioGraph {
         let clips = self.clips.clone();
         let playhead_samples = self.playhead_samples.clone();
         let state = self.state.clone();
+        let input_manager = self.input_manager.clone();
+        let recorder_refs = self.recorder.get_callback_refs();
 
         let stream = device.build_output_stream(
             &config.into(),
@@ -188,9 +202,52 @@ impl AudioGraph {
                 };
 
                 if !is_playing {
-                    // Output silence when not playing
-                    for sample in data.iter_mut() {
-                        *sample = 0.0;
+                    // Even when not playing, we might be recording
+                    // Process metronome and recording
+                    let frames = data.len() / 2;
+                    
+                    // Log channel info once
+                    static LOGGED_CHANNELS: AtomicBool = AtomicBool::new(false);
+
+                    for frame_idx in 0..frames {
+                        // Get input samples (if recording)
+                        let (input_left, input_right) = if let Ok(input_mgr) = input_manager.lock() {
+                            let channels = input_mgr.get_input_channels();
+
+                            // Log once for debugging
+                            if !LOGGED_CHANNELS.swap(true, Ordering::Relaxed) {
+                                eprintln!("🔊 [AudioGraph] Reading input with {} channels", channels);
+                            }
+
+                            if channels == 1 {
+                                // Mono input: read 1 sample and duplicate to both channels
+                                if let Some(samples) = input_mgr.read_samples(1) {
+                                    let mono_sample = samples.get(0).copied().unwrap_or(0.0);
+                                    (mono_sample, mono_sample)
+                                } else {
+                                    (0.0, 0.0)
+                                }
+                            } else {
+                                // Stereo input: read 2 samples
+                                if let Some(samples) = input_mgr.read_samples(2) {
+                                    (samples.get(0).copied().unwrap_or(0.0),
+                                     samples.get(1).copied().unwrap_or(0.0))
+                                } else {
+                                    (0.0, 0.0)
+                                }
+                            }
+                        } else {
+                            // Failed to acquire input manager lock - audio samples will be dropped
+                            eprintln!("⚠️  [AudioGraph] Input mutex lock contention - samples dropped!");
+                            (0.0, 0.0)
+                        };
+
+                        // Process recording and get metronome output
+                        let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right);
+
+                        // Output only metronome when not playing
+                        data[frame_idx * 2] = met_left;
+                        data[frame_idx * 2 + 1] = met_right;
                     }
                     return;
                 }
@@ -204,6 +261,14 @@ impl AudioGraph {
                     let clips_lock = clips.lock().unwrap();
                     clips_lock.clone()
                 };
+
+                // Debug: Log clip count periodically
+                static PLAYBACK_FRAME_COUNTER: AtomicU64 = AtomicU64::new(0);
+                let frame_count = PLAYBACK_FRAME_COUNTER.fetch_add(1, Ordering::Relaxed);
+                if frame_count % 4800 == 0 {  // Log every ~0.1s
+                    eprintln!("🔊 [Playback] {} clips on timeline, playhead: {:.2}s",
+                        clips_snapshot.len(), current_playhead as f64 / TARGET_SAMPLE_RATE as f64);
+                }
 
                 // Mix all clips into the output buffer
                 for frame_idx in 0..frames {
@@ -243,6 +308,39 @@ impl AudioGraph {
                             }
                         }
                     }
+
+                    // Get input samples (if recording)
+                    let (input_left, input_right) = if let Ok(input_mgr) = input_manager.lock() {
+                        let channels = input_mgr.get_input_channels();
+                        if channels == 1 {
+                            // Mono input: read 1 sample and duplicate to both channels
+                            if let Some(samples) = input_mgr.read_samples(1) {
+                                let mono_sample = samples.get(0).copied().unwrap_or(0.0);
+                                (mono_sample, mono_sample)
+                            } else {
+                                (0.0, 0.0)
+                            }
+                        } else {
+                            // Stereo input: read 2 samples
+                            if let Some(samples) = input_mgr.read_samples(2) {
+                                (samples.get(0).copied().unwrap_or(0.0),
+                                 samples.get(1).copied().unwrap_or(0.0))
+                            } else {
+                                (0.0, 0.0)
+                            }
+                        }
+                    } else {
+                        // Failed to acquire input manager lock
+                        eprintln!("⚠️  [AudioGraph] Input mutex lock contention during playback - samples dropped!");
+                        (0.0, 0.0)
+                    };
+
+                    // Process recording and get metronome output
+                    let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right);
+
+                    // Mix playback + metronome
+                    left += met_left;
+                    right += met_right;
 
                     // Clamp to prevent clipping
                     left = left.clamp(-1.0, 1.0);

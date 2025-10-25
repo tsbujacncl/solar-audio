@@ -163,3 +163,92 @@ pub extern "C" fn free_waveform_peaks_ffi(ptr: *mut f32, length: usize) {
     }
 }
 
+// ============================================================================
+// M2: Recording & Input FFI
+// ============================================================================
+
+/// Start recording audio
+#[no_mangle]
+pub extern "C" fn start_recording_ffi() -> *mut c_char {
+    match api::start_recording() {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Stop recording and return clip ID (-1 if no recording)
+#[no_mangle]
+pub extern "C" fn stop_recording_ffi() -> i64 {
+    match api::stop_recording() {
+        Ok(Some(clip_id)) => clip_id as i64,
+        Ok(None) => -1,  // No recording to stop
+        Err(e) => {
+            eprintln!("❌ [FFI] Stop recording failed: {}", e);
+            -1
+        }
+    }
+}
+
+/// Get recording state (0=Idle, 1=CountingIn, 2=Recording)
+#[no_mangle]
+pub extern "C" fn get_recording_state_ffi() -> i32 {
+    api::get_recording_state().unwrap_or_else(|e| {
+        eprintln!("❌ [FFI] Get recording state failed: {}", e);
+        0  // Return Idle state on error
+    })
+}
+
+/// Get recorded duration in seconds
+#[no_mangle]
+pub extern "C" fn get_recorded_duration_ffi() -> f64 {
+    api::get_recorded_duration().unwrap_or_else(|e| {
+        eprintln!("❌ [FFI] Get recorded duration failed: {}", e);
+        0.0
+    })
+}
+
+/// Set count-in duration in bars
+#[no_mangle]
+pub extern "C" fn set_count_in_bars_ffi(bars: u32) -> *mut c_char {
+    match api::set_count_in_bars(bars) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get count-in duration in bars
+#[no_mangle]
+pub extern "C" fn get_count_in_bars_ffi() -> u32 {
+    api::get_count_in_bars().unwrap_or(2)
+}
+
+/// Set tempo in BPM
+#[no_mangle]
+pub extern "C" fn set_tempo_ffi(bpm: f64) -> *mut c_char {
+    match api::set_tempo(bpm) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get tempo in BPM
+#[no_mangle]
+pub extern "C" fn get_tempo_ffi() -> f64 {
+    api::get_tempo().unwrap_or(120.0)
+}
+
+/// Enable or disable metronome
+#[no_mangle]
+pub extern "C" fn set_metronome_enabled_ffi(enabled: i32) -> *mut c_char {
+    match api::set_metronome_enabled(enabled != 0) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Check if metronome is enabled
+#[no_mangle]
+pub extern "C" fn is_metronome_enabled_ffi() -> i32 {
+    if api::is_metronome_enabled().unwrap_or(true) { 1 } else { 0 }
+}
+

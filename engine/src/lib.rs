@@ -3,11 +3,15 @@ mod api;
 mod ffi;
 mod audio_file;
 mod audio_graph;
+mod audio_input;
+mod recorder;
 
 // Re-export API functions
 pub use api::*;
 pub use audio_file::*;
 pub use audio_graph::*;
+pub use audio_input::*;
+pub use recorder::*;
 // FFI exports are handled by #[no_mangle] in ffi.rs
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
