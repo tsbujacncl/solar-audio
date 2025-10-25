@@ -191,62 +191,69 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 ### Tasks
 
 #### Rust: Audio Input Setup
-- [ ] Enumerate input devices using `cpal`
-- [ ] Expose FFI: `get_audio_input_devices() -> Vec<AudioDevice>`
-- [ ] Create input stream (stereo, 48 kHz)
-- [ ] Test: Print input samples to console, confirm mic signal is captured
+- [x] Enumerate input devices using `cpal`
+- [x] Expose FFI: `get_audio_input_devices() -> Vec<AudioDevice>`
+- [x] Create input stream (mono/stereo auto-detected, 48 kHz)
+- [x] Test: Print input samples to console, confirm mic signal is captured
 
 #### Rust: Recording Engine
-- [ ] Implement `start_recording(track_id, pre_roll_bars)` function
-- [ ] Record input samples to buffer during pre-roll (count-in)
-- [ ] After pre-roll, record to new clip on timeline
-- [ ] Implement `stop_recording() -> AudioClipHandle` (returns recorded clip)
-- [ ] Test: Record 5 seconds, verify clip has correct length and audio data
+- [x] Implement `start_recording()` function (simplified from original spec)
+- [x] Record input samples to buffer during count-in
+- [x] After count-in, transition to recording state
+- [x] Implement `stop_recording() -> AudioClipHandle` (returns recorded clip)
+- [x] Test: Record 5 seconds, verify clip has correct length and audio data
 
 #### Rust: Metronome
-- [ ] Generate click sound (sine wave burst or loaded click sample)
-- [ ] Play click on every beat based on tempo (default 120 BPM)
-- [ ] Add metronome enable/disable flag
-- [ ] Mix metronome into output during playback and recording
-- [ ] Test: Play with metronome → hear clicks on beats
+- [x] Generate click sound (sine wave burst at 1200 Hz downbeat, 800 Hz other beats)
+- [x] Play click on every beat based on tempo (default 120 BPM)
+- [x] Add metronome enable/disable flag
+- [x] Mix metronome into output during playback and recording
+- [x] Test: Play with metronome → hear clicks on beats
 
 #### Rust: Count-In
-- [ ] Add count-in duration parameter (1/2/4 bars)
-- [ ] During count-in: play metronome, don't record yet
-- [ ] After count-in: start recording
-- [ ] Expose FFI: `set_count_in_bars(bars: u32)`
-- [ ] Test: Record with 2-bar count-in → recording starts after 8 beats
+- [x] Add count-in duration parameter (0/1/2/4 bars)
+- [x] During count-in: play metronome, don't record yet
+- [x] After count-in: start recording (automatic state transition)
+- [x] Expose FFI: `set_count_in_bars(bars: u32)`, `get_count_in_bars()`
+- [x] Test: Record with 2-bar count-in → recording starts after 8 beats
 
-#### Flutter: Input Device Selector
-- [ ] Add settings panel (slide-in from right)
-- [ ] Display list of audio input devices
-- [ ] Allow user to select device
-- [ ] Call FFI: `set_audio_input_device(device_id)`
-- [ ] Test: Select different mics, confirm input switches
+#### Flutter: Input Device Selector *(Deferred to M4/M7)*
+- [ ] **DEFERRED:** Add settings panel (slide-in from right) → M7 (Polish)
+- [ ] **DEFERRED:** Display list of audio input devices → M7 (Settings UI)
+- [ ] **DEFERRED:** Allow user to select device → M7 (Settings UI)
+- [x] API implemented: `get_audio_input_devices()`, `set_audio_input_device()` work
+- **Note:** Currently uses default input device; API is ready for UI implementation
 
-#### Flutter: Record Button & Track Arming
-- [ ] Add record button (⏺) to transport bar
-- [ ] Add "Arm" button to each track (enable recording on this track)
-- [ ] When record pressed + track armed:
-  - Call `start_recording(track_id, count_in_bars)`
-  - Show count-in timer in UI (4... 3... 2... 1...)
-  - After count-in, show "Recording..." indicator
-- [ ] On stop: call `stop_recording()`, display new clip on timeline
-- [ ] Test: Arm track → press record → see count-in → speak → stop → clip appears
+#### Flutter: Record Button & Basic Recording
+- [x] Add record button (⏺) to transport bar
+- [ ] **DEFERRED:** Add "Arm" button to each track → M4 (Multi-track)
+- [x] When record pressed:
+  - [x] Call `start_recording()` (simplified, no track_id for now)
+  - [ ] **DEFERRED:** Show count-in timer in UI (4... 3... 2... 1...) → M7 (Polish)
+  - [x] Show "Counting In..." / "Recording..." status indicator
+- [x] On stop: call `stop_recording()`, display new clip on timeline
+- [x] Test: Press record → hear count-in → speak → stop → clip appears with waveform
+- **Note:** Basic recording works; per-track arming requires multi-track architecture (M4)
 
 #### Flutter: Metronome Toggle
-- [ ] Add metronome button to transport bar (🎵 icon)
-- [ ] Toggle on/off: call `set_metronome_enabled(bool)`
-- [ ] Visual feedback when enabled
-- [ ] Test: Toggle metronome during playback → hear clicks start/stop
+- [x] Add metronome button to transport bar (🎵 icon)
+- [x] Toggle on/off: call `set_metronome_enabled(bool)`
+- [x] Visual feedback when enabled (blue highlight)
+- [x] Test: Toggle metronome during playback → hear clicks start/stop
 
 ### Success Criteria
-✅ Select audio input device  
-✅ Click record → hear count-in metronome  
-✅ Record audio to timeline  
-✅ Stop recording → clip appears with correct audio  
-✅ Metronome plays during recording and playback  
+✅ Select audio input device *(API implemented, UI deferred to M7)*
+✅ Click record → hear count-in metronome
+✅ Record audio to timeline
+✅ Stop recording → clip appears with correct audio
+✅ Metronome plays during recording and playback
 ✅ No audio latency issues (monitor input in real-time)
+
+### Deferred Items (moved to future milestones)
+- **Input Device Selector UI** → M7 (Settings panel)
+- **Per-Track Arming** → M4 (Multi-track system)
+- **Count-In Visual Timer (4...3...2...1...)** → M7 (Polish)
+- **Input Monitoring Volume Control** → M4 (Mixer panel)
 
 ### Risks & Mitigations
 - **Input latency too high** → Use lowest buffer size possible (64-128 samples), test on different devices
@@ -435,9 +442,12 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 #### Flutter: Track Headers (Timeline)
 - [ ] Display track names on left side of timeline
-- [ ] Add buttons: Mute (M), Solo (S), Arm (⏺)
+- [ ] Add buttons: Mute (M), Solo (S), Arm (⏺) *(Track arming deferred from M2)*
 - [ ] Add FX button (opens effect list for that track)
+- [ ] Wire arm button to recording system (enable per-track recording)
+- [ ] Add input monitoring toggle per track *(Deferred from M2)*
 - [ ] Test: Click mute → track goes silent
+- [ ] Test: Arm track → press record → only armed tracks record
 
 #### Flutter: Effect Plugin UI
 - [ ] Create generic effect panel (slide-in or modal)
@@ -704,6 +714,27 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 - [ ] On crash: write crash log to `~/.solar/crashes/`
 - [ ] On relaunch: detect abnormal exit, offer recovery
 - [ ] Test: Force crash → relaunch → verify recovery works
+
+#### Flutter: Settings Panel *(Deferred from M2)*
+- [ ] Create settings panel (slide-in from right or modal)
+- [ ] Add "Audio" tab with:
+  - [ ] Audio input device selector (list devices, select one) *(Deferred from M2)*
+  - [ ] Audio output device selector
+  - [ ] Sample rate selector (44.1/48/96 kHz)
+  - [ ] Buffer size selector (64/128/256/512 samples)
+- [ ] Add "Recording" tab with:
+  - [ ] Count-in bars selector (0/1/2/4)
+  - [ ] Metronome volume slider
+  - [ ] Default tempo setting
+- [ ] Wire to existing FFI functions from M2
+- [ ] Test: Change input device → recording uses new device
+- [ ] Test: Adjust buffer size → see latency change
+
+#### Flutter: Recording Enhancements *(Deferred from M2)*
+- [ ] Add count-in visual timer (4... 3... 2... 1...) during recording *(Deferred from M2)*
+- [ ] Show beat indicator (highlights on each metronome click)
+- [ ] Add recording waveform preview (show input levels during recording)
+- [ ] Test: Start recording → see countdown → see beat flashes
 
 #### UI Polish
 - [ ] Add app icon (Solar logo: #2B2B2B + #A0A0A0 circle)
