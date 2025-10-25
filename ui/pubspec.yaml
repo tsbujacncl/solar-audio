@@ -37,6 +37,10 @@ dependencies:
   
   # FFI for Rust integration
   ffi: ^2.1.0
+  
+  # File handling
+  desktop_drop: ^0.4.4
+  file_picker: ^8.0.0+1
 
 dev_dependencies:
   flutter_test:
