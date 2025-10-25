@@ -1,0 +1,39 @@
+# Rust
+/engine/target/
+**/*.rs.bk
+Cargo.lock
+
+# Flutter
+/ui/.dart_tool/
+/ui/.flutter-plugins
+/ui/.flutter-plugins-dependencies
+/ui/.packages
+/ui/build/
+/ui/pubspec.lock
+
+# macOS
+/ui/macos/Flutter/ephemeral/
+*.xcworkspace
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Generated FFI
+/ui/lib/bridge_generated.dart
+/engine/bridge/src/bridge_generated.rs
+
+# Audio cache & temp files
+*.wav~
+*.mp3~
+cache/
+.solar/
+
+# OS
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,20 @@
+[package]
+name = "engine"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+# Audio I/O and playback
+cpal = "0.15"                    # Cross-platform audio I/O
+symphonia = { version = "0.5", features = ["aac", "mp3", "isomp4", "alac"] }  # Audio decoding
+rubato = "0.15"                  # Sample rate conversion
+ringbuf = "0.4"                  # Lock-free audio buffers
+
+# Utilities
+anyhow = "1.0"                   # Error handling
+
+# FFI bridge
+flutter_rust_bridge = "2"        # Flutter-Rust bridge
