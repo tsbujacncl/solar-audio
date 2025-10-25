@@ -89,20 +89,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E1E),
       appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.wb_sunny, color: Color(0xFFA0A0A0)),
-            SizedBox(width: 8),
-            Text(
-              'SOLAR AUDIO',
-              style: TextStyle(
-                color: Color(0xFF2B2B2B),
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-          ],
+        title: Image.asset(
+          'assets/images/solar_logo.png',
+          height: 40,
+          fit: BoxFit.contain,
         ),
         backgroundColor: const Color(0xFFF5F5F5),
         centerTitle: true,

@@ -47,21 +47,24 @@ M0 has been successfully completed! We now have a working "Hello World" applicat
 - [x] Enabled macOS desktop support: `flutter config --enable-macos-desktop`
 - [x] Created Solar Audio themed UI:
   - Dark theme (#1E1E1E background, #2B2B2B text, #A0A0A0 accents)
-  - App bar with Solar logo (sun icon + "SOLAR AUDIO" text)
+  - App bar with actual Solar logo (wordmark with grey circle "O")
   - "Play Beep" button (centered, large, modern design)
   - Status message display
+- [x] Added logo asset: `solar_logo.png` in `/assets/images/`
 - [x] Successfully runs with `flutter run -d macos`
 
 ### ✅ FFI Bridge (Rust ↔ Flutter)
 - [x] Added `ffi` package (v2.1.4) to Flutter
 - [x] Created `audio_engine.dart` with Dart FFI bindings:
-  - Loads `libengine.dylib` (macOS) or platform-specific library
+  - Loads `libengine.dylib` (macOS) or platform-specific library (absolute path)
   - Binds to Rust functions via `DynamicLibrary.lookup`
   - Wraps C strings with automatic memory management
+  - Added comprehensive debug logging (🔍 ✅ ❌ emojis for easy debugging)
 - [x] Integrated AudioEngine into `main.dart`:
   - Initializes audio engine on app start
   - Calls `playSineWave(440, 1000)` when button pressed (440 Hz for 1 second)
   - Displays results in status message
+- [x] Disabled macOS app sandbox for development (allows dylib loading)
 
 ### ✅ Testing & Integration
 - [x] End-to-end test: Button in Flutter → calls Rust FFI → plays 440 Hz sine wave
@@ -204,20 +207,25 @@ Solar Audio/
 
 ## Known Issues / Technical Debt
 
-1. **Dynamic library not bundled**: Currently loaded from relative path. Need to:
+1. **Dynamic library not bundled**: Currently loaded from absolute path. Need to:
    - Copy `libengine.dylib` into Flutter app bundle (M1)
    - Update `AudioEngine` to load from bundle resources
+   - Change absolute path to relative/bundled path
 
-2. **Basic FFI (not flutter_rust_bridge)**: Manual C-string marshaling is error-prone. Plan to upgrade in M1 when we add:
+2. **App sandbox disabled**: macOS app sandbox is disabled for development to allow dylib loading. Need to:
+   - Properly bundle the library in M1
+   - Re-enable sandbox with appropriate entitlements
+
+3. **Basic FFI (not flutter_rust_bridge)**: Manual C-string marshaling is error-prone. Plan to upgrade in M1 when we add:
    - Async functions (for file loading)
    - Callbacks (for playhead updates, meters)
    - Complex data structures (AudioClip, Track)
 
-3. **Audio thread lifecycle**: `std::mem::forget(stream)` keeps stream alive but leaks memory. Need proper shutdown in M1.
+4. **Audio thread lifecycle**: `std::mem::forget(stream)` keeps stream alive but leaks memory. Need proper shutdown in M1.
 
-4. **No error recovery**: If audio device disconnects, app will crash. Add error handling in M1.
+5. **No error recovery**: If audio device disconnects, app will crash. Add error handling in M1.
 
-5. **Sine wave blocks UI thread**: `std::thread::sleep()` in Rust. Move to async in M1.
+6. **Sine wave blocks UI thread**: `std::thread::sleep()` in Rust. Move to async in M1.
 
 ---
 
