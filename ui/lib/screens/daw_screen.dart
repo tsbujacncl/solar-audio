@@ -387,36 +387,54 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M3: Virtual piano methods
   void _toggleVirtualPiano() {
-    if (_audioEngine == null) return;
+    debugPrint('🎹 [DEBUG] _toggleVirtualPiano called');
+    debugPrint('🎹 [DEBUG] _audioEngine is null: ${_audioEngine == null}');
+    debugPrint('🎹 [DEBUG] Current _virtualPianoEnabled: $_virtualPianoEnabled');
+    debugPrint('🎹 [DEBUG] Current _virtualPianoVisible: $_virtualPianoVisible');
+
+    if (_audioEngine == null) {
+      debugPrint('❌ [DEBUG] Audio engine is null, returning');
+      return;
+    }
 
     setState(() {
       _virtualPianoEnabled = !_virtualPianoEnabled;
+      debugPrint('🎹 [DEBUG] New _virtualPianoEnabled: $_virtualPianoEnabled');
 
       if (_virtualPianoEnabled) {
         // Enable: Initialize MIDI, start audio stream, and show panel
         try {
+          debugPrint('🎹 [DEBUG] Starting MIDI input...');
           _audioEngine!.startMidiInput();
+          debugPrint('✅ [DEBUG] MIDI input started');
 
           // CRITICAL: Start audio output stream so synthesizer can be heard
           // The synthesizer generates audio but needs the stream running to output it
+          debugPrint('🎹 [DEBUG] Starting transport play...');
           _audioEngine!.transportPlay();
+          debugPrint('✅ [DEBUG] Transport play started');
 
           _virtualPianoVisible = true;
+          debugPrint('🎹 [DEBUG] Set _virtualPianoVisible = true');
           _statusMessage = 'Virtual piano enabled - Press keys to play!';
           debugPrint('✅ Virtual piano enabled');
         } catch (e) {
           debugPrint('❌ Virtual piano enable error: $e');
+          debugPrint('❌ [DEBUG] Stack trace: ${StackTrace.current}');
           _statusMessage = 'Virtual piano error: $e';
           _virtualPianoEnabled = false;
           _virtualPianoVisible = false;
         }
       } else {
         // Disable: Hide panel
+        debugPrint('🎹 [DEBUG] Hiding piano panel...');
         _virtualPianoVisible = false;
         _statusMessage = 'Virtual piano disabled';
         debugPrint('🎹 Virtual piano disabled');
       }
     });
+
+    debugPrint('🎹 [DEBUG] After setState - _virtualPianoVisible: $_virtualPianoVisible');
   }
 
   @override

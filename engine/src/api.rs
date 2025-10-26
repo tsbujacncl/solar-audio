@@ -1,6 +1,7 @@
 /// API functions exposed to Flutter via FFI
 use crate::audio_file::{load_audio_file, AudioClip};
-use crate::audio_graph::{AudioGraph, ClipId, TransportState};
+use crate::audio_graph::{AudioGraph, TransportState};
+use crate::track::ClipId;  // Import from track module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::collections::HashMap;
 use std::f32::consts::PI;
@@ -683,3 +684,735 @@ pub fn send_midi_note_off(note: u8, velocity: u8) -> Result<String, String> {
     Ok(format!("Note Off: {} (velocity: {})", note, velocity))
 }
 
+// ================================================================================
+// MIDI Clip Manipulation API (for Piano Roll)
+// ================================================================================
+
+/// Create a new empty MIDI clip
+pub fn create_midi_clip() -> Result<u64, String> {
+    use crate::midi::MidiClip;
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Create empty MIDI clip
+    let clip = MidiClip::new(crate::audio_file::TARGET_SAMPLE_RATE);
+    let clip_arc = Arc::new(clip);
+
+    // Add to timeline at position 0.0 (can be moved later)
+    let clip_id = graph.add_midi_clip(clip_arc, 0.0);
+
+    Ok(clip_id)
+}
+
+/// Add a MIDI note to a clip
+///
+/// # Arguments
+/// * `clip_id` - The MIDI clip ID
+/// * `note` - MIDI note number (0-127)
+/// * `velocity` - Note velocity (0-127)
+/// * `start_time` - Start time in seconds
+/// * `duration` - Duration in seconds
+pub fn add_midi_note_to_clip(
+    clip_id: u64,
+    note: u8,
+    velocity: u8,
+    start_time: f64,
+    duration: f64,
+) -> Result<String, String> {
+    use crate::midi::MidiEvent;
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Get the MIDI clip
+    let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+    let timeline_clip = midi_clips
+        .iter_mut()
+        .find(|c| c.id == clip_id)
+        .ok_or("MIDI clip not found")?;
+
+    // Get mutable reference to the clip data
+    // Note: We need to clone the Arc, get the data, modify it, and replace it
+    let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
+
+    // Convert time to samples
+    let start_samples = (start_time * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
+    let duration_samples = (duration * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
+
+    // Create note events
+    let note_on = MidiEvent::note_on(note, velocity, start_samples);
+    let note_off = MidiEvent::note_off(note, 64, start_samples + duration_samples);
+
+    // Add events to clip
+    clip_data.add_event(note_on);
+    clip_data.add_event(note_off);
+
+    Ok(format!("Added note {} at {:.3}s, duration {:.3}s", note, start_time, duration))
+}
+
+/// Get all MIDI events from a clip
+/// Returns: Vec<(event_type, note, velocity, timestamp_seconds)>
+/// event_type: 0 = NoteOn, 1 = NoteOff
+pub fn get_midi_clip_events(clip_id: u64) -> Result<Vec<(i32, u8, u8, f64)>, String> {
+    use crate::midi::MidiEventType;
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Get the MIDI clip
+    let midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+    let timeline_clip = midi_clips
+        .iter()
+        .find(|c| c.id == clip_id)
+        .ok_or("MIDI clip not found")?;
+
+    // Convert events to a format that can cross FFI
+    let events: Vec<(i32, u8, u8, f64)> = timeline_clip
+        .clip
+        .events
+        .iter()
+        .map(|event| {
+            let (event_type, note, velocity) = match event.event_type {
+                MidiEventType::NoteOn { note, velocity } => (0, note, velocity),
+                MidiEventType::NoteOff { note, velocity } => (1, note, velocity),
+            };
+            let timestamp_seconds = event.timestamp_samples as f64 / crate::audio_file::TARGET_SAMPLE_RATE as f64;
+            (event_type, note, velocity, timestamp_seconds)
+        })
+        .collect();
+
+    Ok(events)
+}
+
+/// Remove a MIDI event at the specified index
+pub fn remove_midi_event(clip_id: u64, event_index: usize) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Get the MIDI clip
+    let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+    let timeline_clip = midi_clips
+        .iter_mut()
+        .find(|c| c.id == clip_id)
+        .ok_or("MIDI clip not found")?;
+
+    // Get mutable reference to the clip data
+    let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
+
+    // Remove the event
+    clip_data.remove_event(event_index)
+        .ok_or("Event index out of bounds")?;
+
+    Ok(format!("Removed event at index {}", event_index))
+}
+
+/// Clear all MIDI events from a clip
+pub fn clear_midi_clip(clip_id: u64) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Get the MIDI clip
+    let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+    let timeline_clip = midi_clips
+        .iter_mut()
+        .find(|c| c.id == clip_id)
+        .ok_or("MIDI clip not found")?;
+
+    // Get mutable reference to the clip data
+    let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
+
+    // Clear all events
+    clip_data.clear();
+
+    Ok("Cleared all events".to_string())
+}
+
+/// Quantize a MIDI clip to the specified grid
+///
+/// # Arguments
+/// * `clip_id` - The MIDI clip ID
+/// * `grid_division` - Grid division (4 = quarter note, 8 = eighth note, 16 = sixteenth note, etc.)
+pub fn quantize_midi_clip(clip_id: u64, grid_division: u32) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Get the MIDI clip
+    let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+    let timeline_clip = midi_clips
+        .iter_mut()
+        .find(|c| c.id == clip_id)
+        .ok_or("MIDI clip not found")?;
+
+    // Calculate grid size in samples based on tempo (assume 120 BPM for now)
+    let tempo = 120.0;
+    let seconds_per_beat = 60.0 / tempo;
+    let samples_per_beat = (seconds_per_beat * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
+    let grid_samples = samples_per_beat / grid_division as u64;
+
+    // Get mutable reference to the clip data
+    let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
+
+    // Quantize the clip
+    clip_data.quantize(grid_samples);
+
+    Ok(format!("Quantized to 1/{} note grid", grid_division))
+}
+
+// ============================================================================
+// M4: TRACK & MIXING API
+// ============================================================================
+
+use crate::track::{TrackType, TrackId};
+
+/// Create a new track
+///
+/// # Arguments
+/// * `track_type_str` - Track type: "audio", "midi", "return", "group", "master"
+/// * `name` - Display name for the track
+///
+/// # Returns
+/// Track ID on success
+pub fn create_track(track_type_str: &str, name: String) -> Result<TrackId, String> {
+    let track_type = match track_type_str.to_lowercase().as_str() {
+        "audio" => TrackType::Audio,
+        "midi" => TrackType::Midi,
+        "return" => TrackType::Return,
+        "group" => TrackType::Group,
+        "master" => return Err("Cannot create additional master tracks".to_string()),
+        _ => return Err(format!("Unknown track type: {}", track_type_str)),
+    };
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let mut track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    let track_id = track_manager.create_track(track_type, name);
+    Ok(track_id)
+}
+
+/// Set track volume
+///
+/// # Arguments
+/// * `track_id` - Track ID
+/// * `volume_db` - Volume in dB (-96.0 to +6.0)
+pub fn set_track_volume(track_id: TrackId, volume_db: f32) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.volume_db = volume_db.clamp(-96.0, 6.0);
+        Ok(format!("Track {} volume set to {:.2} dB", track_id, track.volume_db))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+/// Set track pan
+///
+/// # Arguments
+/// * `track_id` - Track ID
+/// * `pan` - Pan position (-1.0 = left, 0.0 = center, +1.0 = right)
+pub fn set_track_pan(track_id: TrackId, pan: f32) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.pan = pan.clamp(-1.0, 1.0);
+        Ok(format!("Track {} pan set to {:.2}", track_id, track.pan))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+/// Set track mute state
+pub fn set_track_mute(track_id: TrackId, mute: bool) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.mute = mute;
+        Ok(format!("Track {} mute: {}", track_id, mute))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+/// Set track solo state
+pub fn set_track_solo(track_id: TrackId, solo: bool) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.solo = solo;
+        Ok(format!("Track {} solo: {}", track_id, solo))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+/// Get total number of tracks (including master)
+pub fn get_track_count() -> Result<usize, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    let count = track_manager.get_all_tracks().len();
+    Ok(count)
+}
+
+/// Get track info (for UI display)
+///
+/// Returns: "track_id,name,type,volume_db,pan,mute,solo"
+pub fn get_track_info(track_id: TrackId) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let track = track_arc.lock().map_err(|e| e.to_string())?;
+        let type_str = match track.track_type {
+            TrackType::Audio => "Audio",
+            TrackType::Midi => "MIDI",
+            TrackType::Return => "Return",
+            TrackType::Group => "Group",
+            TrackType::Master => "Master",
+        };
+        Ok(format!(
+            "{},{},{},{:.2},{:.2},{},{}",
+            track.id,
+            track.name,
+            type_str,
+            track.volume_db,
+            track.pan,
+            track.mute as u8,
+            track.solo as u8
+        ))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+/// Move an existing clip to a track
+///
+/// This migrates clips from the legacy global timeline to track-based system
+pub fn move_clip_to_track(track_id: TrackId, clip_id: ClipId) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    // Find the clip in the global timeline
+    let mut clips = graph.get_clips().lock().map_err(|e| e.to_string())?;
+    let clip_idx = clips.iter().position(|c| c.id == clip_id)
+        .ok_or(format!("Clip {} not found in global timeline", clip_id))?;
+
+    // Remove from global timeline
+    let timeline_clip = clips.remove(clip_idx);
+
+    // Add to track
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+
+        // Verify track type matches clip type
+        if track.track_type != TrackType::Audio && track.track_type != TrackType::Group {
+            clips.insert(clip_idx, timeline_clip); // Put it back
+            return Err(format!("Track {} is not an audio track", track_id));
+        }
+
+        track.audio_clips.push(timeline_clip);
+        Ok(format!("Moved clip {} to track {}", clip_id, track_id))
+    } else {
+        clips.insert(clip_idx, timeline_clip); // Put it back
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+// ============================================================================
+// M4: AUTOMATED TESTS
+// ============================================================================
+
+#[cfg(test)]
+mod m4_tests {
+    use super::*;
+
+    fn setup_test_graph() -> Result<(), String> {
+        // Initialize audio graph if not already initialized
+        let _ = init_audio_graph();
+        Ok(())
+    }
+
+    #[test]
+    fn test_track_creation_audio() {
+        setup_test_graph().unwrap();
+
+        let result = create_track("audio", "Test Audio Track".to_string());
+        assert!(result.is_ok(), "Failed to create audio track: {:?}", result);
+
+        let track_id = result.unwrap();
+        assert!(track_id >= 1, "Track ID should be >= 1 (master is 0)");
+
+        println!("✅ Created audio track with ID: {}", track_id);
+    }
+
+    #[test]
+    fn test_track_creation_midi() {
+        setup_test_graph().unwrap();
+
+        let result = create_track("midi", "Test MIDI Track".to_string());
+        assert!(result.is_ok(), "Failed to create MIDI track");
+
+        println!("✅ Created MIDI track with ID: {}", result.unwrap());
+    }
+
+    #[test]
+    fn test_track_creation_return() {
+        setup_test_graph().unwrap();
+
+        let result = create_track("return", "Test Return Track".to_string());
+        assert!(result.is_ok(), "Failed to create return track");
+
+        println!("✅ Created return track with ID: {}", result.unwrap());
+    }
+
+    #[test]
+    fn test_track_creation_invalid_type() {
+        setup_test_graph().unwrap();
+
+        let result = create_track("invalid_type", "Test".to_string());
+        assert!(result.is_err(), "Should reject invalid track type");
+        assert!(result.unwrap_err().contains("Unknown track type"));
+
+        println!("✅ Correctly rejected invalid track type");
+    }
+
+    #[test]
+    fn test_cannot_create_master_track() {
+        setup_test_graph().unwrap();
+
+        let result = create_track("master", "Another Master".to_string());
+        assert!(result.is_err(), "Should not allow creating additional master tracks");
+        assert!(result.unwrap_err().contains("Cannot create additional master tracks"));
+
+        println!("✅ Correctly prevented duplicate master track");
+    }
+
+    #[test]
+    fn test_track_count() {
+        setup_test_graph().unwrap();
+
+        let initial_count = get_track_count().unwrap();
+        assert!(initial_count >= 1, "Should have at least master track");
+
+        // Create a track
+        let _ = create_track("audio", "Count Test".to_string()).unwrap();
+
+        let new_count = get_track_count().unwrap();
+        assert_eq!(new_count, initial_count + 1, "Track count should increase by 1");
+
+        println!("✅ Track count: {} -> {} after creation", initial_count, new_count);
+    }
+
+    #[test]
+    fn test_set_track_volume() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Volume Test".to_string()).unwrap();
+
+        // Test various volume levels
+        let test_cases = vec![
+            (-6.0, "Set to -6 dB"),
+            (0.0, "Set to unity (0 dB)"),
+            (3.0, "Set to +3 dB"),
+            (-96.0, "Set to silent (-96 dB)"),
+            (6.0, "Set to max (+6 dB)"),
+        ];
+
+        for (volume_db, desc) in test_cases {
+            let result = set_track_volume(track_id, volume_db);
+            assert!(result.is_ok(), "{} failed: {:?}", desc, result);
+
+            // Verify the volume was set
+            let info = get_track_info(track_id).unwrap();
+            let parts: Vec<&str> = info.split(',').collect();
+            let stored_volume: f32 = parts[3].parse().unwrap();
+            assert!((stored_volume - volume_db).abs() < 0.01,
+                "{}: expected {}, got {}", desc, volume_db, stored_volume);
+        }
+
+        println!("✅ All volume levels set correctly");
+    }
+
+    #[test]
+    fn test_volume_clamping() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Clamp Test".to_string()).unwrap();
+
+        // Test out-of-range values (should clamp)
+        set_track_volume(track_id, 100.0).unwrap(); // Should clamp to +6
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let volume: f32 = parts[3].parse().unwrap();
+        assert!(volume <= 6.0, "Volume should clamp to max +6 dB, got {}", volume);
+
+        set_track_volume(track_id, -200.0).unwrap(); // Should clamp to -96
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let volume: f32 = parts[3].parse().unwrap();
+        assert!(volume >= -96.0, "Volume should clamp to min -96 dB, got {}", volume);
+
+        println!("✅ Volume clamping works correctly");
+    }
+
+    #[test]
+    fn test_set_track_pan() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Pan Test".to_string()).unwrap();
+
+        // Test various pan positions
+        let test_cases = vec![
+            (-1.0, "Full left"),
+            (0.0, "Center"),
+            (1.0, "Full right"),
+            (-0.5, "Half left"),
+            (0.5, "Half right"),
+        ];
+
+        for (pan, desc) in test_cases {
+            let result = set_track_pan(track_id, pan);
+            assert!(result.is_ok(), "{} failed: {:?}", desc, result);
+
+            // Verify the pan was set
+            let info = get_track_info(track_id).unwrap();
+            let parts: Vec<&str> = info.split(',').collect();
+            let stored_pan: f32 = parts[4].parse().unwrap();
+            assert!((stored_pan - pan).abs() < 0.01,
+                "{}: expected {}, got {}", desc, pan, stored_pan);
+        }
+
+        println!("✅ All pan positions set correctly");
+    }
+
+    #[test]
+    fn test_pan_clamping() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Pan Clamp Test".to_string()).unwrap();
+
+        // Test out-of-range values
+        set_track_pan(track_id, 5.0).unwrap(); // Should clamp to +1.0
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let pan: f32 = parts[4].parse().unwrap();
+        assert!(pan <= 1.0, "Pan should clamp to max +1.0, got {}", pan);
+
+        set_track_pan(track_id, -5.0).unwrap(); // Should clamp to -1.0
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let pan: f32 = parts[4].parse().unwrap();
+        assert!(pan >= -1.0, "Pan should clamp to min -1.0, got {}", pan);
+
+        println!("✅ Pan clamping works correctly");
+    }
+
+    #[test]
+    fn test_track_mute() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Mute Test".to_string()).unwrap();
+
+        // Test mute
+        set_track_mute(track_id, true).unwrap();
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let mute: u8 = parts[5].parse().unwrap();
+        assert_eq!(mute, 1, "Mute should be 1 when enabled");
+
+        // Test unmute
+        set_track_mute(track_id, false).unwrap();
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let mute: u8 = parts[5].parse().unwrap();
+        assert_eq!(mute, 0, "Mute should be 0 when disabled");
+
+        println!("✅ Mute/unmute works correctly");
+    }
+
+    #[test]
+    fn test_track_solo() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Solo Test".to_string()).unwrap();
+
+        // Test solo
+        set_track_solo(track_id, true).unwrap();
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let solo: u8 = parts[6].parse().unwrap();
+        assert_eq!(solo, 1, "Solo should be 1 when enabled");
+
+        // Test unsolo
+        set_track_solo(track_id, false).unwrap();
+        let info = get_track_info(track_id).unwrap();
+        let parts: Vec<&str> = info.split(',').collect();
+        let solo: u8 = parts[6].parse().unwrap();
+        assert_eq!(solo, 0, "Solo should be 0 when disabled");
+
+        println!("✅ Solo/unsolo works correctly");
+    }
+
+    #[test]
+    fn test_get_track_info_format() {
+        setup_test_graph().unwrap();
+
+        let track_id = create_track("audio", "Info Test".to_string()).unwrap();
+
+        let info = get_track_info(track_id).unwrap();
+        println!("Track info: {}", info);
+
+        // Parse CSV format: "id,name,type,volume_db,pan,mute,solo"
+        let parts: Vec<&str> = info.split(',').collect();
+        assert_eq!(parts.len(), 7, "Track info should have 7 fields");
+
+        // Verify each field
+        let id: u64 = parts[0].parse().expect("ID should be u64");
+        assert_eq!(id, track_id, "ID should match");
+
+        assert_eq!(parts[1], "Info Test", "Name should match");
+        assert_eq!(parts[2], "Audio", "Type should be Audio");
+
+        let volume: f32 = parts[3].parse().expect("Volume should be f32");
+        assert_eq!(volume, 0.0, "Default volume should be 0 dB");
+
+        let pan: f32 = parts[4].parse().expect("Pan should be f32");
+        assert_eq!(pan, 0.0, "Default pan should be 0.0 (center)");
+
+        let mute: u8 = parts[5].parse().expect("Mute should be u8");
+        assert_eq!(mute, 0, "Default mute should be 0");
+
+        let solo: u8 = parts[6].parse().expect("Solo should be u8");
+        assert_eq!(solo, 0, "Default solo should be 0");
+
+        println!("✅ Track info format is correct");
+    }
+
+    #[test]
+    fn test_master_track_info() {
+        setup_test_graph().unwrap();
+
+        let info = get_track_info(0).unwrap(); // Master track is always ID 0
+        println!("Master track info: {}", info);
+
+        let parts: Vec<&str> = info.split(',').collect();
+        assert_eq!(parts[0], "0", "Master track ID should be 0");
+        assert_eq!(parts[1], "Master", "Master track name should be 'Master'");
+        assert_eq!(parts[2], "Master", "Master track type should be 'Master'");
+
+        println!("✅ Master track info is correct");
+    }
+
+    #[test]
+    fn test_invalid_track_operations() {
+        setup_test_graph().unwrap();
+
+        let invalid_id = 9999u64;
+
+        // All operations on invalid track should return errors
+        assert!(get_track_info(invalid_id).is_err(), "get_track_info should fail");
+        assert!(set_track_volume(invalid_id, 0.0).is_err(), "set_track_volume should fail");
+        assert!(set_track_pan(invalid_id, 0.0).is_err(), "set_track_pan should fail");
+        assert!(set_track_mute(invalid_id, true).is_err(), "set_track_mute should fail");
+        assert!(set_track_solo(invalid_id, true).is_err(), "set_track_solo should fail");
+
+        println!("✅ All operations correctly reject invalid track ID");
+    }
+
+    #[test]
+    fn test_multiple_tracks_independence() {
+        setup_test_graph().unwrap();
+
+        // Create multiple tracks
+        let track1 = create_track("audio", "Track 1".to_string()).unwrap();
+        let track2 = create_track("audio", "Track 2".to_string()).unwrap();
+        let track3 = create_track("audio", "Track 3".to_string()).unwrap();
+
+        // Set different values
+        set_track_volume(track1, -6.0).unwrap();
+        set_track_volume(track2, 0.0).unwrap();
+        set_track_volume(track3, 3.0).unwrap();
+
+        set_track_pan(track1, -1.0).unwrap();
+        set_track_pan(track2, 0.0).unwrap();
+        set_track_pan(track3, 1.0).unwrap();
+
+        set_track_mute(track1, true).unwrap();
+        set_track_solo(track3, true).unwrap();
+
+        // Verify each track has independent state
+        let info1 = get_track_info(track1).unwrap();
+        let parts1: Vec<&str> = info1.split(',').collect();
+        assert_eq!(parts1[3], "-6.00", "Track 1 volume");
+        assert_eq!(parts1[4], "-1.00", "Track 1 pan");
+        assert_eq!(parts1[5], "1", "Track 1 mute");
+        assert_eq!(parts1[6], "0", "Track 1 solo");
+
+        let info2 = get_track_info(track2).unwrap();
+        let parts2: Vec<&str> = info2.split(',').collect();
+        assert_eq!(parts2[3], "0.00", "Track 2 volume");
+        assert_eq!(parts2[4], "0.00", "Track 2 pan");
+        assert_eq!(parts2[5], "0", "Track 2 mute");
+        assert_eq!(parts2[6], "0", "Track 2 solo");
+
+        let info3 = get_track_info(track3).unwrap();
+        let parts3: Vec<&str> = info3.split(',').collect();
+        assert_eq!(parts3[3], "3.00", "Track 3 volume");
+        assert_eq!(parts3[4], "1.00", "Track 3 pan");
+        assert_eq!(parts3[5], "0", "Track 3 mute");
+        assert_eq!(parts3[6], "1", "Track 3 solo");
+
+        println!("✅ Multiple tracks maintain independent state");
+    }
+
+    #[test]
+    fn test_track_type_names() {
+        setup_test_graph().unwrap();
+
+        let audio = create_track("audio", "A".to_string()).unwrap();
+        let midi = create_track("midi", "M".to_string()).unwrap();
+        let return_track = create_track("return", "R".to_string()).unwrap();
+
+        let audio_info = get_track_info(audio).unwrap();
+        assert!(audio_info.contains("Audio"), "Audio track should have 'Audio' type");
+
+        let midi_info = get_track_info(midi).unwrap();
+        assert!(midi_info.contains("MIDI"), "MIDI track should have 'MIDI' type");
+
+        let return_info = get_track_info(return_track).unwrap();
+        assert!(return_info.contains("Return"), "Return track should have 'Return' type");
+
+        println!("✅ Track type names are correct");
+    }
+}

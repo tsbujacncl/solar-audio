@@ -6,34 +6,11 @@ use crate::midi::MidiClip;
 use crate::midi_input::MidiInputManager;
 use crate::midi_recorder::MidiRecorder;
 use crate::synth::Synthesizer;
+use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackManager};  // Import from track module
+use crate::effects::{Effect, EffectManager, Limiter};  // Import from effects module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-
-/// Unique identifier for clips (both audio and MIDI)
-pub type ClipId = u64;
-
-/// Represents an audio clip placed on the timeline
-#[derive(Clone)]
-pub struct TimelineClip {
-    pub id: ClipId,
-    pub clip: Arc<AudioClip>,
-    /// Position on timeline in seconds
-    pub start_time: f64,
-    /// Offset into the clip in seconds (for trimming start)
-    pub offset: f64,
-    /// Duration to play (None = play entire clip)
-    pub duration: Option<f64>,
-}
-
-/// Represents a MIDI clip placed on the timeline
-#[derive(Clone)]
-pub struct TimelineMidiClip {
-    pub id: ClipId,
-    pub clip: Arc<MidiClip>,
-    /// Position on timeline in seconds
-    pub start_time: f64,
-}
 
 /// Transport state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,9 +22,9 @@ pub enum TransportState {
 
 /// The main audio graph that manages playback
 pub struct AudioGraph {
-    /// All audio clips on the timeline
+    /// All audio clips on the timeline (legacy - will migrate to tracks)
     clips: Arc<Mutex<Vec<TimelineClip>>>,
-    /// All MIDI clips on the timeline
+    /// All MIDI clips on the timeline (legacy - will migrate to tracks)
     midi_clips: Arc<Mutex<Vec<TimelineMidiClip>>>,
     /// Current playhead position in samples
     playhead_samples: Arc<AtomicU64>,
@@ -67,6 +44,14 @@ pub struct AudioGraph {
     pub midi_recorder: Arc<Mutex<MidiRecorder>>,
     /// Built-in synthesizer
     pub synthesizer: Arc<Mutex<Synthesizer>>,
+
+    // --- M4: Mixing & Effects ---
+    /// Track manager (handles all tracks)
+    pub track_manager: Arc<Mutex<TrackManager>>,
+    /// Effect manager (handles all effect instances)
+    pub effect_manager: Arc<Mutex<EffectManager>>,
+    /// Master limiter (prevents clipping)
+    pub master_limiter: Arc<Mutex<Limiter>>,
 }
 
 // SAFETY: AudioGraph is only accessed through a Mutex in the API layer,
@@ -88,6 +73,13 @@ impl AudioGraph {
         let playhead_samples = Arc::new(AtomicU64::new(0));
         let midi_recorder = MidiRecorder::new(playhead_samples.clone());
 
+        // Create M4 managers
+        let track_manager = TrackManager::new(); // Creates with master track
+        let effect_manager = EffectManager::new();
+        let master_limiter = Limiter::new();
+
+        eprintln!("🎚️ [AudioGraph] M4 initialized: TrackManager, EffectManager, Master Limiter");
+
         Ok(Self {
             clips: Arc::new(Mutex::new(Vec::new())),
             midi_clips: Arc::new(Mutex::new(Vec::new())),
@@ -100,6 +92,9 @@ impl AudioGraph {
             midi_input_manager: Arc::new(Mutex::new(midi_input_manager)),
             midi_recorder: Arc::new(Mutex::new(midi_recorder)),
             synthesizer: Arc::new(Mutex::new(Synthesizer::new())),
+            track_manager: Arc::new(Mutex::new(track_manager)),
+            effect_manager: Arc::new(Mutex::new(effect_manager)),
+            master_limiter: Arc::new(Mutex::new(master_limiter)),
         })
     }
 
@@ -249,7 +244,7 @@ impl AudioGraph {
             .ok_or_else(|| anyhow::anyhow!("No output device available"))?;
 
         let config = device.default_output_config()?;
-        
+
         // Clone Arcs for the audio callback
         let clips = self.clips.clone();
         let midi_clips = self.midi_clips.clone();
@@ -258,6 +253,10 @@ impl AudioGraph {
         let input_manager = self.input_manager.clone();
         let recorder_refs = self.recorder.get_callback_refs();
         let synthesizer = self.synthesizer.clone();
+
+        // M4: Clone track and effect managers
+        let track_manager = self.track_manager.clone();
+        let master_limiter = self.master_limiter.clone();
 
         let stream = device.build_output_stream(
             &config.into(),
@@ -452,13 +451,17 @@ impl AudioGraph {
                     left += met_left;
                     right += met_right;
 
-                    // Clamp to prevent clipping
-                    left = left.clamp(-1.0, 1.0);
-                    right = right.clamp(-1.0, 1.0);
+                    // M4: Apply master limiter to prevent clipping (instead of hard clamp)
+                    let (limited_left, limited_right) = if let Ok(mut limiter) = master_limiter.lock() {
+                        limiter.process_frame(left, right)
+                    } else {
+                        // Fallback to clamp if limiter is locked
+                        (left.clamp(-1.0, 1.0), right.clamp(-1.0, 1.0))
+                    };
 
                     // Write to output buffer (interleaved stereo)
-                    data[frame_idx * 2] = left;
-                    data[frame_idx * 2 + 1] = right;
+                    data[frame_idx * 2] = limited_left;
+                    data[frame_idx * 2 + 1] = limited_right;
                 }
 
                 // Advance playhead
@@ -481,6 +484,16 @@ impl AudioGraph {
     /// Get number of MIDI clips
     pub fn midi_clip_count(&self) -> usize {
         self.midi_clips.lock().unwrap().len()
+    }
+
+    /// Get access to audio clips (for editing in API)
+    pub fn get_clips(&self) -> &Arc<Mutex<Vec<TimelineClip>>> {
+        &self.clips
+    }
+
+    /// Get access to MIDI clips (for editing in API)
+    pub fn get_midi_clips(&self) -> &Arc<Mutex<Vec<TimelineMidiClip>>> {
+        &self.midi_clips
     }
 
     /// Get total number of clips (audio + MIDI)

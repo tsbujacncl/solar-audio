@@ -218,6 +218,7 @@ fn parse_midi_message(message: &[u8], timestamp: u64) -> Option<MidiEvent> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::midi::MidiEventType;
 
     #[test]
     fn test_midi_manager_creation() {

@@ -1,6 +1,6 @@
 /// Simple C-compatible FFI layer for M0
 /// This will be replaced with flutter_rust_bridge in M1
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use crate::api;
 
@@ -305,6 +305,179 @@ pub extern "C" fn send_midi_note_on_ffi(note: u8, velocity: u8) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn send_midi_note_off_ffi(note: u8, velocity: u8) -> *mut c_char {
     match api::send_midi_note_off(note, velocity) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+// ============================================================================
+// MIDI Recording and Clip Manipulation FFI
+// ============================================================================
+
+/// Start MIDI recording
+#[no_mangle]
+pub extern "C" fn start_midi_recording_ffi() -> *mut c_char {
+    match api::start_midi_recording() {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Stop MIDI recording and return the clip ID (-1 if no events recorded)
+#[no_mangle]
+pub extern "C" fn stop_midi_recording_ffi() -> i64 {
+    match api::stop_midi_recording() {
+        Ok(Some(clip_id)) => clip_id as i64,
+        Ok(None) => -1,
+        Err(_) => -1,
+    }
+}
+
+/// Get MIDI recording state (0 = Idle, 1 = Recording)
+#[no_mangle]
+pub extern "C" fn get_midi_recording_state_ffi() -> i32 {
+    match api::get_midi_recording_state() {
+        Ok(state) => state,
+        Err(_) => -1,
+    }
+}
+
+/// Create a new empty MIDI clip
+#[no_mangle]
+pub extern "C" fn create_midi_clip_ffi() -> i64 {
+    match api::create_midi_clip() {
+        Ok(clip_id) => clip_id as i64,
+        Err(_) => -1,
+    }
+}
+
+/// Add a MIDI note to a clip
+#[no_mangle]
+pub extern "C" fn add_midi_note_to_clip_ffi(
+    clip_id: u64,
+    note: u8,
+    velocity: u8,
+    start_time: f64,
+    duration: f64,
+) -> *mut c_char {
+    match api::add_midi_note_to_clip(clip_id, note, velocity, start_time, duration) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Quantize a MIDI clip
+#[no_mangle]
+pub extern "C" fn quantize_midi_clip_ffi(clip_id: u64, grid_division: u32) -> *mut c_char {
+    match api::quantize_midi_clip(clip_id, grid_division) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get MIDI clip count
+#[no_mangle]
+pub extern "C" fn get_midi_clip_count_ffi() -> usize {
+    api::get_midi_clip_count().unwrap_or(0)
+}
+
+// ============================================================================
+// M4: TRACK & MIXING FFI
+// ============================================================================
+
+/// Create a new track
+///
+/// # Arguments
+/// * `track_type` - Track type: "audio", "midi", "return", "group"
+/// * `name` - Display name for the track
+///
+/// # Returns
+/// Track ID on success, or -1 on error
+#[no_mangle]
+pub extern "C" fn create_track_ffi(
+    track_type: *const c_char,
+    name: *const c_char,
+) -> i64 {
+    let track_type_str = unsafe {
+        match CStr::from_ptr(track_type).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        }
+    };
+    let name_str = unsafe {
+        match CStr::from_ptr(name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return -1,
+        }
+    };
+
+    match api::create_track(track_type_str, name_str) {
+        Ok(id) => id as i64,
+        Err(e) => {
+            eprintln!("❌ [FFI] create_track error: {}", e);
+            -1
+        }
+    }
+}
+
+/// Set track volume
+#[no_mangle]
+pub extern "C" fn set_track_volume_ffi(track_id: u64, volume_db: f32) -> *mut c_char {
+    match api::set_track_volume(track_id, volume_db) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set track pan
+#[no_mangle]
+pub extern "C" fn set_track_pan_ffi(track_id: u64, pan: f32) -> *mut c_char {
+    match api::set_track_pan(track_id, pan) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set track mute
+#[no_mangle]
+pub extern "C" fn set_track_mute_ffi(track_id: u64, mute: bool) -> *mut c_char {
+    match api::set_track_mute(track_id, mute) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set track solo
+#[no_mangle]
+pub extern "C" fn set_track_solo_ffi(track_id: u64, solo: bool) -> *mut c_char {
+    match api::set_track_solo(track_id, solo) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get track count
+#[no_mangle]
+pub extern "C" fn get_track_count_ffi() -> usize {
+    api::get_track_count().unwrap_or(0)
+}
+
+/// Get track info (CSV format)
+///
+/// Returns: "track_id,name,type,volume_db,pan,mute,solo"
+/// Caller must free the returned string
+#[no_mangle]
+pub extern "C" fn get_track_info_ffi(track_id: u64) -> *mut c_char {
+    match api::get_track_info(track_id) {
+        Ok(info) => CString::new(info).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Move clip to track
+#[no_mangle]
+pub extern "C" fn move_clip_to_track_ffi(track_id: u64, clip_id: u64) -> *mut c_char {
+    match api::move_clip_to_track(track_id, clip_id) {
         Ok(msg) => CString::new(msg).unwrap().into_raw(),
         Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
     }

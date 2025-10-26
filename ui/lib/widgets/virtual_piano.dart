@@ -109,9 +109,20 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
   // Focus node for keyboard input
   final FocusNode _focusNode = FocusNode();
 
+  // Track focus state for visual indicator
+  bool _hasFocus = false;
+
   @override
   void initState() {
     super.initState();
+
+    // Listen to focus changes
+    _focusNode.addListener(() {
+      setState(() {
+        _hasFocus = _focusNode.hasFocus;
+      });
+      print('🎹 [VirtualPiano] Focus changed: $_hasFocus');
+    });
 
     // Setup slide animation
     _animationController = AnimationController(
@@ -127,10 +138,23 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
     // Start animation
     _animationController.forward();
 
-    // Request focus when enabled
+    // Request focus when enabled - use multiple attempts to ensure focus
     if (widget.isEnabled) {
+      // Immediate request
+      _focusNode.requestFocus();
+
+      // Post-frame request
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _focusNode.requestFocus();
+        print('🎹 [VirtualPiano] Focus requested in initState');
+      });
+
+      // Delayed request after animation
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) {
+          _focusNode.requestFocus();
+          print('🎹 [VirtualPiano] Focus requested after animation');
+        }
       });
     }
   }
@@ -142,6 +166,14 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
     // Request focus when enabled
     if (widget.isEnabled && !oldWidget.isEnabled) {
       _focusNode.requestFocus();
+      print('🎹 [VirtualPiano] Focus requested in didUpdateWidget');
+
+      // Also request after a delay to ensure it sticks
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _focusNode.requestFocus();
+        }
+      });
     }
   }
 
@@ -229,38 +261,55 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
         begin: const Offset(0, 1),
         end: Offset.zero,
       ).animate(_slideAnimation),
-      child: Focus(
-        focusNode: _focusNode,
-        autofocus: widget.isEnabled,
-        onKeyEvent: (node, event) {
-          _onKeyEvent(event);
-          return KeyEventResult.handled;
+      child: GestureDetector(
+        onTap: () {
+          // Request focus when piano is tapped
+          _focusNode.requestFocus();
+          print('🎹 [VirtualPiano] Focus requested');
         },
-        child: Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2B2B2B),
-            border: Border(
-              top: BorderSide(color: Colors.grey[800]!),
+        child: Focus(
+          focusNode: _focusNode,
+          autofocus: widget.isEnabled,
+          onKeyEvent: (node, event) {
+            print('🎹 [VirtualPiano] Key event: ${event.logicalKey}');
+            _onKeyEvent(event);
+            return KeyEventResult.handled;
+          },
+          child: Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2B2B2B),
+              border: Border(
+                top: BorderSide(
+                  color: _hasFocus ? const Color(0xFF4CAF50) : Colors.grey[800]!,
+                  width: _hasFocus ? 3 : 1,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+                if (_hasFocus)
+                  BoxShadow(
+                    color: const Color(0xFF4CAF50).withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Header with controls
-              _buildHeader(),
+            child: Column(
+              children: [
+                // Header with controls
+                _buildHeader(),
 
-              // Piano keyboard
-              Expanded(
-                child: _buildKeyboard(),
-              ),
-            ],
+                // Piano keyboard
+                Expanded(
+                  child: _buildKeyboard(),
+                ),
+              ],
+            ),
           ),
         ),
       ),

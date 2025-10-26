@@ -9,6 +9,8 @@ mod midi;
 mod midi_input;
 mod midi_recorder;
 mod synth;
+mod track;      // M4: Track system
+mod effects;    // M4: Audio effects
 
 // Re-export API functions
 pub use api::*;
@@ -20,6 +22,8 @@ pub use midi::*;
 pub use midi_input::*;
 pub use midi_recorder::*;
 pub use synth::*;
+pub use track::*;
+pub use effects::*;
 // FFI exports are handled by #[no_mangle] in ffi.rs
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
