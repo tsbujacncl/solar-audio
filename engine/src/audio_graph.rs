@@ -500,6 +500,314 @@ impl AudioGraph {
     pub fn total_clip_count(&self) -> usize {
         self.clip_count() + self.midi_clip_count()
     }
+
+    // ========================================================================
+    // M5: SAVE & LOAD PROJECT
+    // ========================================================================
+
+    /// Export current state to ProjectData (for saving)
+    pub fn export_to_project_data(&self, project_name: String) -> crate::project::ProjectData {
+        use crate::project::*;
+        use crate::effects::EffectType as ET;
+        use std::collections::HashMap;
+
+        eprintln!("📦 [AudioGraph] Exporting project data...");
+
+        // Get all tracks
+        let track_manager = self.track_manager.lock().unwrap();
+        let effect_manager = self.effect_manager.lock().unwrap();
+
+        let all_tracks = track_manager.get_all_tracks();
+        let tracks_data: Vec<TrackData> = all_tracks.iter().map(|track_arc| {
+            let track = track_arc.lock().unwrap();
+
+            // Get effect chain for this track
+            let fx_chain: Vec<EffectData> = track.fx_chain.iter().filter_map(|effect_id| {
+                // Get effect from effect manager
+                if let Some(effect_arc) = effect_manager.get_effect(*effect_id) {
+                    let effect = effect_arc.lock().unwrap();
+                    let mut parameters = HashMap::new();
+                    let effect_type_str;
+
+                    // Get parameters based on effect type
+                    match &*effect {
+                        ET::EQ(eq) => {
+                            effect_type_str = "eq".to_string();
+                            parameters.insert("low_freq".to_string(), eq.low_freq);
+                            parameters.insert("low_gain_db".to_string(), eq.low_gain_db);
+                            parameters.insert("mid1_freq".to_string(), eq.mid1_freq);
+                            parameters.insert("mid1_gain_db".to_string(), eq.mid1_gain_db);
+                            parameters.insert("mid1_q".to_string(), eq.mid1_q);
+                            parameters.insert("mid2_freq".to_string(), eq.mid2_freq);
+                            parameters.insert("mid2_gain_db".to_string(), eq.mid2_gain_db);
+                            parameters.insert("mid2_q".to_string(), eq.mid2_q);
+                            parameters.insert("high_freq".to_string(), eq.high_freq);
+                            parameters.insert("high_gain_db".to_string(), eq.high_gain_db);
+                        }
+                        ET::Compressor(comp) => {
+                            effect_type_str = "compressor".to_string();
+                            parameters.insert("threshold_db".to_string(), comp.threshold_db);
+                            parameters.insert("ratio".to_string(), comp.ratio);
+                            parameters.insert("attack_ms".to_string(), comp.attack_ms);
+                            parameters.insert("release_ms".to_string(), comp.release_ms);
+                            parameters.insert("makeup_gain_db".to_string(), comp.makeup_gain_db);
+                        }
+                        ET::Reverb(rev) => {
+                            effect_type_str = "reverb".to_string();
+                            parameters.insert("room_size".to_string(), rev.room_size);
+                            parameters.insert("damping".to_string(), rev.damping);
+                            parameters.insert("wet_dry_mix".to_string(), rev.wet_dry_mix);
+                        }
+                        ET::Delay(dly) => {
+                            effect_type_str = "delay".to_string();
+                            parameters.insert("delay_time_ms".to_string(), dly.delay_time_ms);
+                            parameters.insert("feedback".to_string(), dly.feedback);
+                            parameters.insert("wet_dry_mix".to_string(), dly.wet_dry_mix);
+                        }
+                        ET::Chorus(chr) => {
+                            effect_type_str = "chorus".to_string();
+                            parameters.insert("rate_hz".to_string(), chr.rate_hz);
+                            parameters.insert("depth".to_string(), chr.depth);
+                            parameters.insert("wet_dry_mix".to_string(), chr.wet_dry_mix);
+                        }
+                        ET::Limiter(_) => {
+                            effect_type_str = "limiter".to_string();
+                            // Limiter has no user-adjustable parameters
+                        }
+                    }
+
+                    Some(EffectData {
+                        id: *effect_id,
+                        effect_type: effect_type_str,
+                        parameters,
+                    })
+                } else {
+                    None
+                }
+            }).collect();
+
+            // Get clips on this track
+            let clips_data: Vec<ClipData> = track.audio_clips.iter().map(|timeline_clip| {
+                ClipData {
+                    id: timeline_clip.id,
+                    start_time: timeline_clip.start_time,
+                    offset: timeline_clip.offset,
+                    duration: timeline_clip.duration,
+                    audio_file_id: Some(timeline_clip.id), // Simplified: use clip ID as file ID
+                    midi_notes: None,
+                }
+            }).collect();
+            // TODO: Add MIDI clip serialization
+            // MIDI clips use Note On/Note Off events, need to pair them into notes with duration
+
+            TrackData {
+                id: track.id,
+                name: track.name.clone(),
+                track_type: format!("{:?}", track.track_type), // "Audio", "MIDI", etc.
+                volume_db: track.volume_db,
+                pan: track.pan,
+                mute: track.mute,
+                solo: track.solo,
+                armed: track.armed,
+                clips: clips_data,
+                fx_chain,
+            }
+        }).collect();
+
+        // Collect audio files (simplified - get from global timeline for now)
+        let clips_lock = self.clips.lock().unwrap();
+        let audio_files: Vec<AudioFileData> = clips_lock.iter().enumerate().map(|(idx, timeline_clip)| {
+            AudioFileData {
+                id: timeline_clip.id,
+                original_name: timeline_clip.clip.file_path.clone(),
+                relative_path: format!("audio/{:03}-{}", timeline_clip.id, timeline_clip.clip.file_path),
+                duration: timeline_clip.clip.duration_seconds,
+                sample_rate: timeline_clip.clip.sample_rate,
+                channels: timeline_clip.clip.channels as u32,
+            }
+        }).collect();
+
+        eprintln!("   - {} tracks", tracks_data.len());
+        eprintln!("   - {} audio files", audio_files.len());
+
+        ProjectData {
+            version: "1.0".to_string(),
+            name: project_name,
+            tempo: 120.0, // TODO: Get from actual tempo setting
+            sample_rate: TARGET_SAMPLE_RATE,
+            time_sig_numerator: 4,
+            time_sig_denominator: 4,
+            tracks: tracks_data,
+            audio_files,
+        }
+    }
+
+    /// Restore state from ProjectData (for loading)
+    pub fn restore_from_project_data(&mut self, project_data: crate::project::ProjectData) -> anyhow::Result<()> {
+        use crate::project::*;
+        use crate::effects::*;
+        use crate::track::TrackType;
+
+        eprintln!("📥 [AudioGraph] Restoring project data: {}", project_data.name);
+
+        // Stop playback
+        let _ = self.stop();
+
+        // Clear existing tracks (except master will be kept and updated)
+        {
+            let mut track_manager = self.track_manager.lock().unwrap();
+            let mut effect_manager = self.effect_manager.lock().unwrap();
+
+            // Get all track IDs except master (ID 0)
+            let all_tracks = track_manager.get_all_tracks();
+            let track_ids_to_remove: Vec<u64> = all_tracks.iter()
+                .filter_map(|track_arc| {
+                    let track = track_arc.lock().unwrap();
+                    if track.id != 0 { Some(track.id) } else { None }
+                })
+                .collect();
+
+            // Remove non-master tracks
+            for track_id in track_ids_to_remove {
+                track_manager.remove_track(track_id);
+            }
+
+            eprintln!("   - Cleared existing tracks");
+        }
+
+        // Restore tempo (via recorder)
+        self.recorder.set_tempo(project_data.tempo);
+        eprintln!("   - Tempo: {} BPM", project_data.tempo);
+
+        // Recreate tracks and effects
+        for track_data in project_data.tracks {
+            let track_manager = self.track_manager.lock().unwrap();
+            let mut effect_manager = self.effect_manager.lock().unwrap();
+
+            // Parse track type
+            let track_type = match track_data.track_type.as_str() {
+                "Audio" => TrackType::Audio,
+                "Midi" => TrackType::Midi,
+                "Return" => TrackType::Return,
+                "Group" => TrackType::Group,
+                "Master" => TrackType::Master,
+                _ => {
+                    eprintln!("⚠️  Unknown track type: {}, defaulting to Audio", track_data.track_type);
+                    TrackType::Audio
+                }
+            };
+
+            // Handle master track specially (update existing)
+            if track_type == TrackType::Master {
+                if let Some(master_track_arc) = track_manager.get_track(0) {
+                    let mut master = master_track_arc.lock().unwrap();
+                    master.volume_db = track_data.volume_db;
+                    master.pan = track_data.pan;
+                    master.mute = track_data.mute;
+                    master.solo = track_data.solo;
+                    eprintln!("   - Updated Master track");
+                }
+                continue;
+            }
+
+            // Create new track
+            drop(track_manager); // Release lock before creating track
+            let track_id = {
+                let mut tm = self.track_manager.lock().unwrap();
+                tm.create_track(track_type, track_data.name.clone())
+            };
+
+            // Update track properties
+            {
+                let tm = self.track_manager.lock().unwrap();
+                if let Some(track_arc) = tm.get_track(track_id) {
+                    let mut track = track_arc.lock().unwrap();
+                    track.volume_db = track_data.volume_db;
+                    track.pan = track_data.pan;
+                    track.mute = track_data.mute;
+                    track.solo = track_data.solo;
+                    track.armed = track_data.armed;
+                }
+            }
+
+            // Recreate effects on this track
+            for effect_data in &track_data.fx_chain {
+                let effect = match effect_data.effect_type.as_str() {
+                    "eq" => {
+                        let mut eq = ParametricEQ::new();
+                        if let Some(&v) = effect_data.parameters.get("low_freq") { eq.low_freq = v; }
+                        if let Some(&v) = effect_data.parameters.get("low_gain_db") { eq.low_gain_db = v; }
+                        if let Some(&v) = effect_data.parameters.get("mid1_freq") { eq.mid1_freq = v; }
+                        if let Some(&v) = effect_data.parameters.get("mid1_gain_db") { eq.mid1_gain_db = v; }
+                        if let Some(&v) = effect_data.parameters.get("mid1_q") { eq.mid1_q = v; }
+                        if let Some(&v) = effect_data.parameters.get("mid2_freq") { eq.mid2_freq = v; }
+                        if let Some(&v) = effect_data.parameters.get("mid2_gain_db") { eq.mid2_gain_db = v; }
+                        if let Some(&v) = effect_data.parameters.get("mid2_q") { eq.mid2_q = v; }
+                        if let Some(&v) = effect_data.parameters.get("high_freq") { eq.high_freq = v; }
+                        if let Some(&v) = effect_data.parameters.get("high_gain_db") { eq.high_gain_db = v; }
+                        eq.update_coefficients();
+                        EffectType::EQ(eq)
+                    }
+                    "compressor" => {
+                        let mut comp = Compressor::new();
+                        if let Some(&v) = effect_data.parameters.get("threshold_db") { comp.threshold_db = v; }
+                        if let Some(&v) = effect_data.parameters.get("ratio") { comp.ratio = v; }
+                        if let Some(&v) = effect_data.parameters.get("attack_ms") { comp.attack_ms = v; }
+                        if let Some(&v) = effect_data.parameters.get("release_ms") { comp.release_ms = v; }
+                        if let Some(&v) = effect_data.parameters.get("makeup_gain_db") { comp.makeup_gain_db = v; }
+                        comp.update_coefficients();
+                        EffectType::Compressor(comp)
+                    }
+                    "reverb" => {
+                        let mut rev = Reverb::new();
+                        if let Some(&v) = effect_data.parameters.get("room_size") { rev.room_size = v; }
+                        if let Some(&v) = effect_data.parameters.get("damping") { rev.damping = v; }
+                        if let Some(&v) = effect_data.parameters.get("wet_dry_mix") { rev.wet_dry_mix = v; }
+                        EffectType::Reverb(rev)
+                    }
+                    "delay" => {
+                        let mut dly = Delay::new();
+                        if let Some(&v) = effect_data.parameters.get("delay_time_ms") { dly.delay_time_ms = v; }
+                        if let Some(&v) = effect_data.parameters.get("feedback") { dly.feedback = v; }
+                        if let Some(&v) = effect_data.parameters.get("wet_dry_mix") { dly.wet_dry_mix = v; }
+                        EffectType::Delay(dly)
+                    }
+                    "chorus" => {
+                        let mut chr = Chorus::new();
+                        if let Some(&v) = effect_data.parameters.get("rate_hz") { chr.rate_hz = v; }
+                        if let Some(&v) = effect_data.parameters.get("depth") { chr.depth = v; }
+                        if let Some(&v) = effect_data.parameters.get("wet_dry_mix") { chr.wet_dry_mix = v; }
+                        EffectType::Chorus(chr)
+                    }
+                    "limiter" => EffectType::Limiter(Limiter::new()),
+                    _ => {
+                        eprintln!("⚠️  Unknown effect type: {}", effect_data.effect_type);
+                        continue;
+                    }
+                };
+
+                // Add effect to effect manager
+                let effect_id = effect_manager.create_effect(effect);
+
+                // Add to track's FX chain
+                let tm = self.track_manager.lock().unwrap();
+                if let Some(track_arc) = tm.get_track(track_id) {
+                    let mut track = track_arc.lock().unwrap();
+                    track.fx_chain.push(effect_id);
+                }
+            }
+
+            eprintln!("   - Created track '{}' (type: {:?}, {} effects)",
+                track_data.name, track_type, track_data.fx_chain.len());
+        }
+
+        // TODO: Restore clips to tracks
+        // This is deferred because we need access to the loaded AudioClip objects
+        // which are handled in the API layer
+
+        eprintln!("✅ [AudioGraph] Project data restored");
+        Ok(())
+    }
 }
 
 #[cfg(test)]

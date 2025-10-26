@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
@@ -43,6 +44,10 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M4: Mixer state
   bool _mixerVisible = false;
+
+  // M5: Project state
+  String? _currentProjectPath;
+  String _currentProjectName = 'Untitled Project';
 
   @override
   void initState() {
@@ -448,6 +453,238 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
+  // M5: Project file methods
+  void _newProject() {
+    // Show confirmation dialog if current project has unsaved changes
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New Project'),
+        content: const Text('Create a new project? Any unsaved changes will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _currentProjectPath = null;
+                _currentProjectName = 'Untitled Project';
+                _loadedClipId = null;
+                _waveformPeaks = [];
+                _statusMessage = 'New project created';
+              });
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openProject() async {
+    try {
+      // Use macOS native file picker
+      final result = await Process.run('osascript', [
+        '-e',
+        'POSIX path of (choose folder with prompt "Select Solar Audio Project (.solar folder)")'
+      ]);
+
+      if (result.exitCode == 0) {
+        var path = result.stdout.toString().trim();
+        // Remove trailing slash if present
+        if (path.endsWith('/')) {
+          path = path.substring(0, path.length - 1);
+        }
+
+        debugPrint('📂 Selected path: $path');
+
+        if (path.isEmpty) {
+          debugPrint('❌ Path is empty');
+          return;
+        }
+
+        if (!path.endsWith('.solar')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please select a .solar folder')),
+          );
+          return;
+        }
+
+        setState(() => _isLoading = true);
+
+        try {
+          final loadResult = _audioEngine!.loadProject(path);
+          setState(() {
+            _currentProjectPath = path;
+            _currentProjectName = path.split('/').last.replaceAll('.solar', '');
+            _statusMessage = 'Project loaded: $_currentProjectName';
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loadResult)),
+          );
+        } catch (e) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load project: $e')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Open project failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to open project: $e')),
+      );
+    }
+  }
+
+  void _saveProject() {
+    if (_currentProjectPath != null) {
+      _saveProjectToPath(_currentProjectPath!);
+    } else {
+      _saveProjectAs();
+    }
+  }
+
+  void _saveProjectAs() async {
+    // Show dialog to enter project name
+    final nameController = TextEditingController(text: _currentProjectName);
+
+    final projectName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Project As'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Project Name',
+            hintText: 'Enter project name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, nameController.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (projectName == null || projectName.isEmpty) return;
+
+    try {
+      // Use macOS native file picker for save location
+      final result = await Process.run('osascript', [
+        '-e',
+        'POSIX path of (choose folder with prompt "Choose location to save project")'
+      ]);
+
+      if (result.exitCode == 0) {
+        final parentPath = result.stdout.toString().trim();
+        if (parentPath.isNotEmpty) {
+          final projectPath = '$parentPath/$projectName.solar';
+          _saveProjectToPath(projectPath);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Save As failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save project: $e')),
+      );
+    }
+  }
+
+  void _saveProjectToPath(String path) {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = _audioEngine!.saveProject(_currentProjectName, path);
+      setState(() {
+        _currentProjectPath = path;
+        _statusMessage = 'Project saved';
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result)),
+      );
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('❌ Save project failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save project: $e')),
+      );
+    }
+  }
+
+  void _exportProject() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export Audio'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Choose export format:'),
+            SizedBox(height: 16),
+            Text('• WAV - Lossless (Recommended)'),
+            Text('• MP3 - 128 kbps (Coming Soon)'),
+            Text('• Stems - Individual tracks (Coming Soon)'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              // Get export path
+              try {
+                final result = await Process.run('osascript', [
+                  '-e',
+                  'POSIX path of (choose file name with prompt "Export as" default name "${_currentProjectName}.wav")'
+                ]);
+
+                if (result.exitCode == 0) {
+                  final path = result.stdout.toString().trim();
+                  if (path.isNotEmpty) {
+                    try {
+                      final exportResult = _audioEngine!.exportToWav(path, true);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(exportResult)),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Export not yet implemented: $e')),
+                      );
+                    }
+                  }
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to export: $e')),
+                );
+              }
+            },
+            child: const Text('Export WAV'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -460,6 +697,84 @@ class _DAWScreenState extends State<DAWScreen> {
         ),
         backgroundColor: const Color(0xFFF5F5F5),
         actions: [
+          // File menu
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.folder_open, color: Color(0xFF808080)),
+            tooltip: 'File',
+            onSelected: (String value) {
+              switch (value) {
+                case 'new':
+                  _newProject();
+                  break;
+                case 'open':
+                  _openProject();
+                  break;
+                case 'save':
+                  _saveProject();
+                  break;
+                case 'save_as':
+                  _saveProjectAs();
+                  break;
+                case 'export':
+                  _exportProject();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'new',
+                child: Row(
+                  children: [
+                    Icon(Icons.description, size: 18),
+                    SizedBox(width: 8),
+                    Text('New Project'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'open',
+                child: Row(
+                  children: [
+                    Icon(Icons.folder_open, size: 18),
+                    SizedBox(width: 8),
+                    Text('Open...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'save',
+                child: Row(
+                  children: [
+                    Icon(Icons.save, size: 18),
+                    SizedBox(width: 8),
+                    Text('Save'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'save_as',
+                child: Row(
+                  children: [
+                    Icon(Icons.save_as, size: 18),
+                    SizedBox(width: 8),
+                    Text('Save As...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.upload, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export...'),
+                  ],
+                ),
+              ),
+            ],
+          ),
           // Mixer toggle button
           IconButton(
             icon: Icon(

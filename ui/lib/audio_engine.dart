@@ -51,7 +51,21 @@ class AudioEngine {
   late final _SetTrackMuteFfi _setTrackMute;
   late final _SetTrackSoloFfi _setTrackSolo;
   late final _GetTrackCountFfi _getTrackCount;
+  late final _GetAllTrackIdsFfi _getAllTrackIds;
   late final _GetTrackInfoFfi _getTrackInfo;
+  late final _DeleteTrackFfi _deleteTrack;
+
+  // M4 functions - Effects
+  late final _AddEffectToTrackFfi _addEffectToTrack;
+  late final _RemoveEffectFromTrackFfi _removeEffectFromTrack;
+  late final _GetTrackEffectsFfi _getTrackEffects;
+  late final _GetEffectInfoFfi _getEffectInfo;
+  late final _SetEffectParameterFfi _setEffectParameter;
+
+  // M5 functions - Save/Load Project
+  late final _SaveProjectFfi _saveProject;
+  late final _LoadProjectFfi _loadProject;
+  late final _ExportToWavFfi _exportToWav;
 
   AudioEngine() {
     // Load the native library
@@ -306,11 +320,73 @@ class AudioEngine {
           .asFunction();
       print('  ✅ get_track_count_ffi bound');
 
+      _getAllTrackIds = _lib
+          .lookup<ffi.NativeFunction<_GetAllTrackIdsFfiNative>>(
+              'get_all_track_ids_ffi')
+          .asFunction();
+      print('  ✅ get_all_track_ids_ffi bound');
+
       _getTrackInfo = _lib
           .lookup<ffi.NativeFunction<_GetTrackInfoFfiNative>>(
               'get_track_info_ffi')
           .asFunction();
       print('  ✅ get_track_info_ffi bound');
+
+      _deleteTrack = _lib
+          .lookup<ffi.NativeFunction<_DeleteTrackFfiNative>>(
+              'delete_track_ffi')
+          .asFunction();
+      print('  ✅ delete_track_ffi bound');
+
+      // Bind M4 effect functions
+      _addEffectToTrack = _lib
+          .lookup<ffi.NativeFunction<_AddEffectToTrackFfiNative>>(
+              'add_effect_to_track_ffi')
+          .asFunction();
+      print('  ✅ add_effect_to_track_ffi bound');
+
+      _removeEffectFromTrack = _lib
+          .lookup<ffi.NativeFunction<_RemoveEffectFromTrackFfiNative>>(
+              'remove_effect_from_track_ffi')
+          .asFunction();
+      print('  ✅ remove_effect_from_track_ffi bound');
+
+      _getTrackEffects = _lib
+          .lookup<ffi.NativeFunction<_GetTrackEffectsFfiNative>>(
+              'get_track_effects_ffi')
+          .asFunction();
+      print('  ✅ get_track_effects_ffi bound');
+
+      _getEffectInfo = _lib
+          .lookup<ffi.NativeFunction<_GetEffectInfoFfiNative>>(
+              'get_effect_info_ffi')
+          .asFunction();
+      print('  ✅ get_effect_info_ffi bound');
+
+      _setEffectParameter = _lib
+          .lookup<ffi.NativeFunction<_SetEffectParameterFfiNative>>(
+              'set_effect_parameter_ffi')
+          .asFunction();
+      print('  ✅ set_effect_parameter_ffi bound');
+
+      // Bind M5 functions - Save/Load
+      _saveProject = _lib
+          .lookup<ffi.NativeFunction<_SaveProjectFfiNative>>(
+              'save_project_ffi')
+          .asFunction();
+      print('  ✅ save_project_ffi bound');
+
+      _loadProject = _lib
+          .lookup<ffi.NativeFunction<_LoadProjectFfiNative>>(
+              'load_project_ffi')
+          .asFunction();
+      print('  ✅ load_project_ffi bound');
+
+      _exportToWav = _lib
+          .lookup<ffi.NativeFunction<_ExportToWavFfiNative>>(
+              'export_to_wav_ffi')
+          .asFunction();
+      print('  ✅ export_to_wav_ffi bound');
 
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
@@ -822,6 +898,24 @@ class AudioEngine {
     }
   }
 
+  /// Get all track IDs as list
+  List<int> getAllTrackIds() {
+    try {
+      final resultPtr = _getAllTrackIds();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty || result.startsWith('Error:')) {
+        return [];
+      }
+
+      return result.split(',').map((id) => int.parse(id)).toList();
+    } catch (e) {
+      print('❌ [AudioEngine] Get all track IDs failed: $e');
+      return [];
+    }
+  }
+
   /// Get track info as CSV: "track_id,name,type,volume_db,pan,mute,solo"
   String getTrackInfo(int trackId) {
     try {
@@ -832,6 +926,162 @@ class AudioEngine {
     } catch (e) {
       print('❌ [AudioEngine] Get track info failed: $e');
       return '';
+    }
+  }
+
+  /// Delete a track (cannot delete master track)
+  String deleteTrack(int trackId) {
+    print('🗑️ [AudioEngine] Deleting track $trackId...');
+    try {
+      final resultPtr = _deleteTrack(trackId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Delete track failed: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================================================
+  // M4 API - Effects
+  // ========================================================================
+
+  /// Add an effect to a track's FX chain
+  /// effectType: "eq", "compressor", "reverb", "delay", "chorus", "limiter"
+  /// Returns effect ID or -1 on error
+  int addEffectToTrack(int trackId, String effectType) {
+    print('🎛️  [AudioEngine] Adding $effectType to track $trackId');
+    try {
+      final typePtr = effectType.toNativeUtf8();
+      final effectId = _addEffectToTrack(trackId, typePtr.cast());
+      malloc.free(typePtr);
+
+      if (effectId < 0) {
+        print('❌ [AudioEngine] Failed to add effect');
+        return -1;
+      }
+
+      print('✅ [AudioEngine] Effect added with ID: $effectId');
+      return effectId;
+    } catch (e) {
+      print('❌ [AudioEngine] Add effect failed: $e');
+      return -1;
+    }
+  }
+
+  /// Remove an effect from a track's FX chain
+  String removeEffectFromTrack(int trackId, int effectId) {
+    print('🗑️  [AudioEngine] Removing effect $effectId from track $trackId');
+    try {
+      final resultPtr = _removeEffectFromTrack(trackId, effectId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Remove effect failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all effects on a track (returns CSV of effect IDs)
+  String getTrackEffects(int trackId) {
+    try {
+      final resultPtr = _getTrackEffects(trackId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Get track effects failed: $e');
+      return '';
+    }
+  }
+
+  /// Get effect info (type and parameters)
+  /// Returns format: "type:eq,low_freq:100,low_gain:0,..."
+  String getEffectInfo(int effectId) {
+    try {
+      final resultPtr = _getEffectInfo(effectId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Get effect info failed: $e');
+      return '';
+    }
+  }
+
+  /// Set an effect parameter
+  String setEffectParameter(int effectId, String paramName, double value) {
+    try {
+      final namePtr = paramName.toNativeUtf8();
+      final resultPtr = _setEffectParameter(effectId, namePtr.cast(), value);
+      malloc.free(namePtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set effect parameter failed: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================================================
+  // M5 API - Save/Load Project
+  // ========================================================================
+
+  /// Save project to .solar folder
+  String saveProject(String projectName, String projectPath) {
+    print('💾 [AudioEngine] Saving project: $projectName to $projectPath');
+    try {
+      final namePtr = projectName.toNativeUtf8();
+      final pathPtr = projectPath.toNativeUtf8();
+      final resultPtr = _saveProject(namePtr.cast(), pathPtr.cast());
+      malloc.free(namePtr);
+      malloc.free(pathPtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] Save complete: $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Save project failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Load project from .solar folder
+  String loadProject(String projectPath) {
+    print('📂 [AudioEngine] Loading project from: $projectPath');
+    try {
+      final pathPtr = projectPath.toNativeUtf8();
+      final resultPtr = _loadProject(pathPtr.cast());
+      malloc.free(pathPtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] Load complete: $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Load project failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Export project to WAV file
+  String exportToWav(String outputPath, bool normalize) {
+    print('🎵 [AudioEngine] Exporting to WAV: $outputPath (normalize: $normalize)');
+    try {
+      final pathPtr = outputPath.toNativeUtf8();
+      final resultPtr = _exportToWav(pathPtr.cast(), normalize);
+      malloc.free(pathPtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] Export complete: $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Export failed: $e');
+      rethrow;
     }
   }
 }
@@ -958,5 +1208,37 @@ typedef _SetTrackSoloFfi = ffi.Pointer<Utf8> Function(int, bool);
 typedef _GetTrackCountFfiNative = ffi.Size Function();
 typedef _GetTrackCountFfi = int Function();
 
+typedef _GetAllTrackIdsFfiNative = ffi.Pointer<Utf8> Function();
+typedef _GetAllTrackIdsFfi = ffi.Pointer<Utf8> Function();
+
 typedef _GetTrackInfoFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
 typedef _GetTrackInfoFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _DeleteTrackFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _DeleteTrackFfi = ffi.Pointer<Utf8> Function(int);
+
+// M4 types - Effects
+typedef _AddEffectToTrackFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Pointer<ffi.Char>);
+typedef _AddEffectToTrackFfi = int Function(int, ffi.Pointer<ffi.Char>);
+
+typedef _RemoveEffectFromTrackFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint64);
+typedef _RemoveEffectFromTrackFfi = ffi.Pointer<Utf8> Function(int, int);
+
+typedef _GetTrackEffectsFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _GetTrackEffectsFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _GetEffectInfoFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _GetEffectInfoFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _SetEffectParameterFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Pointer<ffi.Char>, ffi.Float);
+typedef _SetEffectParameterFfi = ffi.Pointer<Utf8> Function(int, ffi.Pointer<ffi.Char>, double);
+
+// M5 types - Save/Load Project
+typedef _SaveProjectFfiNative = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);
+typedef _SaveProjectFfi = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);
+
+typedef _LoadProjectFfiNative = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>);
+typedef _LoadProjectFfi = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>);
+
+typedef _ExportToWavFfiNative = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>, ffi.Bool);
+typedef _ExportToWavFfi = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>, bool);

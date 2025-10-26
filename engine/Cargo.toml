@@ -19,5 +19,12 @@ midir = "0.9"                    # Cross-platform MIDI I/O
 # Utilities
 anyhow = "1.0"                   # Error handling
 
+# Serialization (M5)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Audio export (M5)
+hound = "3.5"                    # WAV encoding/decoding
+
 # FFI bridge
 flutter_rust_bridge = "2"        # Flutter-Rust bridge

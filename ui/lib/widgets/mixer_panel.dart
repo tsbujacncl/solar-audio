@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../audio_engine.dart';
+import 'effect_parameter_panel.dart';
 
 /// Track data model
 class TrackData {
@@ -62,6 +63,7 @@ class MixerPanel extends StatefulWidget {
 class _MixerPanelState extends State<MixerPanel> {
   List<TrackData> _tracks = [];
   Timer? _refreshTimer;
+  int? _selectedTrackForFX;
 
   @override
   void initState() {
@@ -84,11 +86,11 @@ class _MixerPanelState extends State<MixerPanel> {
     if (widget.audioEngine == null) return;
 
     try {
-      final count = widget.audioEngine!.getTrackCount();
+      final trackIds = widget.audioEngine!.getAllTrackIds();
       final tracks = <TrackData>[];
 
-      for (int i = 0; i < count; i++) {
-        final info = widget.audioEngine!.getTrackInfo(i);
+      for (int trackId in trackIds) {
+        final info = widget.audioEngine!.getTrackInfo(trackId);
         final track = TrackData.fromCSV(info);
         if (track != null) {
           tracks.add(track);
@@ -118,30 +120,47 @@ class _MixerPanelState extends State<MixerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 400,
-      decoration: const BoxDecoration(
-        color: Color(0xFF2B2B2B),
-        border: Border(
-          left: BorderSide(color: Color(0xFF404040)),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header
-          _buildHeader(),
-
-          // Track strips
-          Expanded(
-            child: _tracks.isEmpty
-                ? _buildEmptyState()
-                : _buildTrackList(),
+    return Row(
+      children: [
+        // Mixer panel
+        Container(
+          width: 400,
+          decoration: const BoxDecoration(
+            color: Color(0xFF2B2B2B),
+            border: Border(
+              left: BorderSide(color: Color(0xFF404040)),
+            ),
           ),
+          child: Column(
+            children: [
+              // Header
+              _buildHeader(),
 
-          // Add track buttons
-          _buildAddTrackBar(),
-        ],
-      ),
+              // Track strips
+              Expanded(
+                child: _tracks.isEmpty
+                    ? _buildEmptyState()
+                    : _buildTrackList(),
+              ),
+
+              // Add track buttons
+              _buildAddTrackBar(),
+            ],
+          ),
+        ),
+
+        // Effects panel (slide-in when track selected)
+        if (_selectedTrackForFX != null)
+          EffectParameterPanel(
+            audioEngine: widget.audioEngine,
+            trackId: _selectedTrackForFX!,
+            onClose: () {
+              setState(() {
+                _selectedTrackForFX = null;
+              });
+            },
+          ),
+      ],
     );
   }
 
@@ -216,12 +235,24 @@ class _MixerPanelState extends State<MixerPanel> {
   }
 
   Widget _buildTrackList() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: _tracks.map((track) => _buildTrackStrip(track)).toList(),
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Regular tracks
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _tracks.where((t) => t.type != 'Master').map((track) => _buildTrackStrip(track)).toList(),
+            ),
+          ),
+        ),
+
+        // Master track
+        if (_tracks.any((t) => t.type == 'Master'))
+          _buildMasterTrackStrip(_tracks.firstWhere((t) => t.type == 'Master')),
+      ],
     );
   }
 
@@ -284,6 +315,171 @@ class _MixerPanelState extends State<MixerPanel> {
 
           // Mute/Solo buttons
           _buildMuteSoloButtons(track),
+
+          const SizedBox(height: 8),
+
+          // FX and Delete buttons
+          _buildTrackActions(track),
+
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrackActions(TrackData track) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          // FX button
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _selectedTrackForFX =
+                      _selectedTrackForFX == track.id ? null : track.id;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedTrackForFX == track.id
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFF404040),
+                foregroundColor: _selectedTrackForFX == track.id
+                    ? Colors.white
+                    : const Color(0xFF808080),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                minimumSize: const Size(0, 24),
+              ),
+              child: const Text('FX', style: TextStyle(fontSize: 10)),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // Delete button
+          SizedBox(
+            width: 24,
+            child: IconButton(
+              icon: const Icon(Icons.close, size: 14),
+              color: const Color(0xFF808080),
+              padding: EdgeInsets.zero,
+              onPressed: () => _confirmDeleteTrack(track),
+              tooltip: 'Delete track',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteTrack(TrackData track) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Track'),
+        content: Text('Are you sure you want to delete "${track.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              widget.audioEngine?.deleteTrack(track.id);
+              Navigator.of(context).pop();
+              _loadTracks();
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMasterTrackStrip(TrackData track) {
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(left: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF4CAF50), width: 2),
+      ),
+      child: Column(
+        children: [
+          // Track name
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFF2B2B2B),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(6),
+                topRight: Radius.circular(6),
+              ),
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'MASTER',
+                  style: TextStyle(
+                    color: Color(0xFF4CAF50),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  track.type.toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Volume fader
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: _buildVolumeFader(track),
+            ),
+          ),
+
+          // Pan control
+          _buildPanControl(track),
+
+          const SizedBox(height: 8),
+
+          // Limiter indicator
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2B2B2B),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.security, size: 12, color: Color(0xFF4CAF50)),
+                  SizedBox(width: 4),
+                  Text(
+                    'LIMITER',
+                    style: TextStyle(
+                      color: Color(0xFF4CAF50),
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
           const SizedBox(height: 8),
         ],

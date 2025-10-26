@@ -462,6 +462,15 @@ pub extern "C" fn get_track_count_ffi() -> usize {
     api::get_track_count().unwrap_or(0)
 }
 
+/// Get all track IDs (CSV format)
+#[no_mangle]
+pub extern "C" fn get_all_track_ids_ffi() -> *mut c_char {
+    match api::get_all_track_ids() {
+        Ok(ids) => CString::new(ids).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
 /// Get track info (CSV format)
 ///
 /// Returns: "track_id,name,type,volume_db,pan,mute,solo"
@@ -478,6 +487,154 @@ pub extern "C" fn get_track_info_ffi(track_id: u64) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn move_clip_to_track_ffi(track_id: u64, clip_id: u64) -> *mut c_char {
     match api::move_clip_to_track(track_id, clip_id) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+// ============================================================================
+// M4: Effect Management FFI
+// ============================================================================
+
+/// Add an effect to a track's FX chain
+/// Returns effect ID on success, or -1 on error
+#[no_mangle]
+pub extern "C" fn add_effect_to_track_ffi(
+    track_id: u64,
+    effect_type: *const c_char,
+) -> i64 {
+    let effect_type_str = unsafe {
+        match CStr::from_ptr(effect_type).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        }
+    };
+
+    match api::add_effect_to_track(track_id, effect_type_str) {
+        Ok(effect_id) => effect_id as i64,
+        Err(e) => {
+            eprintln!("❌ [FFI] add_effect_to_track error: {}", e);
+            -1
+        }
+    }
+}
+
+/// Remove an effect from a track
+#[no_mangle]
+pub extern "C" fn remove_effect_from_track_ffi(track_id: u64, effect_id: u64) -> *mut c_char {
+    match api::remove_effect_from_track(track_id, effect_id) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get all effects on a track (CSV format)
+#[no_mangle]
+pub extern "C" fn get_track_effects_ffi(track_id: u64) -> *mut c_char {
+    match api::get_track_effects(track_id) {
+        Ok(effects) => CString::new(effects).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get effect info (type and parameters)
+#[no_mangle]
+pub extern "C" fn get_effect_info_ffi(effect_id: u64) -> *mut c_char {
+    match api::get_effect_info(effect_id) {
+        Ok(info) => CString::new(info).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set an effect parameter
+#[no_mangle]
+pub extern "C" fn set_effect_parameter_ffi(
+    effect_id: u64,
+    param_name: *const c_char,
+    value: f32,
+) -> *mut c_char {
+    let param_name_str = unsafe {
+        match CStr::from_ptr(param_name).to_str() {
+            Ok(s) => s,
+            Err(_) => return CString::new("Error: Invalid parameter name").unwrap().into_raw(),
+        }
+    };
+
+    match api::set_effect_parameter(effect_id, param_name_str, value) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Delete a track
+#[no_mangle]
+pub extern "C" fn delete_track_ffi(track_id: u64) -> *mut c_char {
+    match api::delete_track(track_id) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+// ============================================================================
+// M5: SAVE/LOAD PROJECT FFI
+// ============================================================================
+
+/// Save project to .solar folder
+#[no_mangle]
+pub extern "C" fn save_project_ffi(
+    project_name: *const c_char,
+    project_path: *const c_char,
+) -> *mut c_char {
+    let project_name_str = unsafe {
+        match CStr::from_ptr(project_name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return CString::new("Error: Invalid project name").unwrap().into_raw(),
+        }
+    };
+
+    let project_path_str = unsafe {
+        match CStr::from_ptr(project_path).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return CString::new("Error: Invalid project path").unwrap().into_raw(),
+        }
+    };
+
+    match api::save_project(project_name_str, project_path_str) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Load project from .solar folder
+#[no_mangle]
+pub extern "C" fn load_project_ffi(project_path: *const c_char) -> *mut c_char {
+    let project_path_str = unsafe {
+        match CStr::from_ptr(project_path).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return CString::new("Error: Invalid project path").unwrap().into_raw(),
+        }
+    };
+
+    match api::load_project(project_path_str) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Export to WAV file
+#[no_mangle]
+pub extern "C" fn export_to_wav_ffi(
+    output_path: *const c_char,
+    normalize: bool,
+) -> *mut c_char {
+    let output_path_str = unsafe {
+        match CStr::from_ptr(output_path).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return CString::new("Error: Invalid output path").unwrap().into_raw(),
+        }
+    };
+
+    match api::export_to_wav(output_path_str, normalize) {
         Ok(msg) => CString::new(msg).unwrap().into_raw(),
         Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
     }
