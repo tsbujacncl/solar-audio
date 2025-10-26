@@ -1,7 +1,7 @@
 # Solar Audio - MVP Specification (v1.0)
 
-**Last Updated:** October 26, 2025  
-**Status:** In Development (M6: MIDI & Piano Roll)  
+**Last Updated:** October 26, 2025
+**Status:** In Development (M5.5 Complete - UI Redesign, M6 Ready to Start)
 **Target Platform:** macOS 12+ (Monterey or later)
 
 ---
@@ -607,8 +607,9 @@ MyProject.solar/
 **❌ Advanced Features**
 - Spectral editing
 - Notation/score export
-- Video sync
-- Surround sound
+- **Video sync** (import video, sync playhead, frame-accurate scoring)
+- Surround sound (5.1/7.1)
+- Advanced time-stretching
 - All deferred to v2.0+ (pro features)
 
 ---

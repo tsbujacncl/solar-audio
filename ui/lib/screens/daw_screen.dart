@@ -5,8 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
-import '../widgets/virtual_piano.dart';
-import '../widgets/mixer_panel.dart';
+import '../widgets/track_mixer_panel.dart';
 import '../widgets/library_panel.dart';
 import '../widgets/bottom_panel.dart';
 
@@ -181,13 +180,13 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _play() {
-    if (_audioEngine == null || _loadedClipId == null) return;
+    if (_audioEngine == null) return;
 
     try {
       _audioEngine!.transportPlay();
       setState(() {
         _isPlaying = true;
-        _statusMessage = 'Playing...';
+        _statusMessage = _loadedClipId != null ? 'Playing...' : 'Playing (empty)';
       });
       _startPlayheadTimer();
     } catch (e) {
@@ -714,15 +713,15 @@ class _DAWScreenState extends State<DAWScreen> {
         children: [
           // Transport bar (with logo and file/mixer buttons)
           TransportBar(
-            onPlay: _loadedClipId != null ? _play : null,
-            onPause: _loadedClipId != null ? _pause : null,
-            onStop: _loadedClipId != null ? _stopPlayback : null,
+            onPlay: _play,
+            onPause: _pause,
+            onStop: _stopPlayback,
             onRecord: _toggleRecording,
             onMetronomeToggle: _toggleMetronome,
             onPianoToggle: _toggleVirtualPiano,
             playheadPosition: _playheadPosition,
             isPlaying: _isPlaying,
-            canPlay: _loadedClipId != null,
+            canPlay: true, // Always allow transport controls
             isRecording: _isRecording,
             isCountingIn: _isCountingIn,
             metronomeEnabled: _metronomeEnabled,
@@ -758,11 +757,10 @@ class _DAWScreenState extends State<DAWScreen> {
                         child: _buildTimelineView(),
                       ),
 
-                      // Right: Mixer panel (always visible)
+                      // Right: Track mixer panel (always visible)
                       if (_mixerVisible)
-                        MixerPanel(
+                        TrackMixerPanel(
                           audioEngine: _audioEngine,
-                          onClose: _toggleMixer,
                           onFXButtonClicked: _onFXButtonClicked,
                         ),
                     ],
@@ -839,6 +837,14 @@ class _DAWScreenState extends State<DAWScreen> {
           if (_clipDuration != null) const SizedBox(width: 16),
           Text(
             'Sample Rate: 48kHz',
+            style: const TextStyle(
+              color: Color(0xFF808080),
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Text(
+            'CPU: 0%', // TODO: Get real CPU usage from audio engine
             style: const TextStyle(
               color: Color(0xFF808080),
               fontSize: 11,

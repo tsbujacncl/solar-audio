@@ -1,7 +1,7 @@
 # Solar Audio - Development Roadmap
 
-**Last Updated:** October 26, 2025  
-**Current Status:** M5 Complete, M6 In Progress
+**Last Updated:** October 26, 2025
+**Current Status:** M5.5 UI Polish Complete, M6 Ready to Start
 
 ---
 
@@ -32,8 +32,9 @@ Week 0    Week 10   Week 15   Week 22
 - M3: Editing
 - M4: Mixing
 - M5: Save & Export
+- M5.5: UI Redesign & Polish (3-panel layout, light grey theme)
 
-**🚧 In Progress:**
+**📋 Ready to Start:**
 - M6: MIDI & Piano Roll
 
 **📋 Upcoming:**
@@ -153,7 +154,7 @@ Build 5 high-quality instruments:
 
 ---
 
-### v1.2+ (Timeline TBD)
+### v1.2 (Timeline TBD)
 
 **Focus:** Live Performance & Advanced Features
 
@@ -165,6 +166,32 @@ Build 5 high-quality instruments:
 - Collaboration features
 - Linux support
 - Cloud saving
+
+---
+
+### v2.0+ (Future Ideas)
+
+**Focus:** Pro Features & Specialized Workflows
+
+**Video Sync for Soundtracks:**
+- Import video file (MP4, MOV) to timeline
+- Video preview window synced to playhead
+- Frame-accurate positioning (timecode support)
+- Markers for scene changes
+- Export audio aligned to video
+- Use cases:
+  - Film scoring
+  - YouTube/TikTok soundtracks
+  - Game audio
+  - Podcast video editing
+
+**Other v2.0+ Ideas:**
+- Advanced automation (curves, LFOs)
+- Spectral editing
+- Notation/score export
+- Surround sound (5.1/7.1)
+- Advanced time-stretching
+- MPE support (ROLI, Linnstrument)
 
 ---
 
@@ -253,9 +280,9 @@ Solar Audio is open-source (GPL v3). Contributions welcome!
 ## Next Steps
 
 **This Week:**
-- Continue M6 (piano roll implementation)
+- Start M6 (piano roll implementation)
 - Test MIDI recording with hardware
-- Update documentation
+- Continue UI polish based on usage
 
 **This Month:**
 - Complete M6

@@ -1,7 +1,38 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'dart:async';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:cross_file/cross_file.dart';
 import '../audio_engine.dart';
-import 'track_header.dart';
+import '../utils/track_colors.dart';
+import '../models/clip_data.dart';
+
+/// Track data model for timeline
+class TimelineTrackData {
+  final int id;
+  final String name;
+  final String type;
+
+  TimelineTrackData({
+    required this.id,
+    required this.name,
+    required this.type,
+  });
+
+  static TimelineTrackData? fromCSV(String csv) {
+    try {
+      final parts = csv.split(',');
+      if (parts.length < 3) return null;
+      return TimelineTrackData(
+        id: int.parse(parts[0]),
+        name: parts[1],
+        type: parts[2],
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+}
 
 /// Timeline view widget for displaying audio clips and playhead
 class TimelineView extends StatefulWidget {
@@ -27,11 +58,124 @@ class TimelineView extends StatefulWidget {
 class _TimelineViewState extends State<TimelineView> {
   final ScrollController _scrollController = ScrollController();
   double _pixelsPerSecond = 100.0; // Zoom level
-  
+  List<TimelineTrackData> _tracks = [];
+  Timer? _refreshTimer;
+
+  // Clip management
+  List<ClipData> _clips = [];
+  PreviewClip? _previewClip;
+  int? _dragHoveredTrackId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTracksAsync();
+
+    // Refresh tracks every 2 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _loadTracksAsync();
+    });
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  /// Calculate timeline position from mouse X coordinate
+  double _calculateTimelinePosition(Offset localPosition) {
+    final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final totalX = localPosition.dx + scrollOffset;
+    return totalX / _pixelsPerSecond;
+  }
+
+  /// Handle file drop on track
+  Future<void> _handleFileDrop(List<XFile> files, int trackId, Offset localPosition) async {
+    if (files.isEmpty || widget.audioEngine == null) return;
+
+    final file = files.first;
+    final filePath = file.path;
+
+    // Only accept audio files
+    if (!filePath.endsWith('.wav') &&
+        !filePath.endsWith('.mp3') &&
+        !filePath.endsWith('.aif') &&
+        !filePath.endsWith('.aiff') &&
+        !filePath.endsWith('.flac')) {
+      debugPrint('⚠️  Unsupported file type: $filePath');
+      return;
+    }
+
+    try {
+      // Load audio file
+      final clipId = widget.audioEngine!.loadAudioFile(filePath);
+      if (clipId < 0) {
+        debugPrint('❌ Failed to load file: $filePath');
+        return;
+      }
+
+      // Get duration and waveform
+      final duration = widget.audioEngine!.getClipDuration(clipId);
+      final peaks = widget.audioEngine!.getWaveformPeaks(clipId, 2000);
+
+      // Calculate drop position
+      final startTime = _calculateTimelinePosition(localPosition);
+
+      // Create clip
+      final clip = ClipData(
+        clipId: clipId,
+        trackId: trackId,
+        filePath: filePath,
+        startTime: startTime,
+        duration: duration,
+        waveformPeaks: peaks,
+        color: const Color(0xFF4CAF50),
+      );
+
+      setState(() {
+        _clips.add(clip);
+        _previewClip = null;
+        _dragHoveredTrackId = null;
+      });
+
+      debugPrint('✅ Dropped clip on track $trackId at ${startTime.toStringAsFixed(2)}s');
+    } catch (e) {
+      debugPrint('❌ Error loading dropped file: $e');
+    }
+  }
+
+  /// Load tracks from audio engine
+  Future<void> _loadTracksAsync() async {
+    if (widget.audioEngine == null) return;
+
+    try {
+      final trackIds = await Future.microtask(() {
+        return widget.audioEngine!.getAllTrackIds();
+      });
+
+      final tracks = <TimelineTrackData>[];
+
+      for (int trackId in trackIds) {
+        final info = await Future.microtask(() {
+          return widget.audioEngine!.getTrackInfo(trackId);
+        });
+
+        final track = TimelineTrackData.fromCSV(info);
+        if (track != null) {
+          tracks.add(track);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _tracks = tracks;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to load tracks for timeline: $e');
+    }
   }
 
   @override
@@ -47,46 +191,29 @@ class _TimelineViewState extends State<TimelineView> {
       ),
       child: Column(
         children: [
-          // Time ruler (with left padding for track headers)
-          Row(
-            children: [
-              const SizedBox(width: 120), // Space for track headers
-              Expanded(
-                child: _buildTimeRuler(totalWidth, duration),
-              ),
-            ],
-          ),
+          // Time ruler (full width)
+          _buildTimeRuler(totalWidth, duration),
 
-          // Timeline tracks area with headers
+          // Timeline tracks scrollable area
           Expanded(
-            child: Row(
-              children: [
-                // Track headers column
-                _buildTrackHeaders(),
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: totalWidth,
+                child: Stack(
+                  children: [
+                    // Grid lines
+                    _buildGrid(totalWidth, duration),
 
-                // Timeline tracks scrollable area
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: totalWidth,
-                      child: Stack(
-                        children: [
-                          // Grid lines
-                          _buildGrid(totalWidth, duration),
+                    // Tracks
+                    _buildTracks(totalWidth),
 
-                          // Tracks
-                          _buildTracks(totalWidth),
-
-                          // Playhead
-                          _buildPlayhead(),
-                        ],
-                      ),
-                    ),
-                  ),
+                    // Playhead
+                    _buildPlayhead(),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
 
@@ -97,56 +224,62 @@ class _TimelineViewState extends State<TimelineView> {
     );
   }
 
-  Widget _buildTrackHeaders() {
-    // For now, show default track + master track
-    return Container(
-      width: 120,
-      decoration: const BoxDecoration(
-        color: Color(0xFF9A9A9A),
-        border: Border(
-          right: BorderSide(color: Color(0xFFAAAAAA)),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Audio Track 1 (default)
-          TrackHeader(
-            trackId: 0,
-            trackName: 'Audio 1',
-            trackType: 'Audio',
-            isMuted: false,
-            isSoloed: false,
-            peakLevel: 0.0,
-            audioEngine: widget.audioEngine,
-          ),
-
-          const Spacer(),
-
-          // Master Track
-          const MasterTrackHeader(
-            peakLevel: 0.0,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTracks(double width) {
+    if (_tracks.isEmpty) {
+      // Show empty state
+      return Container(
+        height: 200,
+        color: const Color(0xFF9A9A9A),
+        child: Center(
+          child: Text(
+            'No tracks - Add a track to get started',
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+          ),
+        ),
+      );
+    }
+
+    // Separate regular tracks from master
+    final regularTracks = _tracks.where((t) => t.type != 'Master').toList();
+    final masterTrack = _tracks.firstWhere(
+      (t) => t.type == 'Master',
+      orElse: () => TimelineTrackData(id: -1, name: 'Master', type: 'Master'),
+    );
+
+    // Count audio and MIDI tracks for numbering
+    int audioCount = 0;
+    int midiCount = 0;
+
     return Column(
       children: [
-        // Audio Track 1
-        _buildAudioTrack(width, 0),
+        // Regular tracks
+        ...regularTracks.asMap().entries.map((entry) {
+          final index = entry.key;
+          final track = entry.value;
 
-        const Spacer(),
+          // Increment counters for track numbering
+          if (track.type.toLowerCase() == 'audio') {
+            audioCount++;
+          } else if (track.type.toLowerCase() == 'midi') {
+            midiCount++;
+          }
 
-        // Master Track (shorter)
-        Container(
-          height: 80,
-          decoration: BoxDecoration(
-            color: const Color(0xFF9A9A9A),
-            border: Border.all(color: const Color(0xFFAAAAAA)),
-          ),
-        ),
+          final trackColor = TrackColors.getTrackColor(index);
+          final currentAudioCount = track.type.toLowerCase() == 'audio' ? audioCount : 0;
+          final currentMidiCount = track.type.toLowerCase() == 'midi' ? midiCount : 0;
+
+          return _buildTrack(
+            width,
+            track,
+            trackColor,
+            currentAudioCount,
+            currentMidiCount,
+          );
+        }),
+
+        // Master track (no spacer - keep aligned with mixer)
+        if (masterTrack.id != -1)
+          _buildMasterTrack(width, masterTrack),
       ],
     );
   }
@@ -180,47 +313,232 @@ class _TimelineViewState extends State<TimelineView> {
     );
   }
 
-  Widget _buildAudioTrack(double width, int trackIndex) {
-    // Empty track container
+  Widget _buildTrack(
+    double width,
+    TimelineTrackData track,
+    Color trackColor,
+    int audioCount,
+    int midiCount,
+  ) {
+    // Build formatted name
+    final formattedName = TrackColors.getFormattedTrackName(
+      trackType: track.type,
+      trackName: track.name,
+      audioCount: audioCount,
+      midiCount: midiCount,
+    );
+    final emoji = TrackColors.getTrackEmoji(track.name, track.type);
+
+    // Find clips for this track
+    final trackClips = _clips.where((c) => c.trackId == track.id).toList();
+    final isHovered = _dragHoveredTrackId == track.id;
+
+    return DropTarget(
+      onDragEntered: (details) {
+        setState(() {
+          _dragHoveredTrackId = track.id;
+        });
+      },
+      onDragExited: (details) {
+        setState(() {
+          _dragHoveredTrackId = null;
+          _previewClip = null;
+        });
+      },
+      onDragUpdated: (details) {
+        // Update preview position
+        final fileName = 'Preview'; // We don't have filename yet
+        final startTime = _calculateTimelinePosition(details.localPosition);
+
+        setState(() {
+          _previewClip = PreviewClip(
+            fileName: fileName,
+            startTime: startTime,
+            trackId: track.id,
+            mousePosition: details.localPosition,
+          );
+        });
+      },
+      onDragDone: (details) async {
+        await _handleFileDrop(details.files, track.id, details.localPosition);
+      },
+      child: Container(
+        height: 100,
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          color: isHovered
+              ? const Color(0xFF505050) // Lighter when hovered
+              : const Color(0xFF404040),
+          border: Border.all(
+            color: isHovered ? trackColor.withOpacity(0.8) : trackColor,
+            width: isHovered ? 3 : 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Track header bar
+            Container(
+              height: 20,
+              color: trackColor.withOpacity(0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  Text(
+                    '$emoji $formattedName',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content area (for clips/waveforms/MIDI)
+            Expanded(
+              child: Stack(
+                children: [
+                  // Grid pattern
+                  CustomPaint(
+                    painter: _GridPatternPainter(),
+                  ),
+
+                  // Render actual clips for this track
+                  ...trackClips.map((clip) => _buildClip(
+                        clip.duration,
+                        clip.waveformPeaks,
+                        clip.startTime,
+                        clip.fileName,
+                      )),
+
+                  // Show preview clip if hovering over this track
+                  if (_previewClip != null && _previewClip!.trackId == track.id)
+                    _buildPreviewClip(_previewClip!),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMasterTrack(double width, TimelineTrackData track) {
     return Container(
       height: 100,
-      margin: const EdgeInsets.only(bottom: 4),
+      margin: const EdgeInsets.only(bottom: 4), // Match other tracks
       decoration: BoxDecoration(
-        color: const Color(0xFF9A9A9A),
-        border: Border.all(color: const Color(0xFFAAAAAA)),
+        color: const Color(0xFF404040),
+        border: Border.all(color: TrackColors.masterColor, width: 2),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Show waveform if clip exists
-          if (widget.clipDuration != null && widget.waveformPeaks.isNotEmpty)
-            _buildClip(widget.clipDuration!, widget.waveformPeaks, 0),
+          // Track header bar
+          Container(
+            height: 20,
+            color: TrackColors.masterColor.withOpacity(0.3),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: const Row(
+              children: [
+                Text(
+                  '🎚️ Master',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Empty content area
+          Expanded(
+            child: CustomPaint(
+              painter: _GridPatternPainter(),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildClip(double duration, List<double> peaks, double startPosition) {
+  Widget _buildClip(double duration, List<double> peaks, double startPosition, String fileName) {
     final clipWidth = duration * _pixelsPerSecond;
     final clipX = startPosition * _pixelsPerSecond;
 
     return Positioned(
       left: clipX,
-      top: 8,
+      top: 4,
       child: Container(
         width: clipWidth,
-        height: 84,
+        height: 72,
         decoration: BoxDecoration(
-          color: const Color(0xFF909090),
-          border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+          color: const Color(0xFF505050),
+          border: Border.all(color: const Color(0xFF4CAF50), width: 2),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: CustomPaint(
-            painter: _WaveformPainter(
-              peaks: peaks,
-              color: const Color(0xFF4CAF50),
+        child: Stack(
+          children: [
+            // Waveform
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CustomPaint(
+                painter: _WaveformPainter(
+                  peaks: peaks,
+                  color: const Color(0xFF4CAF50),
+                ),
+              ),
             ),
+            // File name label
+            Positioned(
+              top: 2,
+              left: 4,
+              child: Text(
+                fileName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewClip(PreviewClip preview) {
+    const previewDuration = 3.0; // seconds (placeholder)
+    final clipWidth = previewDuration * _pixelsPerSecond;
+    final clipX = preview.startTime * _pixelsPerSecond;
+
+    return Positioned(
+      left: clipX,
+      top: 4,
+      child: Container(
+        width: clipWidth,
+        height: 72,
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CAF50).withOpacity(0.3),
+          border: Border.all(
+            color: const Color(0xFF4CAF50),
+            width: 2,
+            strokeAlign: BorderSide.strokeAlignOutside,
+          ),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.audiotrack,
+            color: const Color(0xFF4CAF50).withOpacity(0.6),
+            size: 32,
           ),
         ),
       ),
@@ -281,10 +599,14 @@ class _TimelineViewState extends State<TimelineView> {
                 _pixelsPerSecond = math.max(20, _pixelsPerSecond - 20);
               });
             },
-            icon: const Icon(Icons.zoom_out, size: 20),
+            icon: const Icon(Icons.zoom_out, size: 18),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             color: const Color(0xFF202020),
             tooltip: 'Zoom Out',
           ),
+          const SizedBox(width: 4),
           Expanded(
             child: Slider(
               value: _pixelsPerSecond,
@@ -300,22 +622,26 @@ class _TimelineViewState extends State<TimelineView> {
               inactiveColor: const Color(0xFFAAAAAA),
             ),
           ),
+          const SizedBox(width: 4),
           IconButton(
             onPressed: () {
               setState(() {
                 _pixelsPerSecond = math.min(200, _pixelsPerSecond + 20);
               });
             },
-            icon: const Icon(Icons.zoom_in, size: 20),
+            icon: const Icon(Icons.zoom_in, size: 18),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             color: const Color(0xFF202020),
             tooltip: 'Zoom In',
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           Text(
             '${_pixelsPerSecond.toInt()}px/s',
             style: const TextStyle(
               color: Color(0xFF353535),
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
         ],
@@ -502,5 +828,25 @@ class _WaveformPainter extends CustomPainter {
   bool shouldRepaint(_WaveformPainter oldDelegate) {
     return oldDelegate.peaks != peaks || oldDelegate.color != color;
   }
+}
+
+/// Painter for grid pattern in track background
+class _GridPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF303030)
+      ..strokeWidth = 0.5;
+
+    // Draw subtle horizontal line in middle
+    canvas.drawLine(
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GridPatternPainter oldDelegate) => false;
 }
 

@@ -16,7 +16,6 @@ class TransportBar extends StatelessWidget {
   final bool metronomeEnabled;
   final bool virtualPianoEnabled;
   final double tempo;
-  final double cpuUsage; // 0.0 to 1.0
 
   // File menu callbacks
   final VoidCallback? onNewProject;
@@ -44,7 +43,6 @@ class TransportBar extends StatelessWidget {
     this.metronomeEnabled = true,
     this.virtualPianoEnabled = false,
     this.tempo = 120.0,
-    this.cpuUsage = 0.0,
     this.onNewProject,
     this.onOpenProject,
     this.onSaveProject,
@@ -170,7 +168,7 @@ class TransportBar extends StatelessWidget {
           
           // Time display
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: const Color(0xFF656565),
               borderRadius: BorderRadius.circular(4),
@@ -181,15 +179,15 @@ class TransportBar extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.access_time,
-                  size: 16,
+                  size: 14,
                   color: Color(0xFF404040),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   _formatTime(playheadPosition),
                   style: const TextStyle(
                     color: Color(0xFF202020),
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
@@ -219,76 +217,8 @@ class TransportBar extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 12),
+          const Spacer(),
 
-          // CPU usage indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF656565),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF909090)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'CPU',
-                  style: TextStyle(
-                    color: Color(0xFF505050),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '${(cpuUsage * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    color: _getCPUColor(),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Status indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _getStatusColor().withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _getStatusColor()),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _getStatusText(),
-                  style: TextStyle(
-                    color: _getStatusColor(),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 16),
-          const VerticalDivider(color: Color(0xFF909090), width: 1),
           const SizedBox(width: 8),
 
           // File menu button
@@ -425,26 +355,6 @@ class TransportBar extends StatelessWidget {
     final subdivision = ((totalBeats % 1) * subdivisionsPerBeat).floor() + 1; // 1-indexed
 
     return '$bar.$beat.$subdivision';
-  }
-
-  Color _getCPUColor() {
-    if (cpuUsage < 0.5) return const Color(0xFF4CAF50); // Green
-    if (cpuUsage < 0.75) return const Color(0xFFFFC107); // Yellow
-    return const Color(0xFFFF5722); // Red/Orange
-  }
-
-  Color _getStatusColor() {
-    if (isRecording) return const Color(0xFFFF0000);
-    if (isCountingIn) return const Color(0xFFFFC107);
-    if (isPlaying) return const Color(0xFF4CAF50);
-    return const Color(0xFF404040);
-  }
-
-  String _getStatusText() {
-    if (isRecording) return 'Recording';
-    if (isCountingIn) return 'Count-In';
-    if (isPlaying) return 'Playing';
-    return 'Stopped';
   }
 }
 
