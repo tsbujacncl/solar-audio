@@ -44,6 +44,15 @@ class AudioEngine {
   late final _SendMidiNoteOnFfi _sendMidiNoteOn;
   late final _SendMidiNoteOffFfi _sendMidiNoteOff;
 
+  // M4 functions - Tracks & Mixer
+  late final _CreateTrackFfi _createTrack;
+  late final _SetTrackVolumeFfi _setTrackVolume;
+  late final _SetTrackPanFfi _setTrackPan;
+  late final _SetTrackMuteFfi _setTrackMute;
+  late final _SetTrackSoloFfi _setTrackSolo;
+  late final _GetTrackCountFfi _getTrackCount;
+  late final _GetTrackInfoFfi _getTrackInfo;
+
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
@@ -259,6 +268,49 @@ class AudioEngine {
               'send_midi_note_off_ffi')
           .asFunction();
       print('  ✅ send_midi_note_off_ffi bound');
+
+      // Bind M4 functions
+      _createTrack = _lib
+          .lookup<ffi.NativeFunction<_CreateTrackFfiNative>>(
+              'create_track_ffi')
+          .asFunction();
+      print('  ✅ create_track_ffi bound');
+
+      _setTrackVolume = _lib
+          .lookup<ffi.NativeFunction<_SetTrackVolumeFfiNative>>(
+              'set_track_volume_ffi')
+          .asFunction();
+      print('  ✅ set_track_volume_ffi bound');
+
+      _setTrackPan = _lib
+          .lookup<ffi.NativeFunction<_SetTrackPanFfiNative>>(
+              'set_track_pan_ffi')
+          .asFunction();
+      print('  ✅ set_track_pan_ffi bound');
+
+      _setTrackMute = _lib
+          .lookup<ffi.NativeFunction<_SetTrackMuteFfiNative>>(
+              'set_track_mute_ffi')
+          .asFunction();
+      print('  ✅ set_track_mute_ffi bound');
+
+      _setTrackSolo = _lib
+          .lookup<ffi.NativeFunction<_SetTrackSoloFfiNative>>(
+              'set_track_solo_ffi')
+          .asFunction();
+      print('  ✅ set_track_solo_ffi bound');
+
+      _getTrackCount = _lib
+          .lookup<ffi.NativeFunction<_GetTrackCountFfiNative>>(
+              'get_track_count_ffi')
+          .asFunction();
+      print('  ✅ get_track_count_ffi bound');
+
+      _getTrackInfo = _lib
+          .lookup<ffi.NativeFunction<_GetTrackInfoFfiNative>>(
+              'get_track_info_ffi')
+          .asFunction();
+      print('  ✅ get_track_info_ffi bound');
 
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
@@ -678,6 +730,110 @@ class AudioEngine {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // M4 API - Tracks & Mixer
+  // ========================================================================
+
+  /// Create a new track
+  /// trackType: "audio", "midi", "return", "group", or "master"
+  /// Returns track ID or -1 on error
+  int createTrack(String trackType, String name) {
+    print('🎚️  [AudioEngine] Creating $trackType track: $name');
+    try {
+      final typePtr = trackType.toNativeUtf8();
+      final namePtr = name.toNativeUtf8();
+      final trackId = _createTrack(typePtr.cast(), namePtr.cast());
+      malloc.free(typePtr);
+      malloc.free(namePtr);
+
+      if (trackId < 0) {
+        print('❌ [AudioEngine] Failed to create track');
+        return -1;
+      }
+
+      print('✅ [AudioEngine] Track created with ID: $trackId');
+      return trackId;
+    } catch (e) {
+      print('❌ [AudioEngine] Create track failed: $e');
+      return -1;
+    }
+  }
+
+  /// Set track volume in dB (-∞ to +6 dB)
+  String setTrackVolume(int trackId, double volumeDb) {
+    try {
+      final resultPtr = _setTrackVolume(trackId, volumeDb);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set track volume failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Set track pan (-1.0 = full left, 0.0 = center, 1.0 = full right)
+  String setTrackPan(int trackId, double pan) {
+    try {
+      final resultPtr = _setTrackPan(trackId, pan);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set track pan failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Mute or unmute a track
+  String setTrackMute(int trackId, bool mute) {
+    try {
+      final resultPtr = _setTrackMute(trackId, mute);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set track mute failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Solo or unsolo a track
+  String setTrackSolo(int trackId, bool solo) {
+    try {
+      final resultPtr = _setTrackSolo(trackId, solo);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set track solo failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get total number of tracks
+  int getTrackCount() {
+    try {
+      return _getTrackCount();
+    } catch (e) {
+      print('❌ [AudioEngine] Get track count failed: $e');
+      return 0;
+    }
+  }
+
+  /// Get track info as CSV: "track_id,name,type,volume_db,pan,mute,solo"
+  String getTrackInfo(int trackId) {
+    try {
+      final resultPtr = _getTrackInfo(trackId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Get track info failed: $e');
+      return '';
+    }
+  }
 }
 
 // ==========================================================================
@@ -782,3 +938,25 @@ typedef _SendMidiNoteOnFfi = ffi.Pointer<Utf8> Function(int, int);
 
 typedef _SendMidiNoteOffFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint8, ffi.Uint8);
 typedef _SendMidiNoteOffFfi = ffi.Pointer<Utf8> Function(int, int);
+
+// M4 types - Tracks & Mixer
+typedef _CreateTrackFfiNative = ffi.Int64 Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);
+typedef _CreateTrackFfi = int Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);
+
+typedef _SetTrackVolumeFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Float);
+typedef _SetTrackVolumeFfi = ffi.Pointer<Utf8> Function(int, double);
+
+typedef _SetTrackPanFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Float);
+typedef _SetTrackPanFfi = ffi.Pointer<Utf8> Function(int, double);
+
+typedef _SetTrackMuteFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Bool);
+typedef _SetTrackMuteFfi = ffi.Pointer<Utf8> Function(int, bool);
+
+typedef _SetTrackSoloFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Bool);
+typedef _SetTrackSoloFfi = ffi.Pointer<Utf8> Function(int, bool);
+
+typedef _GetTrackCountFfiNative = ffi.Size Function();
+typedef _GetTrackCountFfi = int Function();
+
+typedef _GetTrackInfoFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _GetTrackInfoFfi = ffi.Pointer<Utf8> Function(int);

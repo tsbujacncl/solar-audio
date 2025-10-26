@@ -6,6 +6,7 @@ import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
 import '../widgets/file_drop_zone.dart';
 import '../widgets/virtual_piano.dart';
+import '../widgets/mixer_panel.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -39,6 +40,9 @@ class _DAWScreenState extends State<DAWScreen> {
   // M3: Virtual piano state
   bool _virtualPianoEnabled = false;
   bool _virtualPianoVisible = false;
+
+  // M4: Mixer state
+  bool _mixerVisible = false;
 
   @override
   void initState() {
@@ -437,6 +441,13 @@ class _DAWScreenState extends State<DAWScreen> {
     debugPrint('🎹 [DEBUG] After setState - _virtualPianoVisible: $_virtualPianoVisible');
   }
 
+  // M4: Mixer methods
+  void _toggleMixer() {
+    setState(() {
+      _mixerVisible = !_mixerVisible;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -449,6 +460,15 @@ class _DAWScreenState extends State<DAWScreen> {
         ),
         backgroundColor: const Color(0xFFF5F5F5),
         actions: [
+          // Mixer toggle button
+          IconButton(
+            icon: Icon(
+              Icons.tune,
+              color: _mixerVisible ? const Color(0xFF4CAF50) : const Color(0xFF808080),
+            ),
+            onPressed: _toggleMixer,
+            tooltip: 'Toggle Mixer',
+          ),
           // Status indicator
           if (_isLoading)
             const Padding(
@@ -484,11 +504,25 @@ class _DAWScreenState extends State<DAWScreen> {
             tempo: _tempo,
           ),
 
-          // Main content area
+          // Main content area with mixer panel
           Expanded(
-            child: _loadedClipId == null
-                ? _buildEmptyState()
-                : _buildTimelineView(),
+            child: Row(
+              children: [
+                // Timeline area
+                Expanded(
+                  child: _loadedClipId == null
+                      ? _buildEmptyState()
+                      : _buildTimelineView(),
+                ),
+
+                // Mixer panel (slide-in from right)
+                if (_mixerVisible)
+                  MixerPanel(
+                    audioEngine: _audioEngine,
+                    onClose: _toggleMixer,
+                  ),
+              ],
+            ),
           ),
 
           // Status bar
