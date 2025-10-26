@@ -16,6 +16,17 @@ class TransportBar extends StatelessWidget {
   final bool metronomeEnabled;
   final bool virtualPianoEnabled;
   final double tempo;
+  final double cpuUsage; // 0.0 to 1.0
+
+  // File menu callbacks
+  final VoidCallback? onNewProject;
+  final VoidCallback? onOpenProject;
+  final VoidCallback? onSaveProject;
+  final VoidCallback? onSaveProjectAs;
+  final VoidCallback? onExportProject;
+  final VoidCallback? onToggleMixer;
+  final bool mixerVisible;
+  final bool isLoading;
 
   const TransportBar({
     super.key,
@@ -33,6 +44,15 @@ class TransportBar extends StatelessWidget {
     this.metronomeEnabled = true,
     this.virtualPianoEnabled = false,
     this.tempo = 120.0,
+    this.cpuUsage = 0.0,
+    this.onNewProject,
+    this.onOpenProject,
+    this.onSaveProject,
+    this.onSaveProjectAs,
+    this.onExportProject,
+    this.onToggleMixer,
+    this.mixerVisible = true,
+    this.isLoading = false,
   });
 
   @override
@@ -40,15 +60,26 @@ class TransportBar extends StatelessWidget {
     return Container(
       height: 60,
       decoration: const BoxDecoration(
-        color: Color(0xFF2B2B2B),
+        color: Color(0xFF707070), // Medium grey panel
         border: Border(
-          bottom: BorderSide(color: Color(0xFF404040)),
+          bottom: BorderSide(color: Color(0xFF909090)), // Light grey border
         ),
       ),
       child: Row(
         children: [
           const SizedBox(width: 16),
-          
+
+          // Solar logo
+          Image.asset(
+            'assets/images/solar_logo.png',
+            height: 32,
+            fit: BoxFit.contain,
+          ),
+
+          const SizedBox(width: 24),
+          const VerticalDivider(color: Color(0xFF909090), width: 1),
+          const SizedBox(width: 16),
+
           // Play/Pause button
           _TransportButton(
             icon: isPlaying ? Icons.pause : Icons.play_arrow,
@@ -85,7 +116,7 @@ class TransportBar extends StatelessWidget {
           ),
           
           const SizedBox(width: 24),
-          const VerticalDivider(color: Color(0xFF404040), width: 1),
+          const VerticalDivider(color: Color(0xFF909090), width: 1),
           const SizedBox(width: 16),
           
           // Metronome toggle
@@ -108,9 +139,9 @@ class TransportBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: const Color(0xFF656565),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF404040)),
+              border: Border.all(color: const Color(0xFF909090)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -118,13 +149,13 @@ class TransportBar extends StatelessWidget {
                 const Icon(
                   Icons.speed,
                   size: 14,
-                  color: Color(0xFF808080),
+                  color: Color(0xFF404040),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   '${tempo.toStringAsFixed(0)} BPM',
                   style: const TextStyle(
-                    color: Color(0xFFA0A0A0),
+                    color: Color(0xFF202020),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -134,16 +165,16 @@ class TransportBar extends StatelessWidget {
           ),
           
           const SizedBox(width: 24),
-          const VerticalDivider(color: Color(0xFF404040), width: 1),
+          const VerticalDivider(color: Color(0xFF909090), width: 1),
           const SizedBox(width: 24),
           
           // Time display
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: const Color(0xFF656565),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF404040)),
+              border: Border.all(color: const Color(0xFF909090)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -151,13 +182,13 @@ class TransportBar extends StatelessWidget {
                 const Icon(
                   Icons.access_time,
                   size: 16,
-                  color: Color(0xFF808080),
+                  color: Color(0xFF404040),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   _formatTime(playheadPosition),
                   style: const TextStyle(
-                    color: Color(0xFFA0A0A0),
+                    color: Color(0xFF202020),
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     fontFeatures: [FontFeature.tabularFigures()],
@@ -168,7 +199,62 @@ class TransportBar extends StatelessWidget {
           ),
           
           const Spacer(),
-          
+
+          // Position display (bars.beats.subdivision)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF656565),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF909090)),
+            ),
+            child: Text(
+              _formatPosition(playheadPosition, tempo),
+              style: const TextStyle(
+                color: Color(0xFF202020),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // CPU usage indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF656565),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF909090)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'CPU',
+                  style: TextStyle(
+                    color: Color(0xFF505050),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${(cpuUsage * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: _getCPUColor(),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
           // Status indicator
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -200,7 +286,117 @@ class TransportBar extends StatelessWidget {
               ],
             ),
           ),
-          
+
+          const SizedBox(width: 16),
+          const VerticalDivider(color: Color(0xFF909090), width: 1),
+          const SizedBox(width: 8),
+
+          // File menu button
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.folder_open, color: Color(0xFF404040), size: 20),
+            tooltip: 'File',
+            onSelected: (String value) {
+              switch (value) {
+                case 'new':
+                  onNewProject?.call();
+                  break;
+                case 'open':
+                  onOpenProject?.call();
+                  break;
+                case 'save':
+                  onSaveProject?.call();
+                  break;
+                case 'save_as':
+                  onSaveProjectAs?.call();
+                  break;
+                case 'export':
+                  onExportProject?.call();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'new',
+                child: Row(
+                  children: [
+                    Icon(Icons.description, size: 18),
+                    SizedBox(width: 8),
+                    Text('New Project'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'open',
+                child: Row(
+                  children: [
+                    Icon(Icons.folder_open, size: 18),
+                    SizedBox(width: 8),
+                    Text('Open...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'save',
+                child: Row(
+                  children: [
+                    Icon(Icons.save, size: 18),
+                    SizedBox(width: 8),
+                    Text('Save'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'save_as',
+                child: Row(
+                  children: [
+                    Icon(Icons.save_as, size: 18),
+                    SizedBox(width: 8),
+                    Text('Save As...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.upload, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export...'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 4),
+
+          // Mixer toggle button
+          IconButton(
+            icon: Icon(
+              Icons.tune,
+              color: mixerVisible ? const Color(0xFF4CAF50) : const Color(0xFF404040),
+              size: 20,
+            ),
+            onPressed: onToggleMixer,
+            tooltip: 'Toggle Mixer',
+          ),
+
+          // Loading indicator
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF4CAF50),
+                ),
+              ),
+            ),
+
           const SizedBox(width: 16),
         ],
       ),
@@ -211,15 +407,37 @@ class TransportBar extends StatelessWidget {
     final minutes = (seconds / 60).floor();
     final secs = (seconds % 60).floor();
     final ms = ((seconds % 1) * 1000).floor();
-    
+
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}.${ms.toString().padLeft(3, '0')}';
+  }
+
+  String _formatPosition(double seconds, double bpm) {
+    // Calculate position in bars.beats.subdivision format
+    final beatsPerSecond = bpm / 60.0;
+    final totalBeats = seconds * beatsPerSecond;
+
+    // Assuming 4/4 time signature
+    final beatsPerBar = 4;
+    final subdivisionsPerBeat = 4; // 16th notes
+
+    final bar = (totalBeats / beatsPerBar).floor() + 1; // 1-indexed
+    final beat = (totalBeats % beatsPerBar).floor() + 1; // 1-indexed
+    final subdivision = ((totalBeats % 1) * subdivisionsPerBeat).floor() + 1; // 1-indexed
+
+    return '$bar.$beat.$subdivision';
+  }
+
+  Color _getCPUColor() {
+    if (cpuUsage < 0.5) return const Color(0xFF4CAF50); // Green
+    if (cpuUsage < 0.75) return const Color(0xFFFFC107); // Yellow
+    return const Color(0xFFFF5722); // Red/Orange
   }
 
   Color _getStatusColor() {
     if (isRecording) return const Color(0xFFFF0000);
     if (isCountingIn) return const Color(0xFFFFC107);
     if (isPlaying) return const Color(0xFF4CAF50);
-    return const Color(0xFF808080);
+    return const Color(0xFF404040);
   }
 
   String _getStatusText() {
@@ -261,12 +479,12 @@ class _TransportButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: onPressed != null 
                   ? color.withOpacity(0.2)
-                  : const Color(0xFF303030),
+                  : const Color(0xFF404040),
               shape: BoxShape.circle,
               border: Border.all(
                 color: onPressed != null 
                     ? color
-                    : const Color(0xFF404040),
+                    : const Color(0xFF909090),
                 width: 2,
               ),
             ),
@@ -275,7 +493,7 @@ class _TransportButton extends StatelessWidget {
               size: size * 0.5,
               color: onPressed != null 
                   ? color
-                  : const Color(0xFF606060),
+                  : const Color(0xFF505050),
             ),
           ),
         ),
@@ -309,12 +527,12 @@ class _MetronomeButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: enabled
                   ? const Color(0xFF2196F3).withOpacity(0.2)
-                  : const Color(0xFF1E1E1E),
+                  : const Color(0xFF5A5A5A),
               shape: BoxShape.circle,
               border: Border.all(
                 color: enabled
                     ? const Color(0xFF2196F3)
-                    : const Color(0xFF404040),
+                    : const Color(0xFF909090),
                 width: 2,
               ),
             ),
@@ -323,7 +541,7 @@ class _MetronomeButton extends StatelessWidget {
               size: 20,
               color: enabled
                   ? const Color(0xFF2196F3)
-                  : const Color(0xFF808080),
+                  : const Color(0xFF404040),
             ),
           ),
         ),
@@ -357,12 +575,12 @@ class _PianoButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: enabled
                   ? const Color(0xFF4CAF50).withOpacity(0.2)
-                  : const Color(0xFF1E1E1E),
+                  : const Color(0xFF5A5A5A),
               shape: BoxShape.circle,
               border: Border.all(
                 color: enabled
                     ? const Color(0xFF4CAF50)
-                    : const Color(0xFF404040),
+                    : const Color(0xFF909090),
                 width: 2,
               ),
             ),
@@ -371,7 +589,7 @@ class _PianoButton extends StatelessWidget {
               size: 20,
               color: enabled
                   ? const Color(0xFF4CAF50)
-                  : const Color(0xFF808080),
+                  : const Color(0xFF404040),
             ),
           ),
         ),

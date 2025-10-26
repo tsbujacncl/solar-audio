@@ -5,9 +5,10 @@ import 'package:file_picker/file_picker.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
-import '../widgets/file_drop_zone.dart';
 import '../widgets/virtual_piano.dart';
 import '../widgets/mixer_panel.dart';
+import '../widgets/library_panel.dart';
+import '../widgets/bottom_panel.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -43,11 +44,16 @@ class _DAWScreenState extends State<DAWScreen> {
   bool _virtualPianoVisible = false;
 
   // M4: Mixer state
-  bool _mixerVisible = false;
+  bool _mixerVisible = true; // Always visible by default
+  int? _selectedTrackForFX;
 
   // M5: Project state
   String? _currentProjectPath;
   String _currentProjectName = 'Untitled Project';
+
+  // M6: UI panel state
+  bool _libraryPanelCollapsed = false;
+  bool _bottomPanelVisible = false;
 
   @override
   void initState() {
@@ -438,6 +444,7 @@ class _DAWScreenState extends State<DAWScreen> {
         // Disable: Hide panel
         debugPrint('🎹 [DEBUG] Hiding piano panel...');
         _virtualPianoVisible = false;
+        _bottomPanelVisible = false; // Hide bottom panel when piano disabled
         _statusMessage = 'Virtual piano disabled';
         debugPrint('🎹 Virtual piano disabled');
       }
@@ -450,6 +457,20 @@ class _DAWScreenState extends State<DAWScreen> {
   void _toggleMixer() {
     setState(() {
       _mixerVisible = !_mixerVisible;
+    });
+  }
+
+  void _onFXButtonClicked(int? trackId) {
+    setState(() {
+      _selectedTrackForFX = trackId;
+      _bottomPanelVisible = trackId != null; // Show bottom panel when FX selected
+    });
+  }
+
+  // M6: Panel toggle methods
+  void _toggleLibraryPanel() {
+    setState(() {
+      _libraryPanelCollapsed = !_libraryPanelCollapsed;
     });
   }
 
@@ -688,120 +709,10 @@ class _DAWScreenState extends State<DAWScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
-      appBar: AppBar(
-        title: Image.asset(
-          'assets/images/solar_logo.png',
-          height: 32,
-          fit: BoxFit.contain,
-        ),
-        backgroundColor: const Color(0xFFF5F5F5),
-        actions: [
-          // File menu
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.folder_open, color: Color(0xFF808080)),
-            tooltip: 'File',
-            onSelected: (String value) {
-              switch (value) {
-                case 'new':
-                  _newProject();
-                  break;
-                case 'open':
-                  _openProject();
-                  break;
-                case 'save':
-                  _saveProject();
-                  break;
-                case 'save_as':
-                  _saveProjectAs();
-                  break;
-                case 'export':
-                  _exportProject();
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'new',
-                child: Row(
-                  children: [
-                    Icon(Icons.description, size: 18),
-                    SizedBox(width: 8),
-                    Text('New Project'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'open',
-                child: Row(
-                  children: [
-                    Icon(Icons.folder_open, size: 18),
-                    SizedBox(width: 8),
-                    Text('Open...'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'save',
-                child: Row(
-                  children: [
-                    Icon(Icons.save, size: 18),
-                    SizedBox(width: 8),
-                    Text('Save'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'save_as',
-                child: Row(
-                  children: [
-                    Icon(Icons.save_as, size: 18),
-                    SizedBox(width: 8),
-                    Text('Save As...'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.upload, size: 18),
-                    SizedBox(width: 8),
-                    Text('Export...'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // Mixer toggle button
-          IconButton(
-            icon: Icon(
-              Icons.tune,
-              color: _mixerVisible ? const Color(0xFF4CAF50) : const Color(0xFF808080),
-            ),
-            onPressed: _toggleMixer,
-            tooltip: 'Toggle Mixer',
-          ),
-          // Status indicator
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF4CAF50),
-                ),
-              ),
-            ),
-        ],
-      ),
+      backgroundColor: const Color(0xFF909090), // Light grey background
       body: Column(
         children: [
-          // Transport bar
+          // Transport bar (with logo and file/mixer buttons)
           TransportBar(
             onPlay: _loadedClipId != null ? _play : null,
             onPause: _loadedClipId != null ? _pause : null,
@@ -817,24 +728,54 @@ class _DAWScreenState extends State<DAWScreen> {
             metronomeEnabled: _metronomeEnabled,
             virtualPianoEnabled: _virtualPianoEnabled,
             tempo: _tempo,
+            // New parameters for file menu and mixer toggle
+            onNewProject: _newProject,
+            onOpenProject: _openProject,
+            onSaveProject: _saveProject,
+            onSaveProjectAs: _saveProjectAs,
+            onExportProject: _exportProject,
+            onToggleMixer: _toggleMixer,
+            mixerVisible: _mixerVisible,
+            isLoading: _isLoading,
           ),
 
-          // Main content area with mixer panel
+          // Main content area - 3-column layout
           Expanded(
-            child: Row(
+            child: Column(
               children: [
-                // Timeline area
+                // Top section: Library + Timeline + Mixer
                 Expanded(
-                  child: _loadedClipId == null
-                      ? _buildEmptyState()
-                      : _buildTimelineView(),
+                  child: Row(
+                    children: [
+                      // Left: Library panel
+                      LibraryPanel(
+                        isCollapsed: _libraryPanelCollapsed,
+                        onToggle: _toggleLibraryPanel,
+                      ),
+
+                      // Center: Timeline area
+                      Expanded(
+                        child: _buildTimelineView(),
+                      ),
+
+                      // Right: Mixer panel (always visible)
+                      if (_mixerVisible)
+                        MixerPanel(
+                          audioEngine: _audioEngine,
+                          onClose: _toggleMixer,
+                          onFXButtonClicked: _onFXButtonClicked,
+                        ),
+                    ],
+                  ),
                 ),
 
-                // Mixer panel (slide-in from right)
-                if (_mixerVisible)
-                  MixerPanel(
+                // Bottom panel: Piano Roll / FX Chain / Virtual Piano
+                if (_bottomPanelVisible || _virtualPianoVisible)
+                  BottomPanel(
                     audioEngine: _audioEngine,
-                    onClose: _toggleMixer,
+                    virtualPianoEnabled: _virtualPianoEnabled,
+                    selectedTrackForFX: _selectedTrackForFX,
+                    onVirtualPianoClose: _toggleVirtualPiano,
                   ),
               ],
             ),
@@ -842,83 +783,18 @@ class _DAWScreenState extends State<DAWScreen> {
 
           // Status bar
           _buildStatusBar(),
-
-          // Virtual piano keyboard (M3)
-          if (_virtualPianoVisible)
-            VirtualPiano(
-              audioEngine: _audioEngine,
-              isEnabled: _virtualPianoEnabled,
-              onClose: _toggleVirtualPiano,
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
-        padding: const EdgeInsets.all(32),
-        child: FileDropZone(
-          onFileLoaded: _loadAudioFile,
-          hasFile: _loadedClipId != null,
-        ),
-      ),
-    );
-  }
-
   Widget _buildTimelineView() {
-    return Column(
-      children: [
-        // File info bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: const BoxDecoration(
-            color: Color(0xFF2B2B2B),
-            border: Border(
-              bottom: BorderSide(color: Color(0xFF404040)),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.audio_file,
-                size: 16,
-                color: Color(0xFF808080),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _statusMessage,
-                  style: const TextStyle(
-                    color: Color(0xFF808080),
-                    fontSize: 13,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _pickFile,
-                icon: const Icon(Icons.folder_open, size: 16),
-                label: const Text('Load Different File'),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFA0A0A0),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Timeline
-        Expanded(
-          child: TimelineView(
-            playheadPosition: _playheadPosition,
-            clipDuration: _clipDuration,
-            waveformPeaks: _waveformPeaks,
-          ),
-        ),
-      ],
+    // Always show timeline (no empty state)
+    return TimelineView(
+      playheadPosition: _playheadPosition,
+      clipDuration: _clipDuration,
+      waveformPeaks: _waveformPeaks,
+      audioEngine: _audioEngine,
     );
   }
 
@@ -927,9 +803,9 @@ class _DAWScreenState extends State<DAWScreen> {
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
-        color: Color(0xFF2B2B2B),
+        color: Color(0xFF606060),
         border: Border(
-          top: BorderSide(color: Color(0xFF404040)),
+          top: BorderSide(color: Color(0xFF808080)),
         ),
       ),
       child: Row(

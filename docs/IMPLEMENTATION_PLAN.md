@@ -634,6 +634,81 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 ---
 
+## M5.5: UI Redesign (October 26, 2025)
+
+**Goal:** Transform UI from basic dark theme to professional 3-panel DAW layout with light grey theme.
+
+**Duration:** 1 day
+**Status:** ✅ Complete
+
+### What Was Implemented
+
+#### New Layout Structure
+- ✅ **3-Panel Layout:** Library (left) + Timeline (center) + Mixer (right)
+- ✅ **LibraryPanel Widget:** 4 categories (Sounds, Instruments, Effects, Plug-Ins)
+- ✅ **Always-Visible Mixer:** Mixer panel permanently visible on right (300px)
+- ✅ **BottomPanel Widget:** Tabbed interface (Piano Roll, FX Chain, Virtual Piano)
+- ✅ **TrackHeader Widget:** Track headers in timeline with S/M buttons and level meters
+- ✅ **Consolidated Transport Bar:** Logo, controls, and file/mixer buttons in single bar
+
+#### Light Grey Theme (Ableton-Style)
+- ✅ **Side Panels:** Medium grey (#707070) for library, mixer, transport, bottom panel
+- ✅ **Center Timeline:** Light grey (#909090) - lighter than sides to draw focus
+- ✅ **Dark Text:** All text changed from light grey to dark grey/black (#202020) for contrast
+- ✅ **Borders:** Light grey (#909090) instead of dark
+- ✅ **Status Bar:** Darker grey (#606060) to anchor bottom
+
+#### Color Palette Documentation
+```
+Side Panels (Library, Mixer, Transport):
+  Background: #707070 (medium grey)
+  Headers:    #656565 (slightly darker)
+  Borders:    #909090 (light grey)
+
+Center Timeline:
+  Background: #909090 (light grey)
+  Tracks:     #9A9A9A (even lighter)
+  Borders:    #AAAAAA (subtle)
+  Grid:       #A0A0A0
+
+Text (Dark on Light):
+  Primary:    #202020 (very dark grey)
+  Secondary:  #353535 (dark grey)
+  Tertiary:   #505050 (medium-dark)
+  Icons:      #404040
+
+Accent Colors (unchanged):
+  Green:   #4CAF50
+  Red:     #FF5722
+  Yellow:  #FFC107
+  Blue:    #2196F3
+```
+
+### Files Created
+1. `ui/lib/widgets/library_panel.dart` - Left sidebar browser
+2. `ui/lib/widgets/track_header.dart` - Timeline track headers
+3. `ui/lib/widgets/bottom_panel.dart` - Tabbed bottom panel
+
+### Files Modified
+1. `ui/lib/screens/daw_screen.dart` - 3-column layout
+2. `ui/lib/widgets/transport_bar.dart` - Logo + file/mixer buttons
+3. `ui/lib/widgets/mixer_panel.dart` - Always-visible, reduced width
+4. `ui/lib/widgets/timeline_view.dart` - Multi-track with headers
+5. `ui/lib/widgets/bottom_panel.dart` - Tab integration
+6. All widgets updated with light grey color scheme
+
+### Design Decisions
+- **Light theme chosen** for better visibility and modern aesthetic (similar to Ableton Live)
+- **Center focus:** Timeline lighter than side panels to draw attention to workspace
+- **Dark text:** Better contrast and readability on light backgrounds
+- **Panel proportions:** Library 12% | Timeline 63% | Mixer 25%
+- **Single transport bar:** Logo moved from AppBar to transport bar for cleaner layout
+
+### Future UI Enhancements
+See "UI/UX Enhancement Roadmap" section below for planned improvements in M7-M9.
+
+---
+
 ## M6: MIDI & Piano Roll
 
 **Goal:** Full MIDI editing support with piano roll, velocity lane, and virtual piano.
@@ -1330,6 +1405,120 @@ After v1.0 launches, gather feedback and plan future versions:
 7. Advanced features (spectral editing, notation)
 
 **Timeline:** 6+ months post-v1.2
+
+---
+
+## UI/UX Enhancement Roadmap
+
+These improvements will be implemented progressively across M7-M10 and future versions. The goal is to balance beginner-friendliness with pro-user features.
+
+### M7: Polish & UX - UI Enhancements
+
+**Panel Flexibility (Critical for Pros):**
+- [ ] Make library panel collapsible (keyboard: `B`)
+- [ ] Make bottom panel collapsible (keyboard: `P`)
+- [ ] Keep mixer toggleable (keyboard: `M`)
+- [ ] Save panel visibility state in preferences
+- **Rationale:** Experienced users want maximum timeline space when editing
+
+**Timeline Track Headers:**
+- [ ] Add track headers directly in timeline (left side)
+  - Track icon/emoji, name, [S] [M] buttons
+  - Level meter visualization
+  - Reduces need to look at mixer constantly
+- [ ] Add track colors for visual identification (🎸 red, 🎹 orange, 🥁 yellow, 🎤 green)
+
+**Transport Bar Additions:**
+- [ ] Add loop on/off toggle button
+- [ ] Add undo/redo buttons
+- [ ] Show project name in title bar
+- [ ] Improve spacing and visual hierarchy
+
+**Timeline Navigation:**
+- [ ] Add zoom slider in timeline corner
+- [ ] Keyboard shortcuts: `+/-` for zoom, `H` = zoom to fit
+- [ ] Add loop region indicators (start/end markers)
+- [ ] Show grid lines for bars/beats
+
+**Tooltips & Onboarding:**
+- [ ] Add tooltips on hover with keyboard shortcuts
+- [ ] First launch: Show quick tour overlay
+- [ ] Empty state guidance: "Try dragging a file here" or "Create your first track"
+- [ ] Help menu with video tutorial links
+
+### M8: Stock Instruments - Library Panel Enhancements
+
+**Library Panel Improvements:**
+- [ ] Add search/filter bar at top
+- [ ] Show "Recent" and "Favorites" sections
+- [ ] Preview on hover:
+  - Waveform visualization for audio samples
+  - Play button for quick audition
+- [ ] Tag-based filtering (drums, bass, FX, synth, etc.)
+- [ ] Drag & drop from library to timeline
+
+### M9: Polish & Beta Launch - Pro Features
+
+**Mixer Panel Optimization:**
+- [ ] Add "Narrow view" mode (show only faders, hide names)
+- [ ] Add mixer routing view (sends/returns visualization)
+- [ ] Add track input selector dropdown (for recording)
+- [ ] Group tracks into folders (collapsible sections)
+
+**Bottom Panel Improvements:**
+- [ ] Add 4th tab: "Automation" (volume/pan curves)
+- [ ] Make height adjustable (drag divider up/down)
+- [ ] Add "maximize" button to make bottom panel full-screen temporarily
+
+**Context Menus & Right-Click:**
+- [ ] Right-click track header: Duplicate, Delete, Rename, Color, Freeze
+- [ ] Right-click timeline: Add marker, Split clip, Delete
+- [ ] Right-click mixer strip: Reset, Copy settings, Add FX
+- [ ] Right-click clip: Normalize, Reverse, Fade in/out
+
+### v1.1+ Advanced Features
+
+**Automation:**
+- [ ] Automation lanes in timeline
+- [ ] Draw volume/pan curves
+- [ ] Automate effect parameters
+- [ ] Automation modes (Read, Touch, Latch, Write)
+
+**Track Management:**
+- [ ] Track folders/groups (collapsible)
+- [ ] Track freeze (bounce to audio to save CPU)
+- [ ] Track templates (save track with settings)
+- [ ] Track routing matrix
+
+**Markers & Navigation:**
+- [ ] Add markers at timeline positions
+- [ ] Named sections (Intro, Verse, Chorus)
+- [ ] Jump to marker (keyboard shortcuts)
+- [ ] Marker list panel
+
+**Comping & Recording:**
+- [ ] Record multiple takes on same track
+- [ ] Comp editor (select best parts)
+- [ ] Take lanes (show all takes)
+- [ ] Punch in/out recording
+
+**Workflow Enhancements:**
+- [ ] Multiple undo/redo stacks
+- [ ] Command palette (⌘K) - fuzzy search all actions
+- [ ] Keyboard shortcut customization
+- [ ] Workspace layouts (Editing, Mixing, Recording presets)
+
+### Layout Proportions
+
+**Current Mockup:** Library 15% | Timeline 60% | Mixer 25%
+
+**Suggested Modes:**
+- **Balanced (default):** Library 12% | Timeline 63% | Mixer 25%
+- **Pro mode:** Library 0% | Timeline 75% | Mixer 25%
+- **Mix mode:** Library 0% | Timeline 50% | Mixer 50%
+- **Edit mode:** Library 12% | Timeline 88% | Mixer 0%
+
+**Key:** Flexibility - let users customize their workspace and remember preferences.
 
 ---
 

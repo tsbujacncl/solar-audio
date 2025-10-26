@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../audio_engine.dart';
+import 'track_header.dart';
 
 /// Timeline view widget for displaying audio clips and playhead
 class TimelineView extends StatefulWidget {
   final double playheadPosition; // in seconds
   final double? clipDuration; // in seconds (null if no clip loaded)
   final List<double> waveformPeaks; // waveform data
+  final AudioEngine? audioEngine;
   final VoidCallback? onSeek; // callback when user clicks timeline
-  
+
   const TimelineView({
     super.key,
     required this.playheadPosition,
     this.clipDuration,
     this.waveformPeaks = const [],
+    this.audioEngine,
     this.onSeek,
   });
 
@@ -35,44 +39,115 @@ class _TimelineViewState extends State<TimelineView> {
     final viewWidth = MediaQuery.of(context).size.width;
     final duration = widget.clipDuration ?? 10.0; // Default 10s if no clip
     final totalWidth = math.max(duration * _pixelsPerSecond, viewWidth);
-    
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        border: Border.all(color: const Color(0xFF404040)),
+        color: const Color(0xFF909090),
+        border: Border.all(color: const Color(0xFFAAAAAA)),
       ),
       child: Column(
         children: [
-          // Time ruler
-          _buildTimeRuler(totalWidth, duration),
-          
-          // Timeline tracks area
-          Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: totalWidth,
-                child: Stack(
-                  children: [
-                    // Grid lines
-                    _buildGrid(totalWidth, duration),
-                    
-                    // Audio track
-                    _buildAudioTrack(totalWidth),
-                    
-                    // Playhead
-                    _buildPlayhead(),
-                  ],
-                ),
+          // Time ruler (with left padding for track headers)
+          Row(
+            children: [
+              const SizedBox(width: 120), // Space for track headers
+              Expanded(
+                child: _buildTimeRuler(totalWidth, duration),
               ),
+            ],
+          ),
+
+          // Timeline tracks area with headers
+          Expanded(
+            child: Row(
+              children: [
+                // Track headers column
+                _buildTrackHeaders(),
+
+                // Timeline tracks scrollable area
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: totalWidth,
+                      child: Stack(
+                        children: [
+                          // Grid lines
+                          _buildGrid(totalWidth, duration),
+
+                          // Tracks
+                          _buildTracks(totalWidth),
+
+                          // Playhead
+                          _buildPlayhead(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          
+
           // Zoom controls
           _buildZoomControls(),
         ],
       ),
+    );
+  }
+
+  Widget _buildTrackHeaders() {
+    // For now, show default track + master track
+    return Container(
+      width: 120,
+      decoration: const BoxDecoration(
+        color: Color(0xFF9A9A9A),
+        border: Border(
+          right: BorderSide(color: Color(0xFFAAAAAA)),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Audio Track 1 (default)
+          TrackHeader(
+            trackId: 0,
+            trackName: 'Audio 1',
+            trackType: 'Audio',
+            isMuted: false,
+            isSoloed: false,
+            peakLevel: 0.0,
+            audioEngine: widget.audioEngine,
+          ),
+
+          const Spacer(),
+
+          // Master Track
+          const MasterTrackHeader(
+            peakLevel: 0.0,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTracks(double width) {
+    return Column(
+      children: [
+        // Audio Track 1
+        _buildAudioTrack(width, 0),
+
+        const Spacer(),
+
+        // Master Track (shorter)
+        Container(
+          height: 80,
+          decoration: BoxDecoration(
+            color: const Color(0xFF9A9A9A),
+            border: Border.all(color: const Color(0xFFAAAAAA)),
+          ),
+        ),
+      ],
     );
   }
 
@@ -81,9 +156,9 @@ class _TimelineViewState extends State<TimelineView> {
       height: 30,
       width: width,
       decoration: const BoxDecoration(
-        color: Color(0xFF2B2B2B),
+        color: Color(0xFF9A9A9A),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF404040)),
+          bottom: BorderSide(color: Color(0xFFAAAAAA)),
         ),
       ),
       child: CustomPaint(
@@ -105,43 +180,37 @@ class _TimelineViewState extends State<TimelineView> {
     );
   }
 
-  Widget _buildAudioTrack(double width) {
-    if (widget.clipDuration == null || widget.waveformPeaks.isEmpty) {
-      return Positioned(
-        top: 20,
-        left: 0,
-        child: Container(
-          width: width,
-          height: 120,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2B2B2B),
-            border: Border.all(color: const Color(0xFF404040)),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Center(
-            child: Text(
-              'No audio loaded',
-              style: TextStyle(
-                color: Color(0xFF606060),
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _buildAudioTrack(double width, int trackIndex) {
+    // Empty track container
+    return Container(
+      height: 100,
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF9A9A9A),
+        border: Border.all(color: const Color(0xFFAAAAAA)),
+      ),
+      child: Stack(
+        children: [
+          // Show waveform if clip exists
+          if (widget.clipDuration != null && widget.waveformPeaks.isNotEmpty)
+            _buildClip(widget.clipDuration!, widget.waveformPeaks, 0),
+        ],
+      ),
+    );
+  }
 
-    final clipWidth = widget.clipDuration! * _pixelsPerSecond;
-    
+  Widget _buildClip(double duration, List<double> peaks, double startPosition) {
+    final clipWidth = duration * _pixelsPerSecond;
+    final clipX = startPosition * _pixelsPerSecond;
+
     return Positioned(
-      top: 20,
-      left: 0,
+      left: clipX,
+      top: 8,
       child: Container(
         width: clipWidth,
-        height: 120,
+        height: 84,
         decoration: BoxDecoration(
-          color: const Color(0xFF2B2B2B),
+          color: const Color(0xFF909090),
           border: Border.all(color: const Color(0xFF4CAF50), width: 1),
           borderRadius: BorderRadius.circular(4),
         ),
@@ -149,7 +218,7 @@ class _TimelineViewState extends State<TimelineView> {
           borderRadius: BorderRadius.circular(4),
           child: CustomPaint(
             painter: _WaveformPainter(
-              peaks: widget.waveformPeaks,
+              peaks: peaks,
               color: const Color(0xFF4CAF50),
             ),
           ),
@@ -199,9 +268,9 @@ class _TimelineViewState extends State<TimelineView> {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: const BoxDecoration(
-        color: Color(0xFF2B2B2B),
+        color: Color(0xFF9A9A9A),
         border: Border(
-          top: BorderSide(color: Color(0xFF404040)),
+          top: BorderSide(color: Color(0xFFAAAAAA)),
         ),
       ),
       child: Row(
@@ -213,7 +282,7 @@ class _TimelineViewState extends State<TimelineView> {
               });
             },
             icon: const Icon(Icons.zoom_out, size: 20),
-            color: const Color(0xFFA0A0A0),
+            color: const Color(0xFF202020),
             tooltip: 'Zoom Out',
           ),
           Expanded(
@@ -227,8 +296,8 @@ class _TimelineViewState extends State<TimelineView> {
                   _pixelsPerSecond = value;
                 });
               },
-              activeColor: const Color(0xFFA0A0A0),
-              inactiveColor: const Color(0xFF404040),
+              activeColor: const Color(0xFF202020),
+              inactiveColor: const Color(0xFFAAAAAA),
             ),
           ),
           IconButton(
@@ -238,14 +307,14 @@ class _TimelineViewState extends State<TimelineView> {
               });
             },
             icon: const Icon(Icons.zoom_in, size: 20),
-            color: const Color(0xFFA0A0A0),
+            color: const Color(0xFF202020),
             tooltip: 'Zoom In',
           ),
           const SizedBox(width: 16),
           Text(
             '${_pixelsPerSecond.toInt()}px/s',
             style: const TextStyle(
-              color: Color(0xFF808080),
+              color: Color(0xFF353535),
               fontSize: 12,
             ),
           ),
@@ -268,7 +337,7 @@ class _TimeRulerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF808080)
+      ..color = const Color(0xFF353535)
       ..strokeWidth = 1;
 
     final textPainter = TextPainter(
@@ -301,7 +370,7 @@ class _TimeRulerPainter extends CustomPainter {
         textPainter.text = TextSpan(
           text: timeText,
           style: const TextStyle(
-            color: Color(0xFFA0A0A0),
+            color: Color(0xFF202020),
             fontSize: 11,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
@@ -336,7 +405,7 @@ class _GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF303030)
+      ..color = const Color(0xFF202020)
       ..strokeWidth = 0.5;
 
     // Vertical grid lines every second
@@ -347,9 +416,9 @@ class _GridPainter extends CustomPainter {
 
       // Major line every 5 seconds
       if (sec % 5 == 0) {
-        paint.color = const Color(0xFF404040);
+        paint.color = const Color(0xFFAAAAAA);
       } else {
-        paint.color = const Color(0xFF303030);
+        paint.color = const Color(0xFF202020);
       }
       
       canvas.drawLine(

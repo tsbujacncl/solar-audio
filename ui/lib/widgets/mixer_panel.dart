@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../audio_engine.dart';
-import 'effect_parameter_panel.dart';
 
 /// Track data model
 class TrackData {
@@ -49,11 +48,13 @@ class TrackData {
 class MixerPanel extends StatefulWidget {
   final AudioEngine? audioEngine;
   final VoidCallback onClose;
+  final Function(int?)? onFXButtonClicked;
 
   const MixerPanel({
     super.key,
     required this.audioEngine,
     required this.onClose,
+    this.onFXButtonClicked,
   });
 
   @override
@@ -131,47 +132,30 @@ class _MixerPanelState extends State<MixerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // Mixer panel
-        Container(
-          width: 400,
-          decoration: const BoxDecoration(
-            color: Color(0xFF2B2B2B),
-            border: Border(
-              left: BorderSide(color: Color(0xFF404040)),
-            ),
-          ),
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(),
-
-              // Track strips
-              Expanded(
-                child: _tracks.isEmpty
-                    ? _buildEmptyState()
-                    : _buildTrackList(),
-              ),
-
-              // Add track buttons
-              _buildAddTrackBar(),
-            ],
-          ),
+    return Container(
+      width: 300, // Reduced from 400px
+      decoration: const BoxDecoration(
+        color: Color(0xFF707070),
+        border: Border(
+          left: BorderSide(color: Color(0xFF909090)),
         ),
+      ),
+      child: Column(
+        children: [
+          // Header
+          _buildHeader(),
 
-        // Effects panel (slide-in when track selected)
-        if (_selectedTrackForFX != null)
-          EffectParameterPanel(
-            audioEngine: widget.audioEngine,
-            trackId: _selectedTrackForFX!,
-            onClose: () {
-              setState(() {
-                _selectedTrackForFX = null;
-              });
-            },
+          // Track strips
+          Expanded(
+            child: _tracks.isEmpty
+                ? _buildEmptyState()
+                : _buildTrackList(),
           ),
-      ],
+
+          // Add track buttons
+          _buildAddTrackBar(),
+        ],
+      ),
     );
   }
 
@@ -179,23 +163,23 @@ class _MixerPanelState extends State<MixerPanel> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
+        color: Color(0xFF656565),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF404040)),
+          bottom: BorderSide(color: Color(0xFF909090)),
         ),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.tune,
-            color: Color(0xFFA0A0A0),
+            color: Color(0xFF202020),
             size: 20,
           ),
           const SizedBox(width: 12),
           const Text(
             'MIXER',
             style: TextStyle(
-              color: Color(0xFFA0A0A0),
+              color: Color(0xFF202020),
               fontSize: 14,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
@@ -204,7 +188,7 @@ class _MixerPanelState extends State<MixerPanel> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.close),
-            color: const Color(0xFFA0A0A0),
+            color: const Color(0xFF202020),
             iconSize: 20,
             onPressed: widget.onClose,
             tooltip: 'Close mixer',
@@ -272,9 +256,9 @@ class _MixerPanelState extends State<MixerPanel> {
       width: 100,
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: const Color(0xFF656565),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF404040)),
+        border: Border.all(color: const Color(0xFF909090)),
       ),
       child: Column(
         children: [
@@ -282,7 +266,7 @@ class _MixerPanelState extends State<MixerPanel> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: const BoxDecoration(
-              color: Color(0xFF2B2B2B),
+              color: Color(0xFF707070),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
@@ -293,7 +277,7 @@ class _MixerPanelState extends State<MixerPanel> {
                 Text(
                   track.name,
                   style: const TextStyle(
-                    color: Color(0xFFA0A0A0),
+                    color: Color(0xFF202020),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -347,18 +331,30 @@ class _MixerPanelState extends State<MixerPanel> {
           Expanded(
             child: ElevatedButton(
               onPressed: () {
-                setState(() {
-                  _selectedTrackForFX =
-                      _selectedTrackForFX == track.id ? null : track.id;
-                });
+                if (widget.onFXButtonClicked != null) {
+                  // Use parent callback (new bottom panel approach)
+                  widget.onFXButtonClicked!(
+                    _selectedTrackForFX == track.id ? null : track.id
+                  );
+                  setState(() {
+                    _selectedTrackForFX =
+                        _selectedTrackForFX == track.id ? null : track.id;
+                  });
+                } else {
+                  // Fallback to old approach (show effect panel on right)
+                  setState(() {
+                    _selectedTrackForFX =
+                        _selectedTrackForFX == track.id ? null : track.id;
+                  });
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _selectedTrackForFX == track.id
                     ? const Color(0xFF4CAF50)
-                    : const Color(0xFF404040),
+                    : const Color(0xFF909090),
                 foregroundColor: _selectedTrackForFX == track.id
                     ? Colors.white
-                    : const Color(0xFF808080),
+                    : const Color(0xFF404040),
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 minimumSize: const Size(0, 24),
               ),
@@ -372,7 +368,7 @@ class _MixerPanelState extends State<MixerPanel> {
             width: 24,
             child: IconButton(
               icon: const Icon(Icons.close, size: 14),
-              color: const Color(0xFF808080),
+              color: const Color(0xFF404040),
               padding: EdgeInsets.zero,
               onPressed: () => _confirmDeleteTrack(track),
               tooltip: 'Delete track',
@@ -412,7 +408,7 @@ class _MixerPanelState extends State<MixerPanel> {
       width: 120,
       margin: const EdgeInsets.only(left: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: const Color(0xFF606060),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFF4CAF50), width: 2),
       ),
@@ -422,7 +418,7 @@ class _MixerPanelState extends State<MixerPanel> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: const BoxDecoration(
-              color: Color(0xFF2B2B2B),
+              color: Color(0xFF707070),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(6),
                 topRight: Radius.circular(6),
@@ -471,7 +467,7 @@ class _MixerPanelState extends State<MixerPanel> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFF2B2B2B),
+                color: const Color(0xFF707070),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -505,7 +501,7 @@ class _MixerPanelState extends State<MixerPanel> {
         Text(
           '${track.volumeDb.toStringAsFixed(1)} dB',
           style: const TextStyle(
-            color: Color(0xFF808080),
+            color: Color(0xFF404040),
             fontSize: 10,
           ),
         ),
@@ -525,8 +521,8 @@ class _MixerPanelState extends State<MixerPanel> {
                   overlayRadius: 12,
                 ),
                 activeTrackColor: const Color(0xFF4CAF50),
-                inactiveTrackColor: const Color(0xFF404040),
-                thumbColor: const Color(0xFFA0A0A0),
+                inactiveTrackColor: const Color(0xFF909090),
+                thumbColor: const Color(0xFF202020),
               ),
               child: Slider(
                 value: _volumeDbToSlider(track.volumeDb),
@@ -555,7 +551,7 @@ class _MixerPanelState extends State<MixerPanel> {
           Text(
             _panToLabel(track.pan),
             style: const TextStyle(
-              color: Color(0xFF808080),
+              color: Color(0xFF404040),
               fontSize: 10,
             ),
           ),
@@ -569,8 +565,8 @@ class _MixerPanelState extends State<MixerPanel> {
                 overlayRadius: 10,
               ),
               activeTrackColor: const Color(0xFF2196F3),
-              inactiveTrackColor: const Color(0xFF404040),
-              thumbColor: const Color(0xFFA0A0A0),
+              inactiveTrackColor: const Color(0xFF909090),
+              thumbColor: const Color(0xFF202020),
             ),
             child: Slider(
               value: track.pan,
@@ -606,10 +602,10 @@ class _MixerPanelState extends State<MixerPanel> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: track.mute
                     ? const Color(0xFFFF5722)
-                    : const Color(0xFF404040),
+                    : const Color(0xFF909090),
                 foregroundColor: track.mute
                     ? Colors.white
-                    : const Color(0xFF808080),
+                    : const Color(0xFF404040),
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 minimumSize: const Size(0, 24),
               ),
@@ -630,10 +626,10 @@ class _MixerPanelState extends State<MixerPanel> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: track.solo
                     ? const Color(0xFFFFC107)
-                    : const Color(0xFF404040),
+                    : const Color(0xFF909090),
                 foregroundColor: track.solo
                     ? Colors.black
-                    : const Color(0xFF808080),
+                    : const Color(0xFF404040),
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 minimumSize: const Size(0, 24),
               ),
@@ -649,9 +645,9 @@ class _MixerPanelState extends State<MixerPanel> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
+        color: Color(0xFF656565),
         border: Border(
-          top: BorderSide(color: Color(0xFF404040)),
+          top: BorderSide(color: Color(0xFF909090)),
         ),
       ),
       child: Row(
@@ -662,8 +658,8 @@ class _MixerPanelState extends State<MixerPanel> {
               icon: const Icon(Icons.audiotrack, size: 16),
               label: const Text('Audio'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF404040),
-                foregroundColor: const Color(0xFFA0A0A0),
+                backgroundColor: const Color(0xFF909090),
+                foregroundColor: const Color(0xFF202020),
                 padding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
@@ -675,8 +671,8 @@ class _MixerPanelState extends State<MixerPanel> {
               icon: const Icon(Icons.piano, size: 16),
               label: const Text('MIDI'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF404040),
-                foregroundColor: const Color(0xFFA0A0A0),
+                backgroundColor: const Color(0xFF909090),
+                foregroundColor: const Color(0xFF202020),
                 padding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
