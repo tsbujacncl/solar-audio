@@ -6,7 +6,7 @@ use crate::midi::MidiClip;
 use crate::midi_input::MidiInputManager;
 use crate::midi_recorder::MidiRecorder;
 use crate::synth::Synthesizer;
-use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackManager};  // Import from track module
+use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackId, TrackManager};  // Import from track module
 use crate::effects::{Effect, EffectManager, Limiter};  // Import from effects module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
@@ -140,6 +140,58 @@ impl AudioGraph {
         id
     }
 
+    /// Add an audio clip to a specific track (M5.5)
+    pub fn add_clip_to_track(&self, track_id: TrackId, clip: Arc<AudioClip>, start_time: f64) -> Option<ClipId> {
+        let id = {
+            let mut next_id = self.next_clip_id.lock().unwrap();
+            let id = *next_id;
+            *next_id += 1;
+            id
+        };
+
+        let track_manager = self.track_manager.lock().unwrap();
+        if let Some(track_arc) = track_manager.get_track(track_id) {
+            let mut track = track_arc.lock().unwrap();
+            track.audio_clips.push(TimelineClip {
+                id,
+                clip,
+                start_time,
+                offset: 0.0,
+                duration: None,
+            });
+            eprintln!("🎵 [AudioGraph] Added audio clip {} to track {} at time {:.2}s", id, track_id, start_time);
+            Some(id)
+        } else {
+            eprintln!("❌ [AudioGraph] Track {} not found, cannot add clip", track_id);
+            None
+        }
+    }
+
+    /// Add a MIDI clip to a specific track (M5.5)
+    pub fn add_midi_clip_to_track(&self, track_id: TrackId, clip: Arc<MidiClip>, start_time: f64) -> Option<ClipId> {
+        let id = {
+            let mut next_id = self.next_clip_id.lock().unwrap();
+            let id = *next_id;
+            *next_id += 1;
+            id
+        };
+
+        let track_manager = self.track_manager.lock().unwrap();
+        if let Some(track_arc) = track_manager.get_track(track_id) {
+            let mut track = track_arc.lock().unwrap();
+            track.midi_clips.push(TimelineMidiClip {
+                id,
+                clip,
+                start_time,
+            });
+            eprintln!("🎹 [AudioGraph] Added MIDI clip {} to track {} at time {:.2}s", id, track_id, start_time);
+            Some(id)
+        } else {
+            eprintln!("❌ [AudioGraph] Track {} not found, cannot add MIDI clip", track_id);
+            None
+        }
+    }
+
     /// Remove a clip from the timeline (audio or MIDI)
     pub fn remove_clip(&self, clip_id: ClipId) -> bool {
         // Try to remove from audio clips
@@ -256,6 +308,7 @@ impl AudioGraph {
 
         // M4: Clone track and effect managers
         let track_manager = self.track_manager.clone();
+        let effect_manager = self.effect_manager.clone();
         let master_limiter = self.master_limiter.clone();
 
         let stream = device.build_output_stream(
@@ -372,17 +425,151 @@ impl AudioGraph {
                     }
                 }
 
-                // Mix all clips into the output buffer
+                // M5.5: Track-based mixing (replaces legacy clip mixing)
+
+                // OPTIMIZATION: Lock tracks ONCE and extract all data before frame loop
+                // This prevents locking for every frame (which causes UI freezing)
+
+                struct TrackSnapshot {
+                    id: u64,
+                    audio_clips: Vec<TimelineClip>,
+                    midi_clips: Vec<TimelineMidiClip>,
+                    volume_gain: f32,
+                    pan_left: f32,
+                    pan_right: f32,
+                    muted: bool,
+                    soloed: bool,
+                    fx_chain: Vec<u64>,
+                }
+
+                let track_data_option = if let Ok(tm) = track_manager.lock() {
+                    let has_solo_flag = tm.has_solo();
+                    let all_tracks = tm.get_all_tracks();
+                    let mut snapshots = Vec::new();
+                    let mut master_snap = None;
+
+                    for track_arc in all_tracks {
+                        if let Ok(track) = track_arc.lock() {
+                            // Extract all data we need from this track
+                            let snap = TrackSnapshot {
+                                id: track.id,
+                                audio_clips: track.audio_clips.clone(),
+                                midi_clips: track.midi_clips.clone(),
+                                volume_gain: track.get_gain(),
+                                pan_left: track.get_pan_gains().0,
+                                pan_right: track.get_pan_gains().1,
+                                muted: track.mute,
+                                soloed: track.solo,
+                                fx_chain: track.fx_chain.clone(),
+                            };
+
+                            if track.track_type == crate::track::TrackType::Master {
+                                master_snap = Some(snap);
+                            } else {
+                                snapshots.push(snap);
+                            }
+                        }
+                    }
+
+                    Some((snapshots, has_solo_flag, master_snap))
+                } else {
+                    None // Lock failed, use empty track list
+                }; // All locks released here!
+
+                let (track_snapshots, has_solo, master_snapshot) = track_data_option
+                    .unwrap_or_else(|| (Vec::new(), false, None));
+
+                // Process each frame (using snapshots - NO LOCKS!)
                 for frame_idx in 0..frames {
                     let playhead_frame = current_playhead + frame_idx as u64;
                     let playhead_seconds = playhead_frame as f64 / TARGET_SAMPLE_RATE as f64;
 
-                    let mut left = 0.0;
-                    let mut right = 0.0;
+                    let mut mix_left = 0.0;
+                    let mut mix_right = 0.0;
 
-                    // Mix all active audio clips
+                    // Mix all tracks using snapshots (no locking!)
+                    for track_snap in &track_snapshots {
+                        // Handle mute/solo logic
+                        if track_snap.muted {
+                            continue; // Muted tracks produce no sound
+                        }
+                        if has_solo && !track_snap.soloed {
+                            continue; // If any track is soloed, skip non-soloed tracks
+                        }
+
+                        let mut track_left = 0.0;
+                        let mut track_right = 0.0;
+
+                        // Mix all audio clips on this track
+                        for timeline_clip in &track_snap.audio_clips {
+                            let clip_duration = timeline_clip.duration
+                                .unwrap_or(timeline_clip.clip.duration_seconds);
+                            let clip_end = timeline_clip.start_time + clip_duration;
+
+                            if playhead_seconds >= timeline_clip.start_time
+                                && playhead_seconds < clip_end
+                            {
+                                let time_in_clip = playhead_seconds - timeline_clip.start_time + timeline_clip.offset;
+                                let frame_in_clip = (time_in_clip * TARGET_SAMPLE_RATE as f64) as usize;
+
+                                if let Some(l) = timeline_clip.clip.get_sample(frame_in_clip, 0) {
+                                    track_left += l;
+                                }
+                                if timeline_clip.clip.channels > 1 {
+                                    if let Some(r) = timeline_clip.clip.get_sample(frame_in_clip, 1) {
+                                        track_right += r;
+                                    }
+                                } else {
+                                    // Mono clip - duplicate to right
+                                    if let Some(l) = timeline_clip.clip.get_sample(frame_in_clip, 0) {
+                                        track_right += l;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Apply track volume (from snapshot)
+                        track_left *= track_snap.volume_gain;
+                        track_right *= track_snap.volume_gain;
+
+                        // Apply track pan (from snapshot)
+                        let panned_left = track_left * track_snap.pan_left + track_right * track_snap.pan_left;
+                        let panned_right = track_left * track_snap.pan_right + track_right * track_snap.pan_right;
+                        track_left = panned_left;
+                        track_right = panned_right;
+
+                        // Process FX chain on this track
+                        let mut fx_left = track_left;
+                        let mut fx_right = track_right;
+
+                        if let Ok(effect_mgr) = effect_manager.lock() {
+                            for effect_id in &track_snap.fx_chain {
+                                if let Some(effect_arc) = effect_mgr.get_effect(*effect_id) {
+                                    if let Ok(mut effect) = effect_arc.lock() {
+                                        let (out_l, out_r) = effect.process_frame(fx_left, fx_right);
+                                        fx_left = out_l;
+                                        fx_right = out_r;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Accumulate to mix bus
+                        mix_left += fx_left;
+                        mix_right += fx_right;
+                    }
+
+                    // Add synthesizer output (MIDI playback)
+                    // Note: MIDI events are processed above, synth generates audio here
+                    if let Ok(mut synth) = synthesizer.lock() {
+                        let synth_sample = synth.process_sample();
+                        mix_left += synth_sample;
+                        mix_right += synth_sample;
+                    }
+
+                    // Legacy: Also mix clips from global timeline (for backward compatibility)
+                    // TODO: Remove this once all clips are migrated to tracks
                     for timeline_clip in &clips_snapshot {
-                        // Check if this clip is active at current playhead
                         let clip_duration = timeline_clip.duration
                             .unwrap_or(timeline_clip.clip.duration_seconds);
                         let clip_end = timeline_clip.start_time + clip_duration;
@@ -390,39 +577,28 @@ impl AudioGraph {
                         if playhead_seconds >= timeline_clip.start_time
                             && playhead_seconds < clip_end
                         {
-                            // Calculate position within the clip
                             let time_in_clip = playhead_seconds - timeline_clip.start_time + timeline_clip.offset;
                             let frame_in_clip = (time_in_clip * TARGET_SAMPLE_RATE as f64) as usize;
 
-                            // Get samples from clip
                             if let Some(l) = timeline_clip.clip.get_sample(frame_in_clip, 0) {
-                                left += l;
+                                mix_left += l;
                             }
                             if timeline_clip.clip.channels > 1 {
                                 if let Some(r) = timeline_clip.clip.get_sample(frame_in_clip, 1) {
-                                    right += r;
+                                    mix_right += r;
                                 }
                             } else {
-                                // Mono clip - duplicate to right channel
                                 if let Some(l) = timeline_clip.clip.get_sample(frame_in_clip, 0) {
-                                    right += l;
+                                    mix_right += l;
                                 }
                             }
                         }
-                    }
-
-                    // Generate and mix synthesizer output
-                    if let Ok(mut synth) = synthesizer.lock() {
-                        let synth_sample = synth.process_sample();
-                        left += synth_sample;
-                        right += synth_sample; // Synth is mono, mix to both channels
                     }
 
                     // Get input samples (if recording)
                     let (input_left, input_right) = if let Ok(input_mgr) = input_manager.lock() {
                         let channels = input_mgr.get_input_channels();
                         if channels == 1 {
-                            // Mono input: read 1 sample and duplicate to both channels
                             if let Some(samples) = input_mgr.read_samples(1) {
                                 let mono_sample = samples.get(0).copied().unwrap_or(0.0);
                                 (mono_sample, mono_sample)
@@ -430,7 +606,6 @@ impl AudioGraph {
                                 (0.0, 0.0)
                             }
                         } else {
-                            // Stereo input: read 2 samples
                             if let Some(samples) = input_mgr.read_samples(2) {
                                 (samples.get(0).copied().unwrap_or(0.0),
                                  samples.get(1).copied().unwrap_or(0.0))
@@ -439,8 +614,6 @@ impl AudioGraph {
                             }
                         }
                     } else {
-                        // Failed to acquire input manager lock
-                        eprintln!("⚠️  [AudioGraph] Input mutex lock contention during playback - samples dropped!");
                         (0.0, 0.0)
                     };
 
@@ -448,15 +621,43 @@ impl AudioGraph {
                     let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right);
 
                     // Mix playback + metronome
-                    left += met_left;
-                    right += met_right;
+                    mix_left += met_left;
+                    mix_right += met_right;
 
-                    // M4: Apply master limiter to prevent clipping (instead of hard clamp)
+                    // Apply master track processing (using snapshot - no locks!)
+                    let mut master_left = mix_left;
+                    let mut master_right = mix_right;
+
+                    if let Some(ref master_snap) = master_snapshot {
+                        // Apply master volume
+                        master_left *= master_snap.volume_gain;
+                        master_right *= master_snap.volume_gain;
+
+                        // Apply master pan
+                        let temp_l = master_left * master_snap.pan_left + master_right * master_snap.pan_left;
+                        let temp_r = master_left * master_snap.pan_right + master_right * master_snap.pan_right;
+                        master_left = temp_l;
+                        master_right = temp_r;
+
+                        // Process master FX chain
+                        if let Ok(effect_mgr) = effect_manager.lock() {
+                            for effect_id in &master_snap.fx_chain {
+                                if let Some(effect_arc) = effect_mgr.get_effect(*effect_id) {
+                                    if let Ok(mut effect) = effect_arc.lock() {
+                                        let (out_l, out_r) = effect.process_frame(master_left, master_right);
+                                        master_left = out_l;
+                                        master_right = out_r;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Apply master limiter to prevent clipping
                     let (limited_left, limited_right) = if let Ok(mut limiter) = master_limiter.lock() {
-                        limiter.process_frame(left, right)
+                        limiter.process_frame(master_left, master_right)
                     } else {
-                        // Fallback to clamp if limiter is locked
-                        (left.clamp(-1.0, 1.0), right.clamp(-1.0, 1.0))
+                        (master_left.clamp(-1.0, 1.0), master_right.clamp(-1.0, 1.0))
                     };
 
                     // Write to output buffer (interleaved stereo)

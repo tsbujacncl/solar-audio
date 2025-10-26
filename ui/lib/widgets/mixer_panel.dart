@@ -68,11 +68,11 @@ class _MixerPanelState extends State<MixerPanel> {
   @override
   void initState() {
     super.initState();
-    _loadTracks();
+    _loadTracksAsync(); // Load asynchronously on init
 
-    // Refresh tracks every second
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _loadTracks();
+    // Refresh tracks every 2 seconds (reduced frequency to avoid UI blocking)
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _loadTracksAsync();
     });
   }
 
@@ -82,15 +82,26 @@ class _MixerPanelState extends State<MixerPanel> {
     super.dispose();
   }
 
-  void _loadTracks() {
+  /// Load tracks asynchronously to avoid blocking UI thread
+  Future<void> _loadTracksAsync() async {
     if (widget.audioEngine == null) return;
 
+    // Run FFI calls in a future to avoid blocking UI
     try {
-      final trackIds = widget.audioEngine!.getAllTrackIds();
+      // These FFI calls can block if audio thread holds locks,
+      // so we yield to the event loop between calls
+      final trackIds = await Future.microtask(() {
+        return widget.audioEngine!.getAllTrackIds();
+      });
+
       final tracks = <TrackData>[];
 
       for (int trackId in trackIds) {
-        final info = widget.audioEngine!.getTrackInfo(trackId);
+        // Yield to event loop between each track query
+        final info = await Future.microtask(() {
+          return widget.audioEngine!.getTrackInfo(trackId);
+        });
+
         final track = TrackData.fromCSV(info);
         if (track != null) {
           tracks.add(track);
@@ -114,7 +125,7 @@ class _MixerPanelState extends State<MixerPanel> {
     final trackId = widget.audioEngine!.createTrack(type, name);
 
     if (trackId >= 0) {
-      _loadTracks();
+      _loadTracksAsync();
     }
   }
 
@@ -387,7 +398,7 @@ class _MixerPanelState extends State<MixerPanel> {
             onPressed: () {
               widget.audioEngine?.deleteTrack(track.id);
               Navigator.of(context).pop();
-              _loadTracks();
+              _loadTracksAsync();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),

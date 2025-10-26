@@ -53,6 +53,7 @@ class AudioEngine {
   late final _GetTrackCountFfi _getTrackCount;
   late final _GetAllTrackIdsFfi _getAllTrackIds;
   late final _GetTrackInfoFfi _getTrackInfo;
+  late final _GetTrackPeakLevelsFfi _getTrackPeakLevels;
   late final _DeleteTrackFfi _deleteTrack;
 
   // M4 functions - Effects
@@ -331,6 +332,12 @@ class AudioEngine {
               'get_track_info_ffi')
           .asFunction();
       print('  ✅ get_track_info_ffi bound');
+
+      _getTrackPeakLevels = _lib
+          .lookup<ffi.NativeFunction<_GetTrackPeakLevelsFfiNative>>(
+              'get_track_peak_levels_ffi')
+          .asFunction();
+      print('  ✅ get_track_peak_levels_ffi bound');
 
       _deleteTrack = _lib
           .lookup<ffi.NativeFunction<_DeleteTrackFfiNative>>(
@@ -929,6 +936,19 @@ class AudioEngine {
     }
   }
 
+  /// Get track peak levels (M5.5) as CSV: "peak_left_db,peak_right_db"
+  String getTrackPeakLevels(int trackId) {
+    try {
+      final resultPtr = _getTrackPeakLevels(trackId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      // Fail silently for peak levels (called frequently)
+      return '-96.0,-96.0';
+    }
+  }
+
   /// Delete a track (cannot delete master track)
   String deleteTrack(int trackId) {
     print('🗑️ [AudioEngine] Deleting track $trackId...');
@@ -1213,6 +1233,9 @@ typedef _GetAllTrackIdsFfi = ffi.Pointer<Utf8> Function();
 
 typedef _GetTrackInfoFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
 typedef _GetTrackInfoFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _GetTrackPeakLevelsFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _GetTrackPeakLevelsFfi = ffi.Pointer<Utf8> Function(int);
 
 typedef _DeleteTrackFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
 typedef _DeleteTrackFfi = ffi.Pointer<Utf8> Function(int);

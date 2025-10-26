@@ -483,6 +483,17 @@ pub extern "C" fn get_track_info_ffi(track_id: u64) -> *mut c_char {
     }
 }
 
+/// Get track peak levels (M5.5)
+/// Returns: "peak_left_db,peak_right_db"
+/// Caller must free the returned string
+#[no_mangle]
+pub extern "C" fn get_track_peak_levels_ffi(track_id: u64) -> *mut c_char {
+    match api::get_track_peak_levels(track_id) {
+        Ok(levels) => CString::new(levels).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
 /// Move clip to track
 #[no_mangle]
 pub extern "C" fn move_clip_to_track_ffi(track_id: u64, clip_id: u64) -> *mut c_char {

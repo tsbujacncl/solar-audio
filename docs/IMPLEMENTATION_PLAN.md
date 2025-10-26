@@ -21,18 +21,21 @@ This document breaks the MVP into **7 actionable milestones** (M1–M7), each re
 
 ## Milestone Overview (Gantt-Style Timeline)
 
-| Milestone | Focus Area                  | Duration | Status             |
-|-----------|-----------------------------|----------|---------------------|
-| **M0**    | Project Setup               | 1 week   | ✅ Complete        |
-| **M1**    | Audio Playback Foundation   | 3 weeks  | ✅ Complete        |
-| **M2**    | Recording & Input           | 3 weeks  | ✅ Complete        |
-| **M3**    | MIDI Editing                | 3 weeks  | ✅ Complete        |
-| **M4**    | Mixing & Effects            | 4 weeks  | ✅ Complete        |
-| **M5**    | Save & Export               | 2 weeks  | ✅ Complete        |
-| **M6**    | Cloud & Versioning          | 2 weeks  | 📋 Ready           |
-| **M7**    | Polish & Beta Launch        | 2 weeks  | 📋 Ready           |
+| Milestone | Focus Area                   | Duration | Status             |
+|-----------|------------------------------|----------|---------------------|
+| **M0**    | Project Setup                | 1 week   | ✅ Complete        |
+| **M1**    | Core Playback                | 2 weeks  | ✅ Complete        |
+| **M2**    | Recording                    | 2 weeks  | ✅ Complete        |
+| **M3**    | Editing                      | 3 weeks  | ✅ Complete        |
+| **M4**    | Mixing                       | 2 weeks  | ✅ Complete        |
+| **M5**    | Save & Export                | 1 week   | ✅ Complete        |
+| **M6**    | MIDI & Piano Roll            | 3 weeks  | 🚧 In Progress     |
+| **M7**    | VST3 Plugin Support          | 2 weeks  | 📋 Ready           |
+| **M8**    | Stock Instruments            | 3 weeks  | 📋 Ready           |
+| **M9**    | Polish & UX                  | 2 weeks  | 📋 Ready           |
+| **M10**   | Beta Testing & Launch        | 2 weeks  | 📋 Ready           |
 
-**Total estimated time:** 20 weeks (~5 months)
+**Total estimated time:** 22 weeks (~5-6 months)
 
 ---
 
@@ -631,7 +634,97 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 ---
 
-## M6: Cloud & Versioning
+## M6: MIDI & Piano Roll
+
+**Goal:** Full MIDI editing support with piano roll, velocity lane, and virtual piano.
+
+**Duration:** 3 weeks  
+**Deliverable:** Users can record MIDI, edit notes in piano roll, adjust velocity, and play with virtual piano.
+
+### Tasks
+
+#### Rust: MIDI Recording
+- [ ] Implement MIDI input listening (always listen, even when not recording)
+- [ ] Add `start_midi_recording()` FFI function
+- [ ] Add `stop_midi_recording()` FFI function  
+- [ ] Store MIDI events as Note On/Off with timestamps
+- [ ] Convert Note On/Off to note duration format (for piano roll)
+- [ ] Test: Play MIDI keyboard → notes recorded → playback works
+
+#### Rust: MIDI Clip Storage
+- [ ] Create `MIDIClip` struct with notes (pitch, start, duration, velocity)
+- [ ] Add `add_midi_clip()` to track
+- [ ] Serialize MIDI clips to project JSON
+- [ ] Deserialize MIDI clips from project JSON
+- [ ] Test: Save project with MIDI → load → notes restored
+
+#### Flutter: Piano Roll UI
+- [ ] Create piano roll widget (bottom panel, 30% height)
+- [ ] Draw piano keys on left (C0 to C8)
+- [ ] Draw grid with bar/beat lines
+- [ ] Draw MIDI notes as horizontal blocks
+- [ ] Implement note drawing (click and drag to draw)
+- [ ] Implement note selection (click to select, Shift+click for multiple)
+- [ ] Implement note moving (drag selected notes)
+- [ ] Implement note resizing (drag edges to change duration)
+- [ ] Implement note deletion (Delete key)
+- [ ] Test: Draw notes → move → resize → delete
+
+#### Flutter: Velocity Lane
+- [ ] Add velocity lane below piano roll (FL Studio-style)
+- [ ] Draw velocity bars for each note (0-127)
+- [ ] Implement velocity editing (drag bars up/down)
+- [ ] Color-code velocity (dark = low, bright = high)
+- [ ] Update note velocity in real-time
+- [ ] Test: Draw note → adjust velocity → hear difference
+
+#### Flutter: Virtual Piano
+- [ ] Create virtual piano widget (separate tab in bottom panel)
+- [ ] Draw 2-octave keyboard (C3 to C5)
+- [ ] Implement click to play notes
+- [ ] Implement computer keyboard mapping:
+  - White keys: A S D F G H J K
+  - Black keys: W E   T Y U
+- [ ] Send MIDI to armed track
+- [ ] Record notes if track is armed and recording
+- [ ] Test: Click keys → hear notes → switch to piano roll → see notes
+
+#### Rust: MIDI Quantize
+- [ ] Implement quantize function (snap notes to grid)
+- [ ] Add quantize resolution options (1/4, 1/8, 1/16, 1/32)
+- [ ] Add FFI: `quantize_midi_clip(clip_id, resolution)`
+- [ ] Test: Record unquantized MIDI → quantize → notes snap to grid
+
+#### Flutter: Quantize UI
+- [ ] Add quantize button to piano roll toolbar
+- [ ] Add dropdown for resolution (1/4, 1/8, 1/16, 1/32)
+- [ ] Implement Preferences option: "Auto-quantize on record"
+- [ ] Test: Record MIDI → click quantize → notes align
+
+#### Integration
+- [ ] Wire piano roll to MIDI track selection
+- [ ] Double-click MIDI clip → open piano roll with clip's notes
+- [ ] Edit notes in piano roll → update audio playback
+- [ ] Virtual piano plays through selected MIDI track's instrument
+- [ ] Test end-to-end workflow: record → edit → play
+
+### Success Criteria
+✅ MIDI keyboard input always works (even when not recording)  
+✅ Can record MIDI to armed track  
+✅ Piano roll shows notes with correct timing  
+✅ Can draw, move, resize, delete notes in piano roll  
+✅ Velocity lane adjusts note dynamics  
+✅ Virtual piano plays and records notes  
+✅ Quantize snaps notes to grid  
+✅ MIDI clips save/load correctly  
+✅ Computer keyboard plays notes (ASDF keys)
+
+### Risks & Mitigations
+- **MIDI input latency** → Use low-latency MIDI library, test on real MIDI keyboard
+- **Piano roll performance** → Limit visible notes, virtualize scrolling
+- **Note timing precision** → Use sample-accurate timestamps, not milliseconds
+
+---
 
 **Goal:** Save snapshots to Firebase, browse version history, restore previous versions.
 
@@ -713,7 +806,358 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 ---
 
-## M7: Polish & Beta Launch
+## M7: VST3 Plugin Support
+
+**Goal:** Load and use VST3 plugins (third-party instruments and effects).
+
+**Duration:** 2 weeks  
+**Deliverable:** Users can scan VST3 plugins, add them to tracks, and use their native UIs.
+
+### Tasks
+
+#### Rust: VST3 Scanner
+- [ ] Scan VST3 folders:
+  - `/Library/Audio/Plug-Ins/VST3/`
+  - `~/Library/Audio/Plug-Ins/VST3/`
+- [ ] Parse VST3 bundle structure (`.vst3` bundles)
+- [ ] Extract plugin metadata (name, vendor, category)
+- [ ] Cache plugin list to JSON file
+- [ ] Add FFI: `scan_vst3_plugins()` → returns JSON list
+- [ ] Test: Scan → finds installed plugins (FabFilter, Serum, etc.)
+
+#### Rust: VST3 Loader
+- [ ] Implement VST3 host using `vst3-sys` crate
+- [ ] Load VST3 plugin from file path
+- [ ] Create plugin instance
+- [ ] Validate plugin (check VST3 compliance)
+- [ ] Add to audio graph as effect node
+- [ ] Add FFI: `load_vst3_plugin(path, track_id)`
+- [ ] Test: Load plugin → appears in effects chain
+
+#### Rust: VST3 Audio Processing
+- [ ] Integrate plugin into audio callback
+- [ ] Route audio through plugin's `process()` function
+- [ ] Handle plugin latency compensation
+- [ ] Handle plugin bypass
+- [ ] Test: Add plugin to track → audio processes through plugin
+
+#### Rust: VST3 Parameter Handling
+- [ ] Read plugin parameters (name, value, range)
+- [ ] Set plugin parameters from Rust
+- [ ] Save plugin state to project JSON
+- [ ] Load plugin state from project JSON
+- [ ] Add FFI: `get_plugin_parameters()`, `set_plugin_parameter()`
+- [ ] Test: Adjust plugin knobs → state saves/loads
+
+#### Flutter: Plugin Window
+- [ ] Create native window for plugin UI (macOS NSWindow)
+- [ ] Embed plugin's native UI (VST3 provides its own window)
+- [ ] Show/hide window on demand
+- [ ] Close window → plugin stays active
+- [ ] Test: Open plugin → adjust parameters → close → reopen → state persists
+
+#### Flutter: Plugin Browser
+- [ ] Add "VST3 Plugins" section to library browser
+- [ ] Show plugin list (name, vendor, category)
+- [ ] Search/filter plugins
+- [ ] Drag plugin to effects chain to add
+- [ ] Test: Find plugin → drag to track → opens UI
+
+#### Integration
+- [ ] First launch: auto-scan plugins
+- [ ] Preferences: "Rescan Plugins" button
+- [ ] Add plugin to track → opens UI window
+- [ ] Plugin parameters save with project
+- [ ] Plugin state loads on project open
+- [ ] Test end-to-end: Add plugin → adjust → save → reload → verify
+
+### Success Criteria
+✅ Scans common VST3 folders on macOS  
+✅ Finds and lists installed VST3 plugins  
+✅ Can load VST3 plugins (instruments + effects)  
+✅ Plugin UI opens in separate window (Ableton-style)  
+✅ Audio processes through plugins correctly  
+✅ Plugin parameters save/load with project  
+✅ Can use commercial plugins (Serum, FabFilter, etc.)  
+✅ No crashes or audio glitches
+
+### Risks & Mitigations
+- **VST3 SDK complexity** → Use well-tested `vst3-sys` crate, start with simple plugins
+- **Plugin UI crashes** → Catch exceptions, show error gracefully
+- **Latency issues** → Implement proper latency compensation
+- **Plugin state serialization** → Use VST3's built-in state save/load
+
+---
+
+## M8: Stock Instruments
+
+**Goal:** Add 5 built-in instruments (Piano, Synth, Sampler, Drums, Bass).
+
+**Duration:** 3 weeks  
+**Deliverable:** Users can add MIDI tracks with built-in instruments, no external plugins required.
+
+### Tasks
+
+#### Rust: Instrument Architecture
+- [ ] Create `Instrument` trait (play note, stop note, process audio)
+- [ ] Integrate instruments into audio graph
+- [ ] Add FFI: `set_track_instrument(track_id, instrument_type)`
+- [ ] Test: Add instrument to track → plays notes
+
+#### Rust: Piano Instrument
+- [ ] Load sampled grand piano (find free samples, e.g., Salamander Piano)
+- [ ] Implement multi-sample player (different samples per key)
+- [ ] Implement velocity layers (loud/soft samples)
+- [ ] Implement sustain pedal (MIDI CC64)
+- [ ] ADSR envelope
+- [ ] Test: Play MIDI → hear realistic piano
+
+#### Rust: Synth Instrument
+- [ ] Implement 2-oscillator subtractive synth
+- [ ] Waveforms: Sine, Saw, Square, Triangle
+- [ ] ADSR envelope (Attack, Decay, Sustain, Release)
+- [ ] Low-pass filter with resonance
+- [ ] LFO for vibrato/tremolo
+- [ ] Test: Play MIDI → hear synth sound
+
+#### Rust: Sampler Instrument
+- [ ] Drag audio file to map to key
+- [ ] Multi-sample support (different samples per key)
+- [ ] Velocity layers
+- [ ] Loop points (sustain loops)
+- [ ] ADSR envelope
+- [ ] Test: Drag audio → play MIDI → hear sampled sound
+
+#### Rust: Drums Instrument
+- [ ] 16-pad machine (4×4 grid)
+- [ ] Pre-load drum kits: "808", "909", "Acoustic"
+- [ ] Map pads to MIDI notes (C1-D#2)
+- [ ] Velocity-sensitive playback
+- [ ] Test: Play MIDI → hear drums
+
+#### Rust: Bass Instrument
+- [ ] Sub bass synthesizer (808-style)
+- [ ] Sine wave oscillator with pitch envelope
+- [ ] Saturation control (warmth)
+- [ ] Filter with envelope
+- [ ] Test: Play low MIDI notes → hear deep bass
+
+#### Flutter: Instrument Selector
+- [ ] Add instrument dropdown to MIDI track header
+- [ ] Show: Piano, Synth, Sampler, Drums, Bass
+- [ ] Change instrument on track
+- [ ] Show instrument presets (3-5 per instrument)
+- [ ] Test: Switch instruments → hear different sounds
+
+#### Integration
+- [ ] Add MIDI track → defaults to Piano
+- [ ] Click instrument name → dropdown appears
+- [ ] Select instrument → MIDI plays through new instrument
+- [ ] Save project → instrument type and settings saved
+- [ ] Test: Create track → play → switch instrument → save → reload
+
+### Success Criteria
+✅ All 5 instruments sound good (professional quality)  
+✅ Piano has realistic sound (velocity-sensitive)  
+✅ Synth has classic analog sound  
+✅ Sampler can load user samples  
+✅ Drums have punchy 808/909 sounds  
+✅ Bass has deep sub frequencies  
+✅ Instruments save/load with project  
+✅ Low CPU usage (can play 10+ instruments at once)
+
+### Risks & Mitigations
+- **Sample library size** → Compress samples, use OGG instead of WAV
+- **Synth sound quality** → Reference Vital, Serum, use anti-aliasing
+- **CPU usage** → Optimize DSP, use SIMD where possible
+
+---
+
+## M9: Polish & UX
+
+**Goal:** Final UX polish, tooltips, error handling, keyboard shortcuts, preferences.
+
+**Duration:** 2 weeks  
+**Deliverable:** Polished, professional-feeling app with no rough edges.
+
+### Tasks
+
+#### Flutter: Tooltips
+- [ ] Add tooltips to all buttons (hover to show)
+- [ ] Show keyboard shortcuts in tooltips:
+  - `[▶]` → "Play (Space)"
+  - `[⏺]` → "Record (R)"
+  - `[S]` → "Solo (S)"
+  - `[M]` → "Mute (M)"
+- [ ] Test: Hover over buttons → see helpful text
+
+#### Flutter: Built-in Tips
+- [ ] Add tips system (random tip in status bar)
+- [ ] 20+ tips (e.g., "Press Cmd+K for command palette")
+- [ ] Rotate tips every 30 seconds
+- [ ] Add "Disable tips" checkbox in Preferences
+- [ ] Test: Tips appear and rotate
+
+#### Flutter: Error Handling
+- [ ] Toast notifications for minor errors (auto-dismiss after 5s)
+  - "Audio file imported"
+  - "Effect added"
+  - "Project saved"
+- [ ] Banner warnings for critical errors (stays until dismissed)
+  - "Audio interface disconnected"
+  - "CPU overload"
+  - "Missing audio files"
+- [ ] Test: Unplug audio interface → see banner
+
+#### Flutter: Preferences Window
+- [ ] Create Preferences window (Cmd+,)
+- [ ] 4 tabs: Audio, MIDI, File, Appearance
+- [ ] Audio tab:
+  - Audio interface selector
+  - Buffer size slider (64/128/256/512/1024)
+  - Sample rate dropdown (44.1/48/96 kHz)
+- [ ] MIDI tab:
+  - MIDI input device selector
+  - Quantize options (auto/manual/ask)
+- [ ] File tab:
+  - Auto-save interval (1/2/5/10 minutes)
+  - Default project location
+- [ ] Appearance tab:
+  - Track colors (8-color palette preview)
+- [ ] Test: Change settings → verify they apply
+
+#### Flutter: Keyboard Shortcuts (Ableton-style)
+- [ ] Implement shortcuts:
+  - `Space` - Play/Pause
+  - `R` - Record
+  - `Cmd+Z` - Undo
+  - `Cmd+Shift+Z` - Redo
+  - `Cmd+D` - Duplicate
+  - `Cmd+S` - Save
+  - `Cmd+O` - Open
+  - `Cmd+E` - Export
+  - `S` - Solo selected track
+  - `M` - Mute selected track
+  - `Delete` - Delete selected clip
+- [ ] Show shortcut hints in menus
+- [ ] Test: All shortcuts work
+
+#### Flutter: Track Colors
+- [ ] Auto-assign colors (8-color palette)
+- [ ] Clips inherit track color
+- [ ] Test: Add tracks → see different colors
+
+#### Flutter: Clip Naming
+- [ ] Auto-name clips from filename
+- [ ] Double-click clip → inline rename
+- [ ] Test: Import "kick.wav" → clip named "kick"
+
+#### Rust: Undo/Redo (Final)
+- [ ] Verify unlimited undo works for all actions
+- [ ] Add undo history to project state
+- [ ] Test: Make 20 changes → undo all → redo all
+
+#### Flutter: UI Polish
+- [ ] Refine spacing, alignment, colors
+- [ ] Smooth animations (panel slide-ins)
+- [ ] Add app icon (Solar logo)
+- [ ] Test: App feels polished
+
+#### Bug Fixes
+- [ ] Fix any crashes from testing
+- [ ] Profile CPU usage (optimize hot paths)
+- [ ] Test on multiple macOS versions
+
+#### Documentation
+- [ ] Update GitHub wiki:
+  - Getting Started
+  - Recording Tutorial
+  - MIDI Tutorial
+  - Mixing Tutorial
+  - Keyboard Shortcuts
+  - FAQ
+- [ ] Update README.md
+
+### Success Criteria
+✅ All tooltips show helpful text  
+✅ Error handling feels professional  
+✅ Preferences window works  
+✅ All keyboard shortcuts work  
+✅ Track colors look good  
+✅ No rough edges in UI  
+✅ Documentation is clear
+
+### Risks & Mitigations
+- **Too many small bugs** → Prioritize critical issues, defer minor polish to v1.1
+- **Performance regressions** → Profile regularly, optimize before M10
+
+---
+
+## M10: Beta Testing & Launch
+
+**Goal:** Private beta, fix bugs, public beta, v1.0 launch.
+
+**Duration:** 2 weeks  
+**Deliverable:** Stable v1.0 released on GitHub, announced on Reddit/YouTube.
+
+### Tasks
+
+#### Week 1: Private Beta
+- [ ] Invite 5-10 friends/family
+- [ ] Send beta build (TestFlight or DMG)
+- [ ] Create feedback form (Google Form)
+- [ ] Collect feedback daily
+- [ ] Fix critical bugs immediately
+- [ ] Iterate on UX issues
+
+#### Week 2: Public Beta & Launch
+- [ ] Tag v0.9-beta on GitHub
+- [ ] Post to Reddit (/r/WeAreTheMusicMakers, /r/linuxaudio)
+- [ ] Share on Twitter/X
+- [ ] Monitor feedback, fix critical bugs
+- [ ] Record 5-10 YouTube tutorials (5 min each):
+  1. "Getting Started with Solar Audio"
+  2. "Recording Your First Song"
+  3. "MIDI Editing in Solar"
+  4. "Mixing and Effects"
+  5. "Using VST3 Plugins"
+  6. "Built-in Instruments"
+  7. "Exporting Your Song"
+  8. "Keyboard Shortcuts Masterclass"
+- [ ] Record product trailer (2 min)
+- [ ] Upload all videos to YouTube
+
+#### Launch Day
+- [ ] Tag v1.0 on GitHub
+- [ ] Upload v1.0 build (DMG)
+- [ ] Post launch announcement on Reddit
+- [ ] Post on Hacker News (Show HN)
+- [ ] Tweet launch announcement
+- [ ] Update website (solaraudio.com)
+- [ ] Send email to beta testers
+- [ ] Celebrate! 🎉
+
+#### Post-Launch (Week 2+)
+- [ ] Monitor GitHub issues
+- [ ] Respond to user feedback
+- [ ] Fix critical bugs (hot-fix v1.0.1)
+- [ ] Plan v1.1 features based on feedback
+
+### Success Criteria
+✅ 5-10 private beta testers give positive feedback  
+✅ Zero critical bugs in public beta  
+✅ v1.0 launches on time  
+✅ 100+ GitHub stars in first week  
+✅ 50+ YouTube views  
+✅ 10+ Reddit upvotes  
+✅ 5+ positive testimonials
+
+### Risks & Mitigations
+- **Major bug found in beta** → Be prepared to delay launch 1 week if needed
+- **Low engagement on launch** → Have backup plan (Product Hunt, more subreddits)
+- **Performance issues on older Macs** → Document minimum requirements clearly
+
+---
 
 **Goal:** Add final UX polish, keyboard shortcuts, command palette, crash recovery, fix bugs.
 
@@ -847,21 +1291,45 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 ---
 
-## Post-M7: v1.1 Planning
+## Post-M10: v1.1+ Planning
 
-After M7 ships, gather feedback and plan v1.1 features:
+After v1.0 launches, gather feedback and plan future versions:
 
-### Top Priorities for v1.1
-1. **Time-stretch/warp** (elastic audio editing)
-2. **Track freeze / bounce in place** (render plugins to audio)
-3. **Collaboration** (soft real-time with per-clip locks)
-4. **Web version** (edit/mix in browser, no recording)
-5. **Mobile apps** (iOS, Android via same Rust codebase)
-6. **Windows & Linux** (desktop builds)
-7. **LUFS metering** (loudness standards)
-8. **More samples & instruments** (guitars, bass, orchestral)
-9. **CLAP plugin support**
-10. **Group track folders**
+### v1.1 (Priority 1 - Q1 2026)
+**Focus:** iPad + More Instruments
+1. iPad version (shared SwiftUI codebase)
+2. Touch-optimized UI
+3. Apple Pencil support
+4. 15-20 stock instruments (expand from 5)
+5. Better onboarding (welcome video)
+
+**Timeline:** 2-3 months post-launch
+
+---
+
+### v1.2 (Priority 2 - Q2 2026)
+**Focus:** Live Performance
+1. MIDI learn (controller mapping)
+2. DJ/Live Performance mode
+3. Send effects (reverb/delay buses)
+4. Loop recording
+5. Session View (Ableton-style clip launching)
+
+**Timeline:** 3-4 months post-v1.1
+
+---
+
+### v1.3+ (Priority 3 - Q3 2026+)
+**Focus:** Collaboration + Cross-Platform
+1. Real-time collaboration (Google Docs-style)
+2. Async sharing (Dropbox-style)
+3. iPhone version
+4. Windows/Linux ports
+5. Templates
+6. MPE support
+7. Advanced features (spectral editing, notation)
+
+**Timeline:** 6+ months post-v1.2
 
 ---
 

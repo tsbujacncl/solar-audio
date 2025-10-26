@@ -131,19 +131,49 @@ pub fn init_audio_graph() -> Result<String, String> {
 pub fn load_audio_file_api(path: String) -> Result<u64, String> {
     let clip = load_audio_file(&path).map_err(|e| e.to_string())?;
     let clip_arc = Arc::new(clip);
-    
+
     let clips_mutex = AUDIO_CLIPS.get()
         .ok_or("Audio graph not initialized")?;
     let mut clips_map = clips_mutex.lock().map_err(|e| e.to_string())?;
-    
+
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
-    // Add clip to timeline at position 0.0 for now
-    let clip_id = graph.add_clip(clip_arc.clone(), 0.0);
+
+    // M5.5: Add clip to first audio track (or create one if none exists)
+    let target_track_id = {
+        let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+        let all_tracks = track_manager.get_all_tracks();
+
+        // Find first audio track
+        let mut audio_track_id = None;
+        for track_arc in all_tracks {
+            let track = track_arc.lock().map_err(|e| e.to_string())?;
+            if track.track_type == crate::track::TrackType::Audio {
+                audio_track_id = Some(track.id);
+                break;
+            }
+        }
+
+        // If no audio track exists, create one
+        if let Some(id) = audio_track_id {
+            id
+        } else {
+            drop(track_manager); // Release lock before creating track
+            let mut tm = graph.track_manager.lock().map_err(|e| e.to_string())?;
+            tm.create_track(crate::track::TrackType::Audio, "Audio 1".to_string())
+        }
+    };
+
+    // Add clip to track at position 0.0 for now
+    let clip_id = graph.add_clip_to_track(target_track_id, clip_arc.clone(), 0.0)
+        .ok_or(format!("Failed to add clip to track {}", target_track_id))?;
+
+    // Also add to legacy timeline for backward compatibility (will be removed in future)
+    graph.add_clip(clip_arc.clone(), 0.0);
+
     clips_map.insert(clip_id, clip_arc);
-    
+
     Ok(clip_id)
 }
 
@@ -1025,6 +1055,23 @@ pub fn get_track_info(track_id: TrackId) -> Result<String, String> {
             track.mute as u8,
             track.solo as u8
         ))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
+/// Get track peak levels (M5.5)
+/// Returns CSV: "peak_left_db,peak_right_db"
+pub fn get_track_peak_levels(track_id: TrackId) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let track = track_arc.lock().map_err(|e| e.to_string())?;
+        let (peak_left_db, peak_right_db) = track.get_peak_db();
+        Ok(format!("{:.2},{:.2}", peak_left_db, peak_right_db))
     } else {
         Err(format!("Track {} not found", track_id))
     }
