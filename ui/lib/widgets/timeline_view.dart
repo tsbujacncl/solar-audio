@@ -191,8 +191,8 @@ class _TimelineViewState extends State<TimelineView> {
       ),
       child: Column(
         children: [
-          // Time ruler (full width)
-          _buildTimeRuler(totalWidth, duration),
+          // Time ruler with zoom controls
+          _buildTimeRulerWithZoom(totalWidth, duration),
 
           // Timeline tracks scrollable area
           Expanded(
@@ -216,9 +216,6 @@ class _TimelineViewState extends State<TimelineView> {
               ),
             ),
           ),
-
-          // Zoom controls
-          _buildZoomControls(),
         ],
       ),
     );
@@ -277,28 +274,91 @@ class _TimelineViewState extends State<TimelineView> {
           );
         }),
 
-        // Master track (no spacer - keep aligned with mixer)
+        // Spacer to push master track to bottom
+        const Spacer(),
+
+        // Master track at bottom
         if (masterTrack.id != -1)
           _buildMasterTrack(width, masterTrack),
       ],
     );
   }
 
-  Widget _buildTimeRuler(double width, double duration) {
+  Widget _buildTimeRulerWithZoom(double width, double duration) {
     return Container(
       height: 30,
-      width: width,
       decoration: const BoxDecoration(
         color: Color(0xFF9A9A9A),
         border: Border(
           bottom: BorderSide(color: Color(0xFFAAAAAA)),
         ),
       ),
-      child: CustomPaint(
-        painter: _TimeRulerPainter(
-          duration: duration,
-          pixelsPerSecond: _pixelsPerSecond,
-        ),
+      child: Stack(
+        children: [
+          // Time ruler (full width)
+          SizedBox(
+            width: width,
+            child: CustomPaint(
+              painter: _TimeRulerPainter(
+                duration: duration,
+                pixelsPerSecond: _pixelsPerSecond,
+              ),
+            ),
+          ),
+
+          // Zoom controls (top-right, fixed position)
+          Positioned(
+            right: 8,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF9A9A9A).withOpacity(0.95),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _pixelsPerSecond = math.max(20, _pixelsPerSecond - 20);
+                      });
+                    },
+                    icon: const Icon(Icons.remove, size: 14),
+                    iconSize: 14,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                    color: const Color(0xFF202020),
+                    tooltip: 'Zoom out (Cmd -)',
+                  ),
+                  Text(
+                    '${_pixelsPerSecond.toInt()}',
+                    style: const TextStyle(
+                      color: Color(0xFF353535),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _pixelsPerSecond = math.min(200, _pixelsPerSecond + 20);
+                      });
+                    },
+                    icon: const Icon(Icons.add, size: 14),
+                    iconSize: 14,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                    color: const Color(0xFF202020),
+                    tooltip: 'Zoom in (Cmd +)',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -581,73 +641,6 @@ class _TimelineViewState extends State<TimelineView> {
     );
   }
 
-  Widget _buildZoomControls() {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF9A9A9A),
-        border: Border(
-          top: BorderSide(color: Color(0xFFAAAAAA)),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _pixelsPerSecond = math.max(20, _pixelsPerSecond - 20);
-              });
-            },
-            icon: const Icon(Icons.zoom_out, size: 18),
-            iconSize: 18,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            color: const Color(0xFF202020),
-            tooltip: 'Zoom Out',
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Slider(
-              value: _pixelsPerSecond,
-              min: 20,
-              max: 200,
-              divisions: 18,
-              onChanged: (value) {
-                setState(() {
-                  _pixelsPerSecond = value;
-                });
-              },
-              activeColor: const Color(0xFF202020),
-              inactiveColor: const Color(0xFFAAAAAA),
-            ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _pixelsPerSecond = math.min(200, _pixelsPerSecond + 20);
-              });
-            },
-            icon: const Icon(Icons.zoom_in, size: 18),
-            iconSize: 18,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            color: const Color(0xFF202020),
-            tooltip: 'Zoom In',
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${_pixelsPerSecond.toInt()}px/s',
-            style: const TextStyle(
-              color: Color(0xFF353535),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// Painter for the time ruler

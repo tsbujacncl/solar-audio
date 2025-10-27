@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
@@ -8,6 +9,7 @@ import '../widgets/timeline_view.dart';
 import '../widgets/track_mixer_panel.dart';
 import '../widgets/library_panel.dart';
 import '../widgets/bottom_panel.dart';
+import '../widgets/resizable_divider.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -53,6 +55,17 @@ class _DAWScreenState extends State<DAWScreen> {
   // M6: UI panel state
   bool _libraryPanelCollapsed = false;
   bool _bottomPanelVisible = false;
+
+  // M7: Resizable panels state
+  double _libraryPanelWidth = 200.0;
+  double _mixerPanelWidth = 380.0;
+  double _bottomPanelHeight = 250.0;
+  static const double _libraryMinWidth = 40.0;
+  static const double _libraryMaxWidth = 400.0;
+  static const double _mixerMinWidth = 200.0;
+  static const double _mixerMaxWidth = 600.0;
+  static const double _bottomMinHeight = 100.0;
+  static const double _bottomMaxHeight = 500.0;
 
   @override
   void initState() {
@@ -537,6 +550,10 @@ class _DAWScreenState extends State<DAWScreen> {
 
         try {
           final loadResult = _audioEngine!.loadProject(path);
+
+          // Load UI layout data
+          _loadUILayout(path);
+
           setState(() {
             _currentProjectPath = path;
             _currentProjectName = path.split('/').last.replaceAll('.solar', '');
@@ -627,6 +644,10 @@ class _DAWScreenState extends State<DAWScreen> {
 
     try {
       final result = _audioEngine!.saveProject(_currentProjectName, path);
+
+      // Save UI layout data
+      _saveUILayout(path);
+
       setState(() {
         _currentProjectPath = path;
         _statusMessage = 'Project saved';
@@ -642,6 +663,77 @@ class _DAWScreenState extends State<DAWScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save project: $e')),
       );
+    }
+  }
+
+  /// Save UI layout state to JSON file
+  void _saveUILayout(String projectPath) {
+    try {
+      final uiLayoutData = {
+        'version': '1.0',
+        'panel_sizes': {
+          'library_width': _libraryPanelWidth,
+          'mixer_width': _mixerPanelWidth,
+          'bottom_height': _bottomPanelHeight,
+        },
+        'panel_collapsed': {
+          'library': _libraryPanelCollapsed,
+          'mixer': !_mixerVisible,
+          'bottom': !(_bottomPanelVisible || _virtualPianoVisible),
+        },
+      };
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(uiLayoutData);
+      final uiLayoutFile = File('$projectPath/ui_layout.json');
+      uiLayoutFile.writeAsStringSync(jsonString);
+      debugPrint('💾 UI layout saved to: ${uiLayoutFile.path}');
+    } catch (e) {
+      debugPrint('⚠️  Failed to save UI layout: $e');
+    }
+  }
+
+  /// Load UI layout state from JSON file
+  void _loadUILayout(String projectPath) {
+    try {
+      final uiLayoutFile = File('$projectPath/ui_layout.json');
+      if (!uiLayoutFile.existsSync()) {
+        debugPrint('ℹ️  No UI layout file found, using defaults');
+        return;
+      }
+
+      final jsonString = uiLayoutFile.readAsStringSync();
+      final Map<String, dynamic> data = jsonDecode(jsonString);
+
+      setState(() {
+        // Load panel sizes
+        final panelSizes = data['panel_sizes'] as Map<String, dynamic>?;
+        if (panelSizes != null) {
+          _libraryPanelWidth = (panelSizes['library_width'] as num?)?.toDouble() ?? 200.0;
+          _mixerPanelWidth = (panelSizes['mixer_width'] as num?)?.toDouble() ?? 380.0;
+          _bottomPanelHeight = (panelSizes['bottom_height'] as num?)?.toDouble() ?? 250.0;
+
+          // Clamp to min/max values
+          _libraryPanelWidth = _libraryPanelWidth.clamp(_libraryMinWidth, _libraryMaxWidth);
+          _mixerPanelWidth = _mixerPanelWidth.clamp(_mixerMinWidth, _mixerMaxWidth);
+          _bottomPanelHeight = _bottomPanelHeight.clamp(_bottomMinHeight, _bottomMaxHeight);
+        }
+
+        // Load collapsed states
+        final panelCollapsed = data['panel_collapsed'] as Map<String, dynamic>?;
+        if (panelCollapsed != null) {
+          _libraryPanelCollapsed = panelCollapsed['library'] as bool? ?? false;
+          _mixerVisible = !(panelCollapsed['mixer'] as bool? ?? false);
+          final bottomCollapsed = panelCollapsed['bottom'] as bool? ?? false;
+          if (!bottomCollapsed) {
+            // Only restore if it was expanded before
+            // Don't auto-open bottom panel on load
+          }
+        }
+      });
+
+      debugPrint('📂 UI layout loaded from: ${uiLayoutFile.path}');
+    } catch (e) {
+      debugPrint('⚠️  Failed to load UI layout: $e');
     }
   }
 
@@ -747,9 +839,29 @@ class _DAWScreenState extends State<DAWScreen> {
                   child: Row(
                     children: [
                       // Left: Library panel
-                      LibraryPanel(
+                      SizedBox(
+                        width: _libraryPanelCollapsed ? 40 : _libraryPanelWidth,
+                        child: LibraryPanel(
+                          isCollapsed: _libraryPanelCollapsed,
+                          onToggle: _toggleLibraryPanel,
+                        ),
+                      ),
+
+                      // Divider: Library/Timeline
+                      ResizableDivider(
+                        orientation: DividerOrientation.vertical,
                         isCollapsed: _libraryPanelCollapsed,
-                        onToggle: _toggleLibraryPanel,
+                        onDrag: (delta) {
+                          setState(() {
+                            _libraryPanelWidth = (_libraryPanelWidth + delta)
+                                .clamp(_libraryMinWidth, _libraryMaxWidth);
+                          });
+                        },
+                        onDoubleClick: () {
+                          setState(() {
+                            _libraryPanelCollapsed = !_libraryPanelCollapsed;
+                          });
+                        },
                       ),
 
                       // Center: Timeline area
@@ -758,23 +870,67 @@ class _DAWScreenState extends State<DAWScreen> {
                       ),
 
                       // Right: Track mixer panel (always visible)
-                      if (_mixerVisible)
-                        TrackMixerPanel(
-                          audioEngine: _audioEngine,
-                          onFXButtonClicked: _onFXButtonClicked,
+                      if (_mixerVisible) ...[
+                        // Divider: Timeline/Mixer
+                        ResizableDivider(
+                          orientation: DividerOrientation.vertical,
+                          isCollapsed: false,
+                          onDrag: (delta) {
+                            setState(() {
+                              _mixerPanelWidth = (_mixerPanelWidth - delta)
+                                  .clamp(_mixerMinWidth, _mixerMaxWidth);
+                            });
+                          },
+                          onDoubleClick: () {
+                            setState(() {
+                              _mixerVisible = false;
+                            });
+                          },
                         ),
+
+                        SizedBox(
+                          width: _mixerPanelWidth,
+                          child: TrackMixerPanel(
+                            audioEngine: _audioEngine,
+                            onFXButtonClicked: _onFXButtonClicked,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
 
                 // Bottom panel: Piano Roll / FX Chain / Virtual Piano
-                if (_bottomPanelVisible || _virtualPianoVisible)
-                  BottomPanel(
-                    audioEngine: _audioEngine,
-                    virtualPianoEnabled: _virtualPianoEnabled,
-                    selectedTrackForFX: _selectedTrackForFX,
-                    onVirtualPianoClose: _toggleVirtualPiano,
+                if (_bottomPanelVisible || _virtualPianoVisible) ...[
+                  // Divider: Timeline/Bottom Panel
+                  ResizableDivider(
+                    orientation: DividerOrientation.horizontal,
+                    isCollapsed: false,
+                    onDrag: (delta) {
+                      setState(() {
+                        _bottomPanelHeight = (_bottomPanelHeight - delta)
+                            .clamp(_bottomMinHeight, _bottomMaxHeight);
+                      });
+                    },
+                    onDoubleClick: () {
+                      setState(() {
+                        _bottomPanelVisible = false;
+                        _virtualPianoVisible = false;
+                        _virtualPianoEnabled = false;
+                      });
+                    },
                   ),
+
+                  SizedBox(
+                    height: _bottomPanelHeight,
+                    child: BottomPanel(
+                      audioEngine: _audioEngine,
+                      virtualPianoEnabled: _virtualPianoEnabled,
+                      selectedTrackForFX: _selectedTrackForFX,
+                      onVirtualPianoClose: _toggleVirtualPiano,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

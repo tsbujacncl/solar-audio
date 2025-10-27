@@ -128,6 +128,50 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
     }
   }
 
+  void _showAddTrackMenu() {
+    // Find the button position
+    final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+
+    // Show popup menu
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        overlay.size.width - 380, // Position near the + button (380 is panel width)
+        30, // Below the header
+        overlay.size.width,
+        0,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'audio',
+          child: Row(
+            children: const [
+              Icon(Icons.audiotrack, size: 18, color: Color(0xFF202020)),
+              SizedBox(width: 12),
+              Text('Audio Track', style: TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'midi',
+          child: Row(
+            children: const [
+              Icon(Icons.piano, size: 18, color: Color(0xFF202020)),
+              SizedBox(width: 12),
+              Text('MIDI Track', style: TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+      elevation: 8,
+    ).then((value) {
+      if (value != null) {
+        _createTrack(value);
+      }
+    });
+  }
+
   void _confirmDeleteTrack(TrackData track) {
     showDialog(
       context: context,
@@ -173,9 +217,6 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
                 ? _buildEmptyState()
                 : _buildTrackStrips(),
           ),
-
-          // Add track buttons
-          _buildAddTrackBar(),
         ],
       ),
     );
@@ -191,15 +232,15 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
           bottom: BorderSide(color: Color(0xFF909090)),
         ),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.tune,
             color: Color(0xFF202020),
             size: 16,
           ),
-          SizedBox(width: 8),
-          Text(
+          const SizedBox(width: 8),
+          const Text(
             'TRACK MIXER',
             style: TextStyle(
               color: Color(0xFF202020),
@@ -207,6 +248,17 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
             ),
+          ),
+          const Spacer(),
+          // Add track button
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            color: const Color(0xFF202020),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            onPressed: _showAddTrackMenu,
+            tooltip: 'Add track',
           ),
         ],
       ),
@@ -260,129 +312,93 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
       ),
     );
 
-    return SingleChildScrollView(
-      controller: widget.scrollController,
-      child: Column(
-        children: [
-          // Regular tracks
-          ...regularTracks.asMap().entries.map((entry) {
-            final index = entry.key;
-            final track = entry.value;
-            final trackColor = TrackColors.getTrackColor(index);
+    return Column(
+      children: [
+        // Regular tracks in scrollable area
+        Expanded(
+          child: SingleChildScrollView(
+            controller: widget.scrollController,
+            child: Column(
+              children: regularTracks.asMap().entries.map((entry) {
+                final index = entry.key;
+                final track = entry.value;
+                final trackColor = TrackColors.getTrackColor(index);
 
-            return TrackMixerStrip(
-                trackId: track.id,
-                trackName: track.name,
-                trackType: track.type,
-                volumeDb: track.volumeDb,
-                pan: track.pan,
-                isMuted: track.mute,
-                isSoloed: track.solo,
-                peakLevel: 0.0, // TODO: Get real-time level from audio engine
-                trackColor: trackColor,
-                audioEngine: widget.audioEngine,
-                isFXActive: _selectedTrackForFX == track.id,
-                onVolumeChanged: (volumeDb) {
-                  setState(() {
-                    track.volumeDb = volumeDb;
-                  });
-                  widget.audioEngine?.setTrackVolume(track.id, volumeDb);
-                },
-                onPanChanged: (pan) {
-                  setState(() {
-                    track.pan = pan;
-                  });
-                  widget.audioEngine?.setTrackPan(track.id, pan);
-                },
-                onMuteToggle: () {
-                  setState(() {
-                    track.mute = !track.mute;
-                  });
-                  widget.audioEngine?.setTrackMute(track.id, track.mute);
-                },
-                onSoloToggle: () {
-                  setState(() {
-                    track.solo = !track.solo;
-                  });
-                  widget.audioEngine?.setTrackSolo(track.id, track.solo);
-                },
-                onFXPressed: () {
-                  if (widget.onFXButtonClicked != null) {
-                    widget.onFXButtonClicked!(
-                      _selectedTrackForFX == track.id ? null : track.id
-                    );
-                  }
-                  setState(() {
-                    _selectedTrackForFX =
-                        _selectedTrackForFX == track.id ? null : track.id;
-                  });
-                },
-                onDeletePressed: () => _confirmDeleteTrack(track),
-              );
-            }),
-
-          // Master track (no spacer - keep aligned with timeline)
-          if (masterTrack.id != -1)
-            MasterTrackMixerStrip(
-              volumeDb: masterTrack.volumeDb,
-              pan: masterTrack.pan,
-              peakLevel: 0.0, // TODO: Get real-time level
-              onVolumeChanged: (volumeDb) {
-                setState(() {
-                  masterTrack.volumeDb = volumeDb;
-                });
-                widget.audioEngine?.setTrackVolume(masterTrack.id, volumeDb);
-              },
-              onPanChanged: (pan) {
-                setState(() {
-                  masterTrack.pan = pan;
-                });
-                widget.audioEngine?.setTrackPan(masterTrack.id, pan);
-              },
+                return TrackMixerStrip(
+                    trackId: track.id,
+                    trackName: track.name,
+                    trackType: track.type,
+                    volumeDb: track.volumeDb,
+                    pan: track.pan,
+                    isMuted: track.mute,
+                    isSoloed: track.solo,
+                    peakLevel: 0.0, // TODO: Get real-time level from audio engine
+                    trackColor: trackColor,
+                    audioEngine: widget.audioEngine,
+                    isFXActive: _selectedTrackForFX == track.id,
+                    onVolumeChanged: (volumeDb) {
+                      setState(() {
+                        track.volumeDb = volumeDb;
+                      });
+                      widget.audioEngine?.setTrackVolume(track.id, volumeDb);
+                    },
+                    onPanChanged: (pan) {
+                      setState(() {
+                        track.pan = pan;
+                      });
+                      widget.audioEngine?.setTrackPan(track.id, pan);
+                    },
+                    onMuteToggle: () {
+                      setState(() {
+                        track.mute = !track.mute;
+                      });
+                      widget.audioEngine?.setTrackMute(track.id, track.mute);
+                    },
+                    onSoloToggle: () {
+                      setState(() {
+                        track.solo = !track.solo;
+                      });
+                      widget.audioEngine?.setTrackSolo(track.id, track.solo);
+                    },
+                    onFXPressed: () {
+                      if (widget.onFXButtonClicked != null) {
+                        widget.onFXButtonClicked!(
+                          _selectedTrackForFX == track.id ? null : track.id
+                        );
+                      }
+                      setState(() {
+                        _selectedTrackForFX =
+                            _selectedTrackForFX == track.id ? null : track.id;
+                      });
+                    },
+                    onDeletePressed: () => _confirmDeleteTrack(track),
+                  );
+                }).toList(),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddTrackBar() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF656565),
-        border: Border(
-          top: BorderSide(color: Color(0xFF909090)),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _createTrack('audio'),
-              icon: const Icon(Icons.audiotrack, size: 14),
-              label: const Text('Audio', style: TextStyle(fontSize: 12)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF909090),
-                foregroundColor: const Color(0xFF202020),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              ),
-            ),
+
+        // Master track pinned at bottom (outside scroll area)
+        if (masterTrack.id != -1)
+          MasterTrackMixerStrip(
+            volumeDb: masterTrack.volumeDb,
+            pan: masterTrack.pan,
+            peakLevel: 0.0, // TODO: Get real-time level
+            onVolumeChanged: (volumeDb) {
+              setState(() {
+                masterTrack.volumeDb = volumeDb;
+              });
+              widget.audioEngine?.setTrackVolume(masterTrack.id, volumeDb);
+            },
+            onPanChanged: (pan) {
+              setState(() {
+                masterTrack.pan = pan;
+              });
+              widget.audioEngine?.setTrackPan(masterTrack.id, pan);
+            },
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _createTrack('midi'),
-              icon: const Icon(Icons.piano, size: 14),
-              label: const Text('MIDI', style: TextStyle(fontSize: 12)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF909090),
-                foregroundColor: const Color(0xFF202020),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              ),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
+
 }

@@ -130,6 +130,50 @@ class _MixerPanelState extends State<MixerPanel> {
     }
   }
 
+  void _showAddTrackMenu() {
+    // Find the button position
+    final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+
+    // Show popup menu
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        overlay.size.width - 300, // Position near the + button
+        60, // Below the header
+        overlay.size.width - 100,
+        0,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'audio',
+          child: Row(
+            children: const [
+              Icon(Icons.audiotrack, size: 18, color: Color(0xFF202020)),
+              SizedBox(width: 12),
+              Text('Audio Track', style: TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'midi',
+          child: Row(
+            children: const [
+              Icon(Icons.piano, size: 18, color: Color(0xFF202020)),
+              SizedBox(width: 12),
+              Text('MIDI Track', style: TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+      elevation: 8,
+    ).then((value) {
+      if (value != null) {
+        _createTrack(value);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -151,9 +195,6 @@ class _MixerPanelState extends State<MixerPanel> {
                 ? _buildEmptyState()
                 : _buildTrackList(),
           ),
-
-          // Add track buttons
-          _buildAddTrackBar(),
         ],
       ),
     );
@@ -186,6 +227,15 @@ class _MixerPanelState extends State<MixerPanel> {
             ),
           ),
           const Spacer(),
+          // Add track button
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            color: const Color(0xFF202020),
+            iconSize: 20,
+            onPressed: _showAddTrackMenu,
+            tooltip: 'Add track',
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.close),
             color: const Color(0xFF202020),
@@ -230,10 +280,9 @@ class _MixerPanelState extends State<MixerPanel> {
   }
 
   Widget _buildTrackList() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
       children: [
-        // Regular tracks
+        // Regular tracks (horizontal scroll)
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -244,7 +293,7 @@ class _MixerPanelState extends State<MixerPanel> {
           ),
         ),
 
-        // Master track
+        // Master track at bottom
         if (_tracks.any((t) => t.type == 'Master'))
           _buildMasterTrackStrip(_tracks.firstWhere((t) => t.type == 'Master')),
       ],
@@ -406,7 +455,7 @@ class _MixerPanelState extends State<MixerPanel> {
   Widget _buildMasterTrackStrip(TrackData track) {
     return Container(
       width: 120,
-      margin: const EdgeInsets.only(left: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF606060),
         borderRadius: BorderRadius.circular(8),
@@ -634,47 +683,6 @@ class _MixerPanelState extends State<MixerPanel> {
                 minimumSize: const Size(0, 24),
               ),
               child: const Text('S', style: TextStyle(fontSize: 11)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddTrackBar() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF656565),
-        border: Border(
-          top: BorderSide(color: Color(0xFF909090)),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _createTrack('audio'),
-              icon: const Icon(Icons.audiotrack, size: 16),
-              label: const Text('Audio'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF909090),
-                foregroundColor: const Color(0xFF202020),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _createTrack('midi'),
-              icon: const Icon(Icons.piano, size: 16),
-              label: const Text('MIDI'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF909090),
-                foregroundColor: const Color(0xFF202020),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
             ),
           ),
         ],
