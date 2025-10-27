@@ -29,7 +29,8 @@ This document breaks the MVP into **7 actionable milestones** (M1–M7), each re
 | **M3**    | Editing                      | 3 weeks  | ✅ Complete        |
 | **M4**    | Mixing                       | 2 weeks  | ✅ Complete        |
 | **M5**    | Save & Export                | 1 week   | ✅ Complete        |
-| **M6**    | MIDI & Piano Roll            | 3 weeks  | 🚧 In Progress     |
+| **M5.5**  | UI Polish & Resizable Panels | 1 week   | ✅ Complete        |
+| **M6**    | MIDI & Piano Roll            | 3 weeks  | 📋 Ready to Start  |
 | **M7**    | VST3 Plugin Support          | 2 weeks  | 📋 Ready           |
 | **M8**    | Stock Instruments            | 3 weeks  | 📋 Ready           |
 | **M9**    | Polish & UX                  | 2 weeks  | 📋 Ready           |
@@ -706,6 +707,75 @@ Accent Colors (unchanged):
 
 ### Future UI Enhancements
 See "UI/UX Enhancement Roadmap" section below for planned improvements in M7-M9.
+
+---
+
+## M5.5: UI Polish & Resizable Panels
+
+**Goal:** Professional UI with resizable panels and layout persistence.
+
+**Duration:** 1 week
+**Deliverable:** Draggable panel dividers, sizes saved per project, master track at bottom.
+
+### Tasks Completed
+
+#### Master Track Repositioning
+- [x] Move master track to bottom of timeline
+- [x] Move master track to bottom of mixer panel
+- [x] Use Spacer widget to push master to bottom
+- [x] Ensure master stays at bottom even with no other tracks
+
+#### Resizable Panel Dividers
+- [x] Create ResizableDivider widget (vertical/horizontal)
+- [x] Add divider between Library and Timeline (drag to resize library width)
+- [x] Add divider between Timeline and Mixer (drag to resize mixer width)
+- [x] Add divider between Timeline and Bottom Panel (drag to resize bottom height)
+- [x] Implement double-click to collapse/expand functionality
+- [x] Add hover effects (highlight, cursor change)
+- [x] Add min/max size constraints
+
+#### UI Layout Persistence
+- [x] Create ui_layout.json format (version, panel_sizes, panel_collapsed)
+- [x] Save panel sizes on project save
+- [x] Load panel sizes on project open
+- [x] Gracefully handle missing ui_layout.json (use defaults)
+
+#### UI Improvements
+- [x] Move zoom controls from bottom bar to top-right corner (+40px vertical space)
+- [x] Replace bottom Audio/MIDI buttons with + button in mixer header
+- [x] Add dropdown menu for track creation (Audio Track / MIDI Track)
+- [x] Improve track creation UX (more discoverable for beginners)
+
+### Success Criteria
+✅ Panels can be resized by dragging dividers
+✅ Double-click dividers collapses/expands panels
+✅ Panel sizes persist across app restarts
+✅ Master track always at bottom of timeline and mixer
+✅ Timeline has +40px more vertical space (zoom bar removed)
+✅ Track creation is more discoverable (+ button vs hidden buttons)
+
+### Files Modified
+- `lib/widgets/resizable_divider.dart` (new)
+- `lib/screens/daw_screen.dart` (added panel size state, save/load methods)
+- `lib/widgets/timeline_view.dart` (master at bottom, zoom moved)
+- `lib/widgets/track_mixer_panel.dart` (master at bottom, + button)
+- `lib/widgets/mixer_panel.dart` (updated but not used in current UI)
+
+### Design Decisions
+- **Ableton-inspired dividers:** 1px subtle lines that highlight on hover (3px green when dragging)
+- **Double-click to collapse:** Industry standard (Logic Pro, VS Code) - faster than dragging all the way
+- **Per-project persistence:** Different projects may need different layouts (recording vs mixing)
+- **Smart constraints:** Prevent panels from being too small (unusable) or too large (timeline crushed)
+- **Cursor feedback:** Changes to resize cursor (↔ or ↕) on hover for discoverability
+
+### Testing Notes
+- Tested on macOS with various panel sizes
+- Verified persistence across app restarts
+- Tested edge cases (collapsed panels, min/max constraints)
+- All panel dividers working smoothly with good visual feedback
+
+### Next Steps
+Ready to start M6 (MIDI & Piano Roll) with improved UI foundation.
 
 ---
 

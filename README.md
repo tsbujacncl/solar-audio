@@ -6,7 +6,7 @@ A modern, cross-platform DAW (Digital Audio Workstation) designed for **speed, s
 
 Solar Audio combines professional workflows with beginner-friendly UX. Built with Flutter (UI) and Rust (audio engine), it's designed to work seamlessly across macOS, iPad, and eventually web, Windows, Linux, iOS, and Android.
 
-**Current Status:** 🚧 In Development - Milestone M0 (Project Setup)
+**Current Status:** ✅ M5.5 Complete - Save/Export + UI Polish | Ready for M6 (MIDI)
 
 ## Core Features (v1 MVP)
 
@@ -18,6 +18,25 @@ Solar Audio combines professional workflows with beginner-friendly UX. Built wit
 - ☁️ **Cloud snapshots** - Version history via Firebase
 - ⌨️ **Keyboard-driven** - Command palette (⌘K) and comprehensive shortcuts
 - 🎨 **Modern UI** - Flat design, clip gain handles, sample preview
+
+## Recent Updates (M5.5 - October 2025)
+
+✅ **UI Redesign Complete:**
+- Professional 3-panel layout (Library | Timeline | Mixer)
+- Light grey theme for better visibility
+- Master track repositioned to bottom of timeline and mixer
+- Resizable panel dividers (drag to adjust, double-click to collapse)
+- Panel sizes saved per project (restored on load)
+- Compact zoom controls in timeline header
+- Improved track creation UX (+ button with dropdown menu)
+
+✅ **Core Features Working:**
+- Audio recording with count-in and metronome
+- Multi-track timeline with waveform display
+- Track mixer with volume, pan, mute, solo
+- Built-in effects (EQ, Compressor, Reverb, Delay, Chorus, Limiter)
+- Project save/load with audio files
+- WAV export
 
 ## Tech Stack
 
@@ -97,14 +116,18 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for detailed mi
 
 | Milestone | Focus                       | Status      |
 |-----------|-----------------------------|-------------|
-| **M0**    | Project Setup               | 🚧 In Progress |
-| **M1**    | Audio Playback              | 📋 Planned  |
-| **M2**    | Recording & Input           | 📋 Planned  |
-| **M3**    | MIDI Editing                | 📋 Planned  |
-| **M4**    | Mixing & Effects            | 📋 Planned  |
-| **M5**    | Save & Export               | 📋 Planned  |
-| **M6**    | Cloud & Versioning          | 📋 Planned  |
-| **M7**    | Polish & Beta Launch        | 📋 Planned  |
+| **M0**    | Project Setup               | ✅ Complete |
+| **M1**    | Audio Playback              | ✅ Complete |
+| **M2**    | Recording & Input           | ✅ Complete |
+| **M3**    | Editing                     | ✅ Complete |
+| **M4**    | Mixing & Effects            | ✅ Complete |
+| **M5**    | Save & Export               | ✅ Complete |
+| **M5.5**  | UI Polish & Resizable Panels| ✅ Complete |
+| **M6**    | MIDI & Piano Roll           | 🚧 Ready    |
+| **M7**    | VST3 Plugin Support         | 📋 Planned  |
+| **M8**    | Stock Instruments           | 📋 Planned  |
+| **M9**    | Polish & UX                 | 📋 Planned  |
+| **M10**   | Beta Testing & Launch       | 📋 Planned  |
 
 ## Documentation
 
@@ -117,6 +140,8 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for detailed mi
 |-----------------------|-------------------------|
 | Space                 | Play/Stop               |
 | R                     | Record toggle           |
+| B                     | Toggle Library Panel    |
+| M                     | Toggle Mixer Panel      |
 | Cmd+K                 | Command Palette         |
 | Cmd+S                 | Save                    |
 | Cmd+Shift+S           | Save to Cloud           |
@@ -127,7 +152,7 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for detailed mi
 
 ## Contributing
 
-This project is currently in early development (pre-v1). Contributions will be welcomed after M7 (beta launch).
+This project is currently in early development (pre-v1). Contributions will be welcomed after beta launch (M10).
 
 ## License
 

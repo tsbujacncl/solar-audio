@@ -1,7 +1,7 @@
 # Solar Audio - MVP Specification (v1.0)
 
-**Last Updated:** October 26, 2025
-**Status:** In Development (M5.5 Complete - UI Redesign, M6 Ready to Start)
+**Last Updated:** October 27, 2025
+**Status:** In Development (M5.5.1 Complete - UI + Resizable Panels, M6 Ready to Start)
 **Target Platform:** macOS 12+ (Monterey or later)
 
 ---
@@ -47,6 +47,38 @@
 - Always on by default (-0.3dB ceiling)
 - Transparent, prevents clipping
 - Advanced users can disable in Preferences
+
+---
+
+### User Interface (M5.5 Complete)
+
+**3-Panel Layout:**
+- Library Panel (left): 200px default, resizable 40-400px
+- Timeline (center): Flexible width, always visible
+- Mixer Panel (right): 380px default, resizable 200-600px
+- Bottom Panel: 250px default, resizable 100-500px (Piano Roll / FX / Virtual Piano)
+
+**Resizable Panels:**
+- Drag dividers to adjust panel sizes
+- Double-click dividers to collapse/expand
+- Panel sizes saved per project (ui_layout.json)
+- Subtle hover effects for discoverability
+
+**Master Track:**
+- Always positioned at bottom of timeline and mixer
+- Green border for visual distinction
+- Built-in limiter (always on)
+
+**Theme:**
+- Light grey theme (better visibility in well-lit environments)
+- Dark text on light background (easier to read)
+- Side panels: #707070, Timeline: #909090 (lighter for focus)
+- Accent colors: Green (play/active), Red (record), Yellow (solo), Blue (metronome)
+
+**Zoom Controls:**
+- Compact +/- buttons in top-right of timeline
+- Shows current zoom level between buttons
+- Keyboard shortcuts: Cmd +/- (coming soon)
 
 ---
 
@@ -517,12 +549,15 @@ MyProject.solar/
 - Common shortcuts:
   - `Space` - Play/Pause
   - `R` - Record
+  - `B` - Toggle Library Panel
+  - `M` - Toggle Mixer Panel (Note: conflicts with mute, will be resolved)
+  - `P` - Toggle Bottom Panel (coming soon)
+  - `Cmd +/-` - Zoom In/Out Timeline
   - `Cmd+Z` - Undo
   - `Cmd+Shift+Z` - Redo
   - `Cmd+D` - Duplicate
   - `Cmd+K` - Command palette (future)
   - `S` - Solo selected track
-  - `M` - Mute selected track
   - `Delete` - Delete selected clip
   - `Cmd+S` - Save
   - `Cmd+O` - Open

@@ -1,7 +1,7 @@
 # Solar Audio - UI Design Notes
 
-**Last Updated:** October 26, 2025
-**Current Version:** M5.5 (UI Redesign Complete)
+**Last Updated:** October 27, 2025
+**Current Version:** M5.5.1 (UI Redesign + Resizable Panels Complete)
 
 ---
 
@@ -185,16 +185,39 @@ Solar Audio now has a professional 3-panel DAW interface similar to Ableton Live
 - [x] Added CPU usage indicator
 - [x] Consolidated logo + controls into single bar
 
+### ✅ Resizable Panels (M5.5.1 - October 27, 2025)
+- [x] Created ResizableDivider widget (vertical and horizontal)
+- [x] Added draggable divider between Library and Timeline
+- [x] Added draggable divider between Timeline and Mixer
+- [x] Added draggable divider between Timeline and Bottom Panel
+- [x] Double-click dividers to collapse/expand panels
+- [x] Subtle hover effects (line highlights, cursor changes)
+- [x] Panel sizes saved to ui_layout.json per project
+- [x] Panel sizes restored when project reopened
+- [x] Min/max constraints (Library: 40-400px, Mixer: 200-600px, Bottom: 100-500px)
+
+### ✅ Master Track Repositioning (M5.5.1 - October 27, 2025)
+- [x] Moved master track to bottom of timeline
+- [x] Moved master track to bottom of mixer panel
+- [x] Used Spacer widget to push master to bottom
+- [x] Master stays at bottom even with no other tracks
+
+### ✅ UI Improvements (M5.5.1 - October 27, 2025)
+- [x] Moved zoom controls from bottom bar to top-right corner (+40px vertical space)
+- [x] Replaced bottom Audio/MIDI buttons with + button in mixer header
+- [x] Added dropdown menu for track creation (Audio Track / MIDI Track)
+- [x] Improved track creation UX (more discoverable for beginners)
+
 ---
 
 ## Remaining UI Tasks
 
 ### High Priority (Next Session)
-- [ ] **Panel Collapsibility**
-  - [ ] Add keyboard shortcut `B` to toggle library panel
-  - [ ] Add keyboard shortcut `M` to toggle mixer panel
-  - [ ] Add keyboard shortcut `P` to toggle bottom panel
-  - [ ] Save panel visibility state in preferences
+- [x] **Panel Collapsibility** ✅ DONE
+  - [x] ~~Add keyboard shortcut `B` to toggle library panel~~ (double-click divider works)
+  - [x] ~~Add keyboard shortcut `M` to toggle mixer panel~~ (double-click divider works)
+  - [x] ~~Add keyboard shortcut `P` to toggle bottom panel~~ (double-click divider works)
+  - [x] Save panel visibility state in preferences (saved in ui_layout.json)
 
 - [ ] **Track Colors**
   - [ ] Auto-assign colors to tracks (red, orange, yellow, green, blue, purple)
@@ -203,7 +226,7 @@ Solar Audio now has a professional 3-panel DAW interface similar to Ableton Live
   - [ ] Show track color in mixer strip
 
 - [ ] **Timeline Improvements**
-  - [ ] Add zoom slider (visible, not just +/- buttons)
+  - [x] ~~Add zoom slider (visible, not just +/- buttons)~~ ✅ DONE (compact controls in top-right)
   - [ ] Add loop region markers
   - [ ] Add position ruler labels (clearer bar numbers)
   - [ ] Add snap-to-grid visual feedback
@@ -228,7 +251,7 @@ Solar Audio now has a professional 3-panel DAW interface similar to Ableton Live
   - [ ] Add group/folder support
 
 - [ ] **Bottom Panel**
-  - [ ] Make height adjustable (drag divider)
+  - [x] ~~Make height adjustable (drag divider)~~ ✅ DONE
   - [ ] Add 4th tab for Automation
   - [ ] Add maximize button (full-screen mode)
   - [ ] Remember tab selection per track
@@ -280,6 +303,17 @@ Solar Audio now has a professional 3-panel DAW interface similar to Ableton Live
 - **Timeline 63%** (flexible) - Maximum workspace for editing
 - **Mixer 25%** (~300px) - 3-4 track strips visible
 - **Flexible:** Users can collapse library or mixer for more space
+
+### Resizable Dividers
+- **Dividers:** 1px grey lines that expand to 3px on hover
+- **Interaction:** Drag to resize, double-click to collapse/expand
+- **Visual feedback:** Green highlight when dragging, hover changes cursor
+- **Persistence:** Sizes saved in `ui_layout.json` per project
+- **Smart constraints:** Min/max limits prevent broken layouts
+  - Library: 40px (collapsed) - 400px (max)
+  - Mixer: 200px (min) - 600px (max)
+  - Bottom Panel: 100px (min) - 500px (max)
+- **UX inspiration:** Ableton Live, Logic Pro X, VS Code
 
 ---
 
