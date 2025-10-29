@@ -6,7 +6,7 @@ A modern, cross-platform DAW (Digital Audio Workstation) designed for **speed, s
 
 Solar Audio combines professional workflows with beginner-friendly UX. Built with Flutter (UI) and Rust (audio engine), it's designed to work seamlessly across macOS, iPad, and eventually web, Windows, Linux, iOS, and Android.
 
-**Current Status:** ✅ M5.6 Complete - Track Duplication | Ready for M6 (MIDI)
+**Current Status:** ✅ M6.1 Complete - MIDI & Instruments | Ready for M7 (VST3)
 
 ## Core Features (v1 MVP)
 
@@ -20,7 +20,20 @@ Solar Audio combines professional workflows with beginner-friendly UX. Built wit
 - ⌨️ **Keyboard-driven** - Command palette (⌘K) and comprehensive shortcuts
 - 🎨 **Modern UI** - Flat design, clip gain handles, sample preview
 
-## Recent Updates (M5.6 - October 29, 2025)
+## Recent Updates (M6.1 - October 29, 2025)
+
+✅ **MIDI & Instruments Complete:**
+- Piano roll editor with FL Studio-style layout
+- Polyphonic synthesizer (16 voices, ADSR, filter, LFO)
+- Virtual piano keyboard (computer keyboard mapping)
+- Instrument browser with drag-and-drop workflow
+- MIDI clip playback during transport ✨
+- Proper track deletion cleanup (no stuck notes) ✨
+- Ableton-style drag from library → timeline
+
+✨ = Fixed in M6.1 post-release patch
+
+## Previous Updates (M5.6 - October 29, 2025)
 
 ✅ **Track Duplication (Ableton-style):**
 - Right-click context menu on tracks
@@ -133,8 +146,10 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for detailed mi
 | **M4**    | Mixing & Effects            | ✅ Complete |
 | **M5**    | Save & Export               | ✅ Complete |
 | **M5.5**  | UI Polish & Resizable Panels| ✅ Complete |
-| **M6**    | MIDI & Piano Roll           | 🚧 Ready    |
-| **M7**    | VST3 Plugin Support         | 📋 Planned  |
+| **M5.6**  | Track Duplication           | ✅ Complete |
+| **M6**    | MIDI & Piano Roll           | ✅ Complete |
+| **M6.1**  | MIDI Playback Fixes         | ✅ Complete |
+| **M7**    | VST3 Plugin Support         | 🚧 Ready    |
 | **M8**    | Stock Instruments           | 📋 Planned  |
 | **M9**    | Polish & UX                 | 📋 Planned  |
 | **M10**   | Beta Testing & Launch       | 📋 Planned  |

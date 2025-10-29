@@ -34,6 +34,7 @@ Week 0    Week 10   Week 15   Week 22
 - M5: Save & Export
 - M5.5: UI Redesign & Polish (3-panel layout, light grey theme)
 - M6: MIDI & Instruments (piano roll, synthesizer, drag-and-drop)
+- M6.1: MIDI Playback Fixes (clip playback, track cleanup, stuck notes)
 
 **📋 Ready to Start:**
 - M7: VST3 Plugin Support
@@ -61,6 +62,8 @@ Week 0    Week 10   Week 15   Week 22
 - ✅ Ableton-style workflow (drag from library → timeline)
 - ✅ Auto-create MIDI tracks on instrument drop
 - ✅ App branding update (Solar Audio logo)
+- ✅ MIDI clip playback during transport (M6.1)
+- ✅ Proper track deletion cleanup (M6.1)
 
 **Deferred to Future:**
 - MIDI recording (planned for M7/M8)
@@ -134,6 +137,7 @@ Build 5 high-quality instruments:
 - ✅ Built-in effects (EQ, Compressor, Reverb, Delay, Limiter)
 - ✅ Save/load/export
 - ✅ MIDI editing with piano roll
+- ✅ MIDI playback during transport
 - ✅ Synthesizer instrument
 - 📋 VST3 plugin support
 - 📋 Additional stock instruments (4 more)

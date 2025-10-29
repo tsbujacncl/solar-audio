@@ -1,8 +1,9 @@
 # M6: MIDI & Instruments - Completion Report
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete (including M6.1 fixes)
 **Completed:** October 29, 2025
-**Commit:** `6600866`
+**Initial Commit:** `6600866`
+**M6.1 Fixes Commit:** `88f1e9e`
 
 ---
 
@@ -198,8 +199,24 @@ M6 implemented MIDI support, piano roll editor, polyphonic synthesizer, and Able
 1. **MIDI Recording:** Not yet implemented (planned for future)
 2. **Quantize:** Not yet implemented
 3. **Instrument List:** Hardcoded (only Synthesizer is functional)
-4. **MIDI Clip Playback:** Notes can be edited but not played back from timeline yet
+4. ~~**MIDI Clip Playback:** Notes can be edited but not played back from timeline yet~~ ✅ **FIXED in M6.1**
 5. **Computer Keyboard Mapping:** Fixed to ASDF layout (not customizable)
+6. ~~**Track Cleanup:** Duplicate clips and stuck notes after track operations~~ ✅ **FIXED in M6.1**
+
+---
+
+## M6.1 Post-Release Fixes
+
+**Completed:** October 29, 2025 (same day as M6 release)
+
+### Issues Fixed
+- ✅ **MIDI Playback:** Notes now play back correctly during transport
+- ✅ **Duplicate Clips:** Editing notes no longer creates duplicate clips
+- ✅ **Stuck Notes:** Track deletion properly stops all active notes
+- ✅ **Track Cleanup:** MIDI clips removed from audio graph on track deletion
+- ✅ **Console Noise:** Removed excessive debug messages for cleaner operation
+
+**See:** `docs/M6/M6.1_MIDI_PLAYBACK_FIX.md` for full technical details.
 
 ---
 
@@ -208,7 +225,7 @@ M6 implemented MIDI support, piano roll editor, polyphonic synthesizer, and Able
 ### Immediate Priorities
 - Implement MIDI recording
 - Add quantize functionality
-- Hook up MIDI clip playback in timeline
+- ~~Hook up MIDI clip playback in timeline~~ ✅ **DONE in M6.1**
 
 ### M7: VST3 Plugin Support
 - Scan installed VST3 plugins
