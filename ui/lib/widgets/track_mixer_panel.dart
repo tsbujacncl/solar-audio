@@ -55,6 +55,7 @@ class TrackMixerPanel extends StatefulWidget {
   final int? selectedMidiTrackId;
   final Function(int?)? onMidiTrackSelected;
   final Function(int, String)? onInstrumentSelected; // (trackId, instrumentId)
+  final Function(int, int)? onTrackDuplicated; // (sourceTrackId, newTrackId)
   final Map<int, InstrumentData>? trackInstruments;
 
   const TrackMixerPanel({
@@ -65,6 +66,7 @@ class TrackMixerPanel extends StatefulWidget {
     this.selectedMidiTrackId,
     this.onMidiTrackSelected,
     this.onInstrumentSelected,
+    this.onTrackDuplicated,
     this.trackInstruments,
   });
 
@@ -179,6 +181,23 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
         _createTrack(value);
       }
     });
+  }
+
+  void _duplicateTrack(TrackData track) {
+    if (widget.audioEngine == null) return;
+
+    final newTrackId = widget.audioEngine!.duplicateTrack(track.id);
+
+    if (newTrackId >= 0) {
+      debugPrint('✅ Track ${track.id} duplicated → new track $newTrackId');
+
+      // Notify parent about duplication so it can copy instrument mapping
+      widget.onTrackDuplicated?.call(track.id, newTrackId);
+
+      _loadTracksAsync();
+    } else {
+      debugPrint('❌ Failed to duplicate track ${track.id}');
+    }
   }
 
   void _confirmDeleteTrack(TrackData track) {
@@ -384,6 +403,7 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
                             _selectedTrackForFX == track.id ? null : track.id;
                       });
                     },
+                    onDuplicatePressed: () => _duplicateTrack(track),
                     onDeletePressed: () => _confirmDeleteTrack(track),
                   );
                 }).toList(),

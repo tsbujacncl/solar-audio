@@ -62,6 +62,7 @@ class AudioEngine {
   late final _GetTrackInfoFfi _getTrackInfo;
   late final _GetTrackPeakLevelsFfi _getTrackPeakLevels;
   late final _DeleteTrackFfi _deleteTrack;
+  late final _DuplicateTrackFfi _duplicateTrack;
 
   // M4 functions - Effects
   late final _AddEffectToTrackFfi _addEffectToTrack;
@@ -349,6 +350,11 @@ class AudioEngine {
       _deleteTrack = _lib
           .lookup<ffi.NativeFunction<_DeleteTrackFfiNative>>(
               'delete_track_ffi')
+          .asFunction();
+
+      _duplicateTrack = _lib
+          .lookup<ffi.NativeFunction<_DuplicateTrackFfiNative>>(
+              'duplicate_track_ffi')
           .asFunction();
       print('  ✅ delete_track_ffi bound');
 
@@ -1002,6 +1008,25 @@ class AudioEngine {
     }
   }
 
+  /// Duplicate a track (cannot duplicate master track)
+  /// Returns the new track ID, or -1 on error
+  int duplicateTrack(int trackId) {
+    print('📋 [AudioEngine] Duplicating track $trackId...');
+    try {
+      final newTrackId = _duplicateTrack(trackId);
+      if (newTrackId >= 0) {
+        print('✅ [AudioEngine] Track $trackId duplicated → new track $newTrackId');
+        return newTrackId;
+      } else {
+        print('❌ [AudioEngine] Failed to duplicate track $trackId');
+        return -1;
+      }
+    } catch (e) {
+      print('❌ [AudioEngine] Duplicate track failed: $e');
+      return -1;
+    }
+  }
+
   // ========================================================================
   // M4 API - Effects
   // ========================================================================
@@ -1371,6 +1396,9 @@ typedef _GetTrackPeakLevelsFfi = ffi.Pointer<Utf8> Function(int);
 
 typedef _DeleteTrackFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
 typedef _DeleteTrackFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _DuplicateTrackFfiNative = ffi.Int64 Function(ffi.Uint64);
+typedef _DuplicateTrackFfi = int Function(int);
 
 // M4 types - Effects
 typedef _AddEffectToTrackFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Pointer<ffi.Char>);

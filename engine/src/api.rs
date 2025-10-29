@@ -1327,6 +1327,113 @@ pub fn delete_track(track_id: TrackId) -> Result<String, String> {
     }
 }
 
+/// Duplicate a track (cannot duplicate master)
+///
+/// Creates a copy of the track with the same settings, clips, and effects.
+/// The new track will be named "<original name> Copy".
+///
+/// # Arguments
+/// * `track_id` - Track ID to duplicate
+///
+/// # Returns
+/// New track ID on success, error if track not found or is master
+pub fn duplicate_track(track_id: TrackId) -> Result<TrackId, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Cannot duplicate master track
+    if track_id == 0 {
+        return Err("Cannot duplicate master track".to_string());
+    }
+
+    // First, collect the data we need from the source track
+    let (track_type, name, volume_db, pan, mute, audio_clips, midi_clips, fx_chain, sends) = {
+        let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+        let source_track_arc = track_manager.get_track(track_id)
+            .ok_or(format!("Track {} not found", track_id))?;
+
+        let source_track = source_track_arc.lock().map_err(|e| e.to_string())?;
+
+        // Collect all data we need to copy
+        (
+            source_track.track_type,
+            format!("{} Copy", source_track.name),
+            source_track.volume_db,
+            source_track.pan,
+            source_track.mute,
+            source_track.audio_clips.clone(),
+            source_track.midi_clips.clone(),
+            source_track.fx_chain.clone(),
+            source_track.sends.clone(),
+        )
+        // source_track lock is released here
+        // track_manager lock is released here
+    };
+
+    // Now create the new track and set its properties
+    let new_track_id = {
+        let mut track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+        track_manager.create_track(track_type, name)
+    };
+
+    // Deep copy effects chain (create new effect instances)
+    let new_fx_chain = {
+        let mut effect_manager = graph.effect_manager.lock().map_err(|e| e.to_string())?;
+        let mut new_chain = Vec::new();
+
+        for effect_id in &fx_chain {
+            if let Some(new_effect_id) = effect_manager.duplicate_effect(*effect_id) {
+                new_chain.push(new_effect_id);
+            } else {
+                eprintln!("⚠️  [API] Failed to duplicate effect {}", effect_id);
+            }
+        }
+
+        new_chain
+    };
+
+    // Copy properties to the new track
+    {
+        let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+        let new_track_arc = track_manager.get_track(new_track_id)
+            .ok_or("Failed to get newly created track")?;
+
+        let mut new_track = new_track_arc.lock().map_err(|e| e.to_string())?;
+
+        // Copy mixer settings
+        new_track.volume_db = volume_db;
+        new_track.pan = pan;
+        new_track.mute = mute;
+        new_track.solo = false; // Don't copy solo state
+        new_track.armed = false; // Don't copy armed state
+
+        // Copy clips (Arc references, so this is cheap)
+        new_track.audio_clips = audio_clips;
+        new_track.midi_clips = midi_clips;
+
+        // Use the deep-copied effects chain
+        new_track.fx_chain = new_fx_chain;
+
+        // Copy sends
+        new_track.sends = sends;
+        // new_track lock is released here
+        // track_manager lock is released here
+    };
+
+    // Copy instrument assignment if exists (for MIDI tracks)
+    {
+        let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
+        if synth_manager.has_synth(track_id) {
+            synth_manager.copy_synth(track_id, new_track_id);
+        }
+    };
+
+    eprintln!("📋 [API] Duplicated track {} → new track {} created", track_id, new_track_id);
+
+    Ok(new_track_id)
+}
+
 // ============================================================================
 // M5: PROJECT SAVE/LOAD API
 // ============================================================================

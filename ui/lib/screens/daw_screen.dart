@@ -508,6 +508,22 @@ class _DAWScreenState extends State<DAWScreen> {
     debugPrint('🎹 Track $trackId instrument set to: $instrumentId');
   }
 
+  void _onTrackDuplicated(int sourceTrackId, int newTrackId) {
+    setState(() {
+      // Copy instrument mapping from source track to new track if it exists
+      if (_trackInstruments.containsKey(sourceTrackId)) {
+        final sourceInstrument = _trackInstruments[sourceTrackId]!;
+        // Create a copy with the new track ID
+        _trackInstruments[newTrackId] = InstrumentData(
+          trackId: newTrackId,
+          type: sourceInstrument.type,
+          parameters: Map.from(sourceInstrument.parameters),
+        );
+        debugPrint('🎹 Copied instrument from track $sourceTrackId to track $newTrackId');
+      }
+    });
+  }
+
   void _onInstrumentDropped(int trackId, Instrument instrument) {
     debugPrint('🎹 _onInstrumentDropped CALLED: track=$trackId, instrument=${instrument.name}');
     // Reuse the same logic as _onInstrumentSelected
@@ -1066,6 +1082,7 @@ class _DAWScreenState extends State<DAWScreen> {
                             selectedMidiTrackId: _selectedMidiTrackId,
                             onMidiTrackSelected: _onMidiTrackSelected,
                             onInstrumentSelected: _onInstrumentSelected,
+                            onTrackDuplicated: _onTrackDuplicated,
                             trackInstruments: _trackInstruments,
                           ),
                         ),

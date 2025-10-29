@@ -586,6 +586,21 @@ pub extern "C" fn delete_track_ffi(track_id: u64) -> *mut c_char {
     }
 }
 
+/// Duplicate a track
+///
+/// Returns the new track ID as a string on success, or "Error: <message>" on failure.
+/// Returns "-1" if duplication fails.
+#[no_mangle]
+pub extern "C" fn duplicate_track_ffi(track_id: u64) -> i64 {
+    match api::duplicate_track(track_id) {
+        Ok(new_track_id) => new_track_id as i64,
+        Err(e) => {
+            eprintln!("❌ [FFI] Failed to duplicate track {}: {}", track_id, e);
+            -1
+        }
+    }
+}
+
 // ============================================================================
 // M5: SAVE/LOAD PROJECT FFI
 // ============================================================================

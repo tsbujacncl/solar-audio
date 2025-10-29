@@ -12,6 +12,8 @@ class TrackHeader extends StatelessWidget {
   final AudioEngine? audioEngine;
   final VoidCallback? onMuteToggle;
   final VoidCallback? onSoloToggle;
+  final VoidCallback? onDuplicatePressed;
+  final VoidCallback? onDeletePressed;
 
   const TrackHeader({
     super.key,
@@ -24,21 +26,27 @@ class TrackHeader extends StatelessWidget {
     this.audioEngine,
     this.onMuteToggle,
     this.onSoloToggle,
+    this.onDuplicatePressed,
+    this.onDeletePressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 120,
-      height: 100, // Height of track row in timeline
-      decoration: const BoxDecoration(
-        color: Color(0xFF707070),
-        border: Border(
-          right: BorderSide(color: Color(0xFF909090)),
-          bottom: BorderSide(color: Color(0xFF909090)),
+    return GestureDetector(
+      onSecondaryTapDown: (TapDownDetails details) {
+        _showContextMenu(context, details.globalPosition);
+      },
+      child: Container(
+        width: 120,
+        height: 100, // Height of track row in timeline
+        decoration: const BoxDecoration(
+          color: Color(0xFF707070),
+          border: Border(
+            right: BorderSide(color: Color(0xFF909090)),
+            bottom: BorderSide(color: Color(0xFF909090)),
+          ),
         ),
-      ),
-      child: Column(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Track name and icon
@@ -138,8 +146,54 @@ class TrackHeader extends StatelessWidget {
 
           const SizedBox(height: 8),
         ],
+        ),
       ),
     );
+  }
+
+  void _showContextMenu(BuildContext context, Offset position) {
+    // Don't show context menu for master track
+    if (trackType.toLowerCase() == 'master') {
+      return;
+    }
+
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'duplicate',
+          child: Row(
+            children: [
+              Icon(Icons.content_copy, size: 16, color: Color(0xFF202020)),
+              SizedBox(width: 8),
+              Text('Duplicate', style: TextStyle(color: Color(0xFF202020))),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, size: 16, color: Color(0xFFFF5722)),
+              SizedBox(width: 8),
+              Text('Delete', style: TextStyle(color: Color(0xFFFF5722))),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'duplicate' && onDuplicatePressed != null) {
+        onDuplicatePressed!();
+      } else if (value == 'delete' && onDeletePressed != null) {
+        onDeletePressed!();
+      }
+    });
   }
 
   Widget _buildLevelMeter() {

@@ -30,6 +30,7 @@ This document breaks the MVP into **7 actionable milestones** (M1–M7), each re
 | **M4**    | Mixing                       | 2 weeks  | ✅ Complete        |
 | **M5**    | Save & Export                | 1 week   | ✅ Complete        |
 | **M5.5**  | UI Polish & Resizable Panels | 1 week   | ✅ Complete        |
+| **M5.6**  | Track Duplication            | 1 day    | ✅ Complete        |
 | **M6**    | MIDI & Piano Roll            | 3 weeks  | 📋 Ready to Start  |
 | **M7**    | VST3 Plugin Support          | 2 weeks  | 📋 Ready           |
 | **M8**    | Stock Instruments            | 3 weeks  | 📋 Ready           |
@@ -776,6 +777,108 @@ See "UI/UX Enhancement Roadmap" section below for planned improvements in M7-M9.
 
 ### Next Steps
 Ready to start M6 (MIDI & Piano Roll) with improved UI foundation.
+
+---
+
+## M5.6: Track Duplication (October 29, 2025)
+
+**Goal:** Add professional track duplication with full state copying (instruments, effects, clips).
+
+**Duration:** 1 day
+**Status:** ✅ Complete
+
+### What Was Implemented
+
+#### Backend Enhancements (Rust)
+- [x] **TrackSynthManager.copy_synth()** - Deep copies synthesizers with all parameters
+- [x] **EffectManager.duplicate_effect()** - Creates independent effect instances
+- [x] **Clone trait** - Added to all 6 effect types (EQ, Compressor, Reverb, Delay, Limiter, Chorus)
+- [x] **Enhanced duplicate_track()** - Now copies instruments and deep copies effects
+- [x] **Proper lock management** - Fixed deadlock issues with scoped lock acquisition
+
+#### UI Enhancements (Flutter)
+- [x] **Right-click context menu** - Added to track headers and mixer strips
+- [x] **Duplicate menu option** - With copy icon and keyboard shortcut hint
+- [x] **Delete menu option** - With confirmation dialog (already existed)
+- [x] **Instrument mapping sync** - Flutter copies instrument data when track duplicated
+- [x] **Callback system** - TrackMixerPanel notifies DAW screen of duplication
+
+### What Gets Duplicated
+When you duplicate a track, the following are copied:
+
+✅ **Track properties:**
+- Name (with " Copy" suffix)
+- Volume, pan, mute settings
+- Track type (Audio/MIDI)
+
+✅ **Audio/MIDI clips:**
+- All clips on the track (Arc references - efficient)
+- Clip positions and durations
+
+✅ **Instrument assignment:**
+- Full synthesizer state with all parameters
+- Oscillator types, levels, detune
+- Filter settings (cutoff, resonance, type)
+- Envelope parameters (ADSR)
+
+✅ **Effects chain:**
+- Independent copies of all effects
+- All effect parameters preserved
+- Each track has fully independent effect instances
+
+❌ **Not copied (intentional):**
+- Solo state (always false on new track)
+- Armed state (always false on new track)
+
+### Technical Highlights
+
+**Lock Management:**
+- Implemented proper lock scoping to prevent deadlocks
+- Three-phase approach: (1) read source, (2) create track, (3) copy properties
+- Each lock is acquired and released cleanly
+
+**Effect Deep Copying:**
+- Each effect instance is cloned (not shared)
+- Changing effect parameters on one track doesn't affect the other
+- Matches Ableton Live's duplication behavior
+
+**Instrument Copying:**
+- Copies all 12+ synth parameters
+- Updates all voice instances with new parameters
+- Maintains polyphony and voice state independence
+
+### Files Modified
+**Rust (engine/):**
+1. `src/synth.rs` - Added copy_synth() method
+2. `src/effects.rs` - Added Clone trait to all effects, duplicate_effect()
+3. `src/api.rs` - Enhanced duplicate_track() with instrument and effect copying
+
+**Flutter (ui/lib/):**
+4. `widgets/track_header.dart` - Added context menu with duplicate/delete
+5. `widgets/track_mixer_strip.dart` - Added context menu
+6. `widgets/track_mixer_panel.dart` - Added onTrackDuplicated callback
+7. `screens/daw_screen.dart` - Added _onTrackDuplicated() handler
+
+### Usage
+1. **Right-click** on any track (timeline header or mixer strip)
+2. Select **"Duplicate"** from context menu
+3. New track appears with:
+   - Same instrument and all its settings ✅
+   - Independent effects (change one, doesn't affect other) ✅
+   - Same clips ✅
+   - Same mixer settings ✅
+
+**Just like Ableton Live!** 🎹🎛️
+
+### Testing
+- ✅ Duplicate MIDI track with synthesizer → instrument copied
+- ✅ Duplicate track with effects → effects are independent
+- ✅ Adjust parameters on duplicated track → original unaffected
+- ✅ No crashes or deadlocks
+- ✅ Builds successfully (Rust warnings only, no errors)
+
+### Next Steps
+Ready to start M6 (MIDI & Piano Roll) with complete track management features.
 
 ---
 
@@ -1662,6 +1765,11 @@ This plan is **aggressive but achievable** if you work consistently (~15-20 hour
 ✅ **M2:** Recording & Input - COMPLETE
 ✅ **M3:** MIDI Editing - COMPLETE (Virtual Piano + Synthesizer functional, Piano Roll/Sequencer deferred)
 ✅ **M4:** Mixing & Effects - COMPLETE (Full mixer UI + effects panel working, integration with audio callback deferred)
-📋 **M5:** Save & Export - READY TO START
-📋 **M6:** Cloud & Versioning - Ready
-📋 **M7:** Polish & Beta Launch - Ready (will include deferred M4 UI)
+✅ **M5:** Save & Export - COMPLETE
+✅ **M5.5:** UI Polish & Resizable Panels - COMPLETE
+✅ **M5.6:** Track Duplication - COMPLETE (Full state copying: instruments, effects, clips)
+📋 **M6:** MIDI & Piano Roll - Ready to Start
+📋 **M7:** VST3 Plugin Support - Ready
+📋 **M8:** Stock Instruments - Ready
+📋 **M9:** Polish & UX - Ready
+📋 **M10:** Beta Testing & Launch - Ready

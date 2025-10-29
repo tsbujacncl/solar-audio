@@ -42,6 +42,7 @@ pub enum BiquadType {
 ///
 /// Used for EQ bands. Implements cookbook formulae from:
 /// "Audio EQ Cookbook" by Robert Bristow-Johnson
+#[derive(Clone)]
 struct BiquadFilter {
     // Coefficients
     b0: f32, b1: f32, b2: f32,
@@ -150,6 +151,7 @@ impl BiquadFilter {
 // ========================================================================
 
 /// 4-band parametric EQ
+#[derive(Clone)]
 pub struct ParametricEQ {
     // Bands: low shelf, mid1, mid2, high shelf
     low_shelf: BiquadFilter,
@@ -257,6 +259,7 @@ impl Effect for ParametricEQ {
 // ========================================================================
 
 /// Dynamic range compressor
+#[derive(Clone)]
 pub struct Compressor {
     // Parameters
     pub threshold_db: f32,
@@ -350,6 +353,7 @@ impl Effect for Compressor {
 // ========================================================================
 
 /// Stereo delay effect
+#[derive(Clone)]
 pub struct Delay {
     // Parameters
     pub delay_time_ms: f32,
@@ -424,6 +428,7 @@ impl Effect for Delay {
 // ========================================================================
 
 /// Simple reverb based on Freeverb algorithm
+#[derive(Clone)]
 pub struct Reverb {
     // Parameters
     pub room_size: f32,      // 0.0 to 1.0
@@ -595,6 +600,7 @@ impl Effect for Reverb {
 // ========================================================================
 
 /// Brick-wall limiter (for master track)
+#[derive(Clone)]
 pub struct Limiter {
     pub threshold_db: f32,
     pub release_ms: f32,
@@ -677,6 +683,7 @@ impl Effect for Limiter {
 // ========================================================================
 
 /// Chorus effect (modulated delay)
+#[derive(Clone)]
 pub struct Chorus {
     pub rate_hz: f32,        // LFO rate
     pub depth: f32,          // Modulation depth (0.0 to 1.0)
@@ -759,6 +766,7 @@ impl Effect for Chorus {
 // ========================================================================
 
 /// Container for any effect type
+#[derive(Clone)]
 pub enum EffectType {
     EQ(ParametricEQ),
     Compressor(Compressor),
@@ -853,5 +861,29 @@ impl EffectManager {
     /// Get all effect IDs
     pub fn get_all_effect_ids(&self) -> Vec<EffectId> {
         self.effects.keys().copied().collect()
+    }
+
+    /// Duplicate an effect (deep copy with new ID)
+    /// Returns new effect ID on success, None if source effect not found
+    pub fn duplicate_effect(&mut self, source_effect_id: EffectId) -> Option<EffectId> {
+        if let Some(source_effect_arc) = self.effects.get(&source_effect_id) {
+            let source_effect = source_effect_arc.lock().unwrap();
+
+            // Clone the effect (deep copy)
+            let cloned_effect = source_effect.clone();
+            drop(source_effect); // Release lock
+
+            // Create new effect with cloned data
+            let new_id = self.next_id;
+            self.next_id += 1;
+
+            self.effects.insert(new_id, Arc::new(Mutex::new(cloned_effect)));
+            eprintln!("🎛️ [EffectManager] Duplicated effect {} → {} ({})",
+                      source_effect_id, new_id, self.effects.get(&new_id).unwrap().lock().unwrap().name());
+
+            Some(new_id)
+        } else {
+            None
+        }
     }
 }

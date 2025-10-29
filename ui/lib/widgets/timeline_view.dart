@@ -264,14 +264,16 @@ class _TimelineViewState extends State<TimelineView> {
   }
 
   Widget _buildTracks(double width) {
-    if (_tracks.isEmpty) {
-      // Show empty state
+    // Only show empty state if audio engine is not initialized
+    // Master track should always exist, so empty _tracks means audio engine issue
+    if (_tracks.isEmpty && widget.audioEngine == null) {
+      // Show empty state only if no audio engine
       return Container(
         height: 200,
         color: const Color(0xFF9A9A9A),
         child: Center(
           child: Text(
-            'No tracks - Add a track to get started',
+            'Audio engine not initialized',
             style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
         ),

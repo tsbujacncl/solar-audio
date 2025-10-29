@@ -931,4 +931,45 @@ impl TrackSynthManager {
     pub fn has_synth(&self, track_id: u64) -> bool {
         self.synths.contains_key(&track_id)
     }
+
+    /// Copy synthesizer from one track to another
+    /// Creates a new synth for dest_track_id with same parameters as source_track_id
+    pub fn copy_synth(&mut self, source_track_id: u64, dest_track_id: u64) -> bool {
+        if let Some(source_synth) = self.synths.get(&source_track_id) {
+            // Create new synth with same parameters
+            let mut new_synth = TrackSynthesizer::new(self.sample_rate);
+
+            // Copy all parameters
+            new_synth.osc1_type = source_synth.osc1_type;
+            new_synth.osc1_level = source_synth.osc1_level;
+            new_synth.osc1_detune = source_synth.osc1_detune;
+            new_synth.osc2_type = source_synth.osc2_type;
+            new_synth.osc2_level = source_synth.osc2_level;
+            new_synth.osc2_detune = source_synth.osc2_detune;
+            new_synth.filter_type = source_synth.filter_type;
+            new_synth.filter_cutoff = source_synth.filter_cutoff;
+            new_synth.filter_resonance = source_synth.filter_resonance;
+            new_synth.envelope_params = source_synth.envelope_params.clone();
+
+            // Update all voices with the new parameters
+            for voice in &mut new_synth.voices {
+                voice.oscillator.osc1_type = new_synth.osc1_type;
+                voice.oscillator.osc1_level = new_synth.osc1_level;
+                voice.oscillator.osc1_detune = new_synth.osc1_detune;
+                voice.oscillator.osc2_type = new_synth.osc2_type;
+                voice.oscillator.osc2_level = new_synth.osc2_level;
+                voice.oscillator.osc2_detune = new_synth.osc2_detune;
+                voice.filter.filter_type = new_synth.filter_type;
+                voice.filter.cutoff = new_synth.filter_cutoff;
+                voice.filter.resonance = new_synth.filter_resonance;
+                voice.envelope.params = new_synth.envelope_params.clone();
+            }
+
+            self.synths.insert(dest_track_id, new_synth);
+            eprintln!("🎹 [TrackSynthManager] Copied synth from track {} to track {}", source_track_id, dest_track_id);
+            true
+        } else {
+            false
+        }
+    }
 }

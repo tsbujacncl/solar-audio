@@ -6,7 +6,7 @@ A modern, cross-platform DAW (Digital Audio Workstation) designed for **speed, s
 
 Solar Audio combines professional workflows with beginner-friendly UX. Built with Flutter (UI) and Rust (audio engine), it's designed to work seamlessly across macOS, iPad, and eventually web, Windows, Linux, iOS, and Android.
 
-**Current Status:** ✅ M5.5 Complete - Save/Export + UI Polish | Ready for M6 (MIDI)
+**Current Status:** ✅ M5.6 Complete - Track Duplication | Ready for M6 (MIDI)
 
 ## Core Features (v1 MVP)
 
@@ -14,12 +14,22 @@ Solar Audio combines professional workflows with beginner-friendly UX. Built wit
 - ✂️ **Edit with precision** - Piano roll, step sequencer, clip automation
 - 🎚️ **Mix like a pro** - Send effects, built-in EQ/reverb/compressor/delay
 - 🎹 **Built-in instruments** - Subtractive synth, drum sampler, piano ROMpler
+- 📋 **Track duplication** - Right-click to duplicate tracks with instruments & effects
 - 💾 **Save & export** - Local autosave, crash recovery, export to WAV/MP3/stems
 - ☁️ **Cloud snapshots** - Version history via Firebase
 - ⌨️ **Keyboard-driven** - Command palette (⌘K) and comprehensive shortcuts
 - 🎨 **Modern UI** - Flat design, clip gain handles, sample preview
 
-## Recent Updates (M5.5 - October 2025)
+## Recent Updates (M5.6 - October 29, 2025)
+
+✅ **Track Duplication (Ableton-style):**
+- Right-click context menu on tracks
+- Duplicates instruments with all parameters
+- Deep copies effects (independent instances)
+- Copies all clips and mixer settings
+- Delete option with confirmation dialog
+
+## Previous Updates (M5.5 - October 2025)
 
 ✅ **UI Redesign Complete:**
 - Professional 3-panel layout (Library | Timeline | Mixer)

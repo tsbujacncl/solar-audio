@@ -24,6 +24,7 @@ class TrackMixerStrip extends StatelessWidget {
   final VoidCallback? onSoloToggle;
   final VoidCallback? onFXPressed;
   final VoidCallback? onDeletePressed;
+  final VoidCallback? onDuplicatePressed;
   final bool isFXActive;
 
   // MIDI instrument selection
@@ -48,6 +49,7 @@ class TrackMixerStrip extends StatelessWidget {
     this.onSoloToggle,
     this.onFXPressed,
     this.onDeletePressed,
+    this.onDuplicatePressed,
     this.isFXActive = false,
     this.instrumentData,
     this.onInstrumentSelect,
@@ -55,14 +57,18 @@ class TrackMixerStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 380,
-      height: 100, // Matches timeline track row height
-      margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF909090)),
-      ),
-      child: Row(
+    return GestureDetector(
+      onSecondaryTapDown: (TapDownDetails details) {
+        _showContextMenu(context, details.globalPosition);
+      },
+      child: Container(
+        width: 380,
+        height: 100, // Matches timeline track row height
+        margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFF909090)),
+        ),
+        child: Row(
         children: [
           // Left section: Colored track name area (Ableton style)
           Container(
@@ -98,8 +104,54 @@ class TrackMixerStrip extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
+  }
+
+  void _showContextMenu(BuildContext context, Offset position) {
+    // Don't show context menu for master track
+    if (trackType.toLowerCase() == 'master') {
+      return;
+    }
+
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'duplicate',
+          child: Row(
+            children: [
+              Icon(Icons.content_copy, size: 16, color: Color(0xFF202020)),
+              SizedBox(width: 8),
+              Text('Duplicate', style: TextStyle(color: Color(0xFF202020))),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, size: 16, color: Color(0xFFFF5722)),
+              SizedBox(width: 8),
+              Text('Delete', style: TextStyle(color: Color(0xFFFF5722))),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'duplicate' && onDuplicatePressed != null) {
+        onDuplicatePressed!();
+      } else if (value == 'delete' && onDeletePressed != null) {
+        onDeletePressed!();
+      }
+    });
   }
 
   Widget _buildTrackNameSection() {
