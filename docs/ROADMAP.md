@@ -1,7 +1,7 @@
 # Solar Audio - Development Roadmap
 
-**Last Updated:** October 26, 2025
-**Current Status:** M5.5 UI Polish Complete, M6 Ready to Start
+**Last Updated:** October 29, 2025
+**Current Status:** M6 Complete (MIDI & Instruments), M7 Ready to Start
 
 ---
 
@@ -33,12 +33,12 @@ Week 0    Week 10   Week 15   Week 22
 - M4: Mixing
 - M5: Save & Export
 - M5.5: UI Redesign & Polish (3-panel layout, light grey theme)
+- M6: MIDI & Instruments (piano roll, synthesizer, drag-and-drop)
 
 **📋 Ready to Start:**
-- M6: MIDI & Piano Roll
+- M7: VST3 Plugin Support
 
 **📋 Upcoming:**
-- M7: VST3 Plugin Support
 - M8: Stock Instruments
 - M9: Polish & UX
 - M10: Beta Testing & Launch
@@ -47,16 +47,24 @@ Week 0    Week 10   Week 15   Week 22
 
 ## Milestones
 
-### M6: MIDI & Piano Roll (Weeks 11-13) 🚧
+### M6: MIDI & Instruments (Weeks 11-13) ✅
 
-- Piano roll with velocity lane (FL Studio-style)
-- Virtual piano (bottom panel)
-- MIDI recording (always listen to input)
-- Quantize options
-- Note editing (draw, move, resize, delete)
-- Computer keyboard mapping (ASDF keys)
+**Completed:** October 29, 2025
 
-**Target:** Mid-November 2025
+**Implemented:**
+- ✅ Piano roll with velocity lane (FL Studio-style)
+- ✅ Virtual piano (bottom panel, polyphonic)
+- ✅ Note editing (draw, move, resize, delete, undo/redo)
+- ✅ Computer keyboard mapping (ASDF keys)
+- ✅ Polyphonic synthesizer (16 voices, ADSR, 3 oscillators, filter, LFO)
+- ✅ Instrument browser with drag-and-drop
+- ✅ Ableton-style workflow (drag from library → timeline)
+- ✅ Auto-create MIDI tracks on instrument drop
+- ✅ App branding update (Solar Audio logo)
+
+**Deferred to Future:**
+- MIDI recording (planned for M7/M8)
+- Quantize options (planned for M7/M8)
 
 ---
 
@@ -125,9 +133,10 @@ Build 5 high-quality instruments:
 - ✅ Multiple tracks with mixing
 - ✅ Built-in effects (EQ, Compressor, Reverb, Delay, Limiter)
 - ✅ Save/load/export
-- 🚧 MIDI editing with piano roll
+- ✅ MIDI editing with piano roll
+- ✅ Synthesizer instrument
 - 📋 VST3 plugin support
-- 📋 5 stock instruments
+- 📋 Additional stock instruments (4 more)
 - 📋 Windows release (alongside macOS)
 
 **Won't-Have (v1.0):**
@@ -280,17 +289,17 @@ Solar Audio is open-source (GPL v3). Contributions welcome!
 ## Next Steps
 
 **This Week:**
-- Start M6 (piano roll implementation)
-- Test MIDI recording with hardware
-- Continue UI polish based on usage
+- Start M7 (VST3 plugin support)
+- Implement plugin scanning
+- Test with commercial plugins
 
 **This Month:**
-- Complete M6
-- Start M7 (VST3 support)
+- Complete M7 (VST3 support)
+- Start M8 (stock instruments)
 - Post monthly dev update (vlog or blog)
 
 **By December 1:**
-- Complete M7-M9
+- Complete M8-M9
 - Private beta testing
 - Public beta launch 🚀
 

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 
 /// Track color utilities for assigning colors to tracks
 class TrackColors {
-  /// Available track colors (cycling palette)
+  /// Available track colors (Ableton-style pastels)
   static const List<Color> palette = [
-    Color(0xFFE91E63), // Pink/Magenta
-    Color(0xFF2196F3), // Blue
-    Color(0xFFFF9800), // Orange
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF00BCD4), // Cyan/Teal
-    Color(0xFFFF5722), // Deep Orange
-    Color(0xFF4CAF50), // Green
-    Color(0xFFFFC107), // Amber/Yellow
+    Color(0xFF7DB3D9), // Light blue (Ableton Track 4)
+    Color(0xFFE87368), // Coral red (Ableton Track 5)
+    Color(0xFF8B7355), // Brown/tan (Ableton Track 6)
+    Color(0xFFE89EB3), // Pink (Ableton Track 7)
+    Color(0xFF7FA894), // Sage green
+    Color(0xFFD4A574), // Light gold/amber
+    Color(0xFF9B8DC4), // Light purple/lavender
+    Color(0xFFB8A890), // Beige/tan
   ];
 
   /// Master track color

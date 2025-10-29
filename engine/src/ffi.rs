@@ -651,3 +651,89 @@ pub extern "C" fn export_to_wav_ffi(
     }
 }
 
+// ============================================================================
+// M6: PER-TRACK SYNTHESIZER FFI
+// ============================================================================
+
+/// Set instrument for a track (returns instrument ID, or -1 on error)
+#[no_mangle]
+pub extern "C" fn set_track_instrument_ffi(
+    track_id: u64,
+    instrument_type: *const c_char,
+) -> i64 {
+    let instrument_type_str = unsafe {
+        match CStr::from_ptr(instrument_type).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return -1,
+        }
+    };
+
+    match api::set_track_instrument(track_id, instrument_type_str) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("❌ [FFI] Failed to set instrument: {}", e);
+            -1
+        }
+    }
+}
+
+/// Set a synthesizer parameter for a track
+#[no_mangle]
+pub extern "C" fn set_synth_parameter_ffi(
+    track_id: u64,
+    param_name: *const c_char,
+    value: *const c_char,
+) -> *mut c_char {
+    let param_name_str = unsafe {
+        match CStr::from_ptr(param_name).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return CString::new("Error: Invalid parameter name").unwrap().into_raw(),
+        }
+    };
+
+    let value_str = unsafe {
+        match CStr::from_ptr(value).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => return CString::new("Error: Invalid value").unwrap().into_raw(),
+        }
+    };
+
+    match api::set_synth_parameter(track_id, param_name_str, value_str) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get all synthesizer parameters for a track
+#[no_mangle]
+pub extern "C" fn get_synth_parameters_ffi(track_id: u64) -> *mut c_char {
+    println!("🎹 [FFI] Get synth parameters for track {}", track_id);
+
+    match api::get_synth_parameters(track_id) {
+        Ok(json) => CString::new(json).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Send MIDI note on event to track synthesizer
+#[no_mangle]
+pub extern "C" fn send_track_midi_note_on_ffi(track_id: u64, note: u8, velocity: u8) -> *mut c_char {
+    println!("🎹 [FFI] Track {} Note On: note={}, velocity={}", track_id, note, velocity);
+
+    match api::send_track_midi_note_on(track_id, note, velocity) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Send MIDI note off event to track synthesizer
+#[no_mangle]
+pub extern "C" fn send_track_midi_note_off_ffi(track_id: u64, note: u8, velocity: u8) -> *mut c_char {
+    println!("🎹 [FFI] Track {} Note Off: note={}, velocity={}", track_id, note, velocity);
+
+    match api::send_track_midi_note_off(track_id, note, velocity) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'instrument_browser.dart';
 
 /// Library panel widget - left sidebar with browsable content categories
 class LibraryPanel extends StatefulWidget {
@@ -222,9 +223,86 @@ class _LibraryPanelState extends State<LibraryPanel> {
   }
 
   Widget _buildItem(String name) {
+    // Try to find matching instrument for dragging
+    final instrument = _findInstrumentByName(name);
+    debugPrint('📚 Building library item "$name", instrument found: ${instrument != null ? instrument.name : "NONE"}');
+
+    if (instrument != null) {
+      // Instrument items are draggable (instant drag, no long press)
+      return Draggable<Instrument>(
+        data: instrument,
+        onDragStarted: () {
+          debugPrint('🎯 DRAG STARTED from library: ${instrument.name}');
+        },
+        onDragEnd: (details) {
+          debugPrint('🎯 DRAG ENDED: wasAccepted=${details.wasAccepted}, velocity=${details.velocity}');
+        },
+        onDraggableCanceled: (velocity, offset) {
+          debugPrint('🎯 DRAG CANCELED at offset $offset');
+        },
+        feedback: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(instrument.icon, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  instrument.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(
+          opacity: 0.5,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+            child: Text(
+              name,
+              style: const TextStyle(
+                color: Color(0xFF404040),
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: InkWell(
+            onTap: () {
+              debugPrint('📚 Library item tapped: $name');
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+              child: Text(
+                name,
+                style: const TextStyle(
+                  color: Color(0xFF404040),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Non-instrument items are not draggable
     return InkWell(
       onTap: () {
-        // TODO: Handle item selection (future: drag to timeline)
         debugPrint('📚 Library item tapped: $name');
       },
       child: Container(
@@ -238,5 +316,16 @@ class _LibraryPanelState extends State<LibraryPanel> {
         ),
       ),
     );
+  }
+
+  /// Find instrument by name from available instruments
+  Instrument? _findInstrumentByName(String name) {
+    try {
+      return availableInstruments.firstWhere(
+        (inst) => inst.name.toLowerCase() == name.toLowerCase(),
+      );
+    } catch (e) {
+      return null;
+    }
   }
 }

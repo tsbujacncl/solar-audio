@@ -44,6 +44,13 @@ class AudioEngine {
   late final _SendMidiNoteOnFfi _sendMidiNoteOn;
   late final _SendMidiNoteOffFfi _sendMidiNoteOff;
 
+  // M6 functions - Per-track Synthesizer
+  late final _SetTrackInstrumentFfi _setTrackInstrument;
+  late final _SetSynthParameterFfi _setSynthParameter;
+  late final _GetSynthParametersFfi _getSynthParameters;
+  late final _SendTrackMidiNoteOnFfi _sendTrackMidiNoteOn;
+  late final _SendTrackMidiNoteOffFfi _sendTrackMidiNoteOff;
+
   // M4 functions - Tracks & Mixer
   late final _CreateTrackFfi _createTrack;
   late final _SetTrackVolumeFfi _setTrackVolume;
@@ -394,6 +401,37 @@ class AudioEngine {
               'export_to_wav_ffi')
           .asFunction();
       print('  ✅ export_to_wav_ffi bound');
+
+      // Bind M6 functions - Per-track Synthesizer
+      _setTrackInstrument = _lib
+          .lookup<ffi.NativeFunction<_SetTrackInstrumentFfiNative>>(
+              'set_track_instrument_ffi')
+          .asFunction();
+      print('  ✅ set_track_instrument_ffi bound');
+
+      _setSynthParameter = _lib
+          .lookup<ffi.NativeFunction<_SetSynthParameterFfiNative>>(
+              'set_synth_parameter_ffi')
+          .asFunction();
+      print('  ✅ set_synth_parameter_ffi bound');
+
+      _getSynthParameters = _lib
+          .lookup<ffi.NativeFunction<_GetSynthParametersFfiNative>>(
+              'get_synth_parameters_ffi')
+          .asFunction();
+      print('  ✅ get_synth_parameters_ffi bound');
+
+      _sendTrackMidiNoteOn = _lib
+          .lookup<ffi.NativeFunction<_SendTrackMidiNoteOnFfiNative>>(
+              'send_track_midi_note_on_ffi')
+          .asFunction();
+      print('  ✅ send_track_midi_note_on_ffi bound');
+
+      _sendTrackMidiNoteOff = _lib
+          .lookup<ffi.NativeFunction<_SendTrackMidiNoteOffFfiNative>>(
+              'send_track_midi_note_off_ffi')
+          .asFunction();
+      print('  ✅ send_track_midi_note_off_ffi bound');
 
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
@@ -1104,6 +1142,100 @@ class AudioEngine {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // M6 API - Per-track Synthesizer
+  // ========================================================================
+
+  /// Set the instrument for a track
+  /// Returns the instrument ID or -1 on error
+  int setTrackInstrument(int trackId, String instrumentType) {
+    print('🎹 [AudioEngine] Setting instrument for track $trackId: $instrumentType');
+    try {
+      final typePtr = instrumentType.toNativeUtf8();
+      final instrumentId = _setTrackInstrument(trackId, typePtr.cast());
+      malloc.free(typePtr);
+
+      if (instrumentId < 0) {
+        print('❌ [AudioEngine] Failed to set instrument');
+        return -1;
+      }
+
+      print('✅ [AudioEngine] Instrument set, ID: $instrumentId');
+      return instrumentId;
+    } catch (e) {
+      print('❌ [AudioEngine] Set track instrument failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Set a synthesizer parameter for a track
+  /// paramName: parameter name (e.g., 'osc1_type', 'filter_cutoff')
+  /// value: parameter value (will be converted to string)
+  String setSynthParameter(int trackId, String paramName, dynamic value) {
+    try {
+      final namePtr = paramName.toNativeUtf8();
+      final valueStr = value.toString();
+      final valuePtr = valueStr.toNativeUtf8();
+      final resultPtr = _setSynthParameter(trackId, namePtr.cast(), valuePtr.cast());
+      malloc.free(namePtr);
+      malloc.free(valuePtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set synth parameter failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all synthesizer parameters for a track
+  /// Returns a comma-separated string of key:value pairs
+  String getSynthParameters(int trackId) {
+    print('🎹 [AudioEngine] Getting synth parameters for track $trackId');
+    try {
+      final resultPtr = _getSynthParameters(trackId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] Got parameters: $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Get synth parameters failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Send MIDI note on to a specific track's instrument
+  /// trackId: the track to send MIDI to
+  /// note: MIDI note number (0-127)
+  /// velocity: MIDI velocity (0-127)
+  String sendTrackMidiNoteOn(int trackId, int note, int velocity) {
+    try {
+      final resultPtr = _sendTrackMidiNoteOn(trackId, note, velocity);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Send track MIDI note on failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Send MIDI note off to a specific track's instrument
+  /// trackId: the track to send MIDI to
+  /// note: MIDI note number (0-127)
+  /// velocity: MIDI velocity (0-127)
+  String sendTrackMidiNoteOff(int trackId, int note, int velocity) {
+    try {
+      final resultPtr = _sendTrackMidiNoteOff(trackId, note, velocity);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Send track MIDI note off failed: $e');
+      rethrow;
+    }
+  }
 }
 
 // ==========================================================================
@@ -1265,3 +1397,19 @@ typedef _LoadProjectFfi = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>);
 
 typedef _ExportToWavFfiNative = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>, ffi.Bool);
 typedef _ExportToWavFfi = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Char>, bool);
+
+// M6 types - Per-track Synthesizer
+typedef _SetTrackInstrumentFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Pointer<ffi.Char>);
+typedef _SetTrackInstrumentFfi = int Function(int, ffi.Pointer<ffi.Char>);
+
+typedef _SetSynthParameterFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);
+typedef _SetSynthParameterFfi = ffi.Pointer<Utf8> Function(int, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);
+
+typedef _GetSynthParametersFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _GetSynthParametersFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _SendTrackMidiNoteOnFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint8, ffi.Uint8);
+typedef _SendTrackMidiNoteOnFfi = ffi.Pointer<Utf8> Function(int, int, int);
+
+typedef _SendTrackMidiNoteOffFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint8, ffi.Uint8);
+typedef _SendTrackMidiNoteOffFfi = ffi.Pointer<Utf8> Function(int, int, int);

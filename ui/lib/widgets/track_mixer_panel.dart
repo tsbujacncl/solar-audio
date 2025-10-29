@@ -3,6 +3,7 @@ import 'dart:async';
 import '../audio_engine.dart';
 import 'track_mixer_strip.dart';
 import '../utils/track_colors.dart';
+import '../models/instrument_data.dart';
 
 /// Track data model
 class TrackData {
@@ -51,12 +52,20 @@ class TrackMixerPanel extends StatefulWidget {
   final AudioEngine? audioEngine;
   final Function(int?)? onFXButtonClicked;
   final ScrollController? scrollController; // For syncing with timeline
+  final int? selectedMidiTrackId;
+  final Function(int?)? onMidiTrackSelected;
+  final Function(int, String)? onInstrumentSelected; // (trackId, instrumentId)
+  final Map<int, InstrumentData>? trackInstruments;
 
   const TrackMixerPanel({
     super.key,
     required this.audioEngine,
     this.onFXButtonClicked,
     this.scrollController,
+    this.selectedMidiTrackId,
+    this.onMidiTrackSelected,
+    this.onInstrumentSelected,
+    this.trackInstruments,
   });
 
   @override
@@ -336,6 +345,10 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
                     trackColor: trackColor,
                     audioEngine: widget.audioEngine,
                     isFXActive: _selectedTrackForFX == track.id,
+                    instrumentData: widget.trackInstruments?[track.id],
+                    onInstrumentSelect: (instrumentId) {
+                      widget.onInstrumentSelected?.call(track.id, instrumentId);
+                    },
                     onVolumeChanged: (volumeDb) {
                       setState(() {
                         track.volumeDb = volumeDb;

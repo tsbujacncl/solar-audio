@@ -2,20 +2,36 @@ import 'package:flutter/material.dart';
 import '../audio_engine.dart';
 import 'virtual_piano.dart';
 import 'effect_parameter_panel.dart';
+import 'piano_roll.dart';
+import 'synthesizer_panel.dart';
+import '../models/midi_note_data.dart';
+import '../models/instrument_data.dart';
 
-/// Bottom panel widget - tabbed interface for Piano Roll, FX Chain, and Virtual Piano
+/// Bottom panel widget - tabbed interface for Piano Roll, FX Chain, Instrument, and Virtual Piano
 class BottomPanel extends StatefulWidget {
   final AudioEngine? audioEngine;
   final bool virtualPianoEnabled;
   final int? selectedTrackForFX;
+  final int? selectedTrackForInstrument;
+  final InstrumentData? currentInstrumentData;
   final VoidCallback? onVirtualPianoClose;
+  final MidiClipData? currentEditingClip;
+  final int? selectedMidiTrackId;
+  final Function(MidiClipData)? onMidiClipUpdated;
+  final Function(InstrumentData)? onInstrumentParameterChanged;
 
   const BottomPanel({
     super.key,
     this.audioEngine,
     this.virtualPianoEnabled = false,
     this.selectedTrackForFX,
+    this.selectedTrackForInstrument,
+    this.currentInstrumentData,
     this.onVirtualPianoClose,
+    this.currentEditingClip,
+    this.selectedMidiTrackId,
+    this.onMidiClipUpdated,
+    this.onInstrumentParameterChanged,
   });
 
   @override
@@ -29,25 +45,27 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-
-    // Auto-switch to Virtual Piano tab when enabled
-    if (widget.virtualPianoEnabled) {
-      _tabController.index = 2;
-    }
   }
 
   @override
   void didUpdateWidget(BottomPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Auto-switch to Virtual Piano tab when enabled
-    if (widget.virtualPianoEnabled && !oldWidget.virtualPianoEnabled) {
-      _tabController.index = 2;
+    // Auto-switch to Instrument tab when track with instrument selected
+    if (widget.selectedTrackForInstrument != null &&
+        oldWidget.selectedTrackForInstrument == null) {
+      _tabController.index = 2; // Instrument is 3rd tab
     }
 
     // Auto-switch to FX Chain tab when track selected
     if (widget.selectedTrackForFX != null && oldWidget.selectedTrackForFX == null) {
       _tabController.index = 1;
+    }
+
+    // Auto-switch to Piano Roll tab when MIDI track or clip selected
+    if ((widget.selectedMidiTrackId != null && oldWidget.selectedMidiTrackId == null) ||
+        (widget.currentEditingClip != null && oldWidget.currentEditingClip == null)) {
+      _tabController.index = 0; // Piano Roll is first tab
     }
   }
 
@@ -80,8 +98,8 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
             child: TabBar(
               controller: _tabController,
               indicatorColor: const Color(0xFF4CAF50),
-              labelColor: const Color(0xFFA0A0A0),
-              unselectedLabelColor: const Color(0xFF606060),
+              labelColor: const Color(0xFF202020),
+              unselectedLabelColor: const Color(0xFF505050),
               labelStyle: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -89,7 +107,7 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
               tabs: const [
                 Tab(text: 'Piano Roll'),
                 Tab(text: 'FX Chain'),
-                Tab(text: 'Virtual Piano'),
+                Tab(text: 'Instrument'),
               ],
             ),
           ),
@@ -101,81 +119,82 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
               children: [
                 _buildPianoRollTab(),
                 _buildFXChainTab(),
-                _buildVirtualPianoTab(),
+                _buildInstrumentTab(),
               ],
             ),
           ),
+
+          // Virtual Piano (below tabs, always visible when enabled)
+          if (widget.virtualPianoEnabled)
+            VirtualPiano(
+              audioEngine: widget.audioEngine,
+              isEnabled: widget.virtualPianoEnabled,
+              onClose: widget.onVirtualPianoClose,
+              selectedTrackId: widget.selectedMidiTrackId,
+            ),
         ],
       ),
     );
   }
 
   Widget _buildPianoRollTab() {
-    return Container(
-      color: const Color(0xFF707070),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.piano_outlined,
-              size: 64,
-              color: Color(0xFF909090),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Piano Roll',
-              style: TextStyle(
-                color: Color(0xFF202020),
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+    // Use real clip data if available, otherwise create an empty clip for the selected track
+    final clipData = widget.currentEditingClip ?? (widget.selectedMidiTrackId != null
+      ? MidiClipData(
+          clipId: -1, // -1 indicates a new, unsaved clip
+          trackId: widget.selectedMidiTrackId!,
+          startTime: 0.0,
+          duration: 16.0,
+          name: 'New MIDI Clip',
+          notes: [],
+        )
+      : null);
+
+    if (clipData == null) {
+      // No track selected - show empty state
+      return Container(
+        color: const Color(0xFF707070),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.piano_outlined,
+                size: 64,
+                color: Color(0xFF909090),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming in M6',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
+              const SizedBox(height: 16),
+              const Text(
+                'Piano Roll',
+                style: TextStyle(
+                  color: Color(0xFF202020),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.symmetric(horizontal: 32),
-              decoration: BoxDecoration(
-                color: const Color(0xFF656565),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF909090)),
+              const SizedBox(height: 8),
+              Text(
+                'Select a MIDI track or clip to start editing',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.info_outline, size: 16, color: Color(0xFF202020)),
-                      SizedBox(width: 8),
-                      Text(
-                        'MIDI Editing Features',
-                        style: TextStyle(
-                          color: Color(0xFF202020),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildFeatureItem('• Draw, edit, and resize MIDI notes'),
-                  _buildFeatureItem('• Velocity lane for dynamics'),
-                  _buildFeatureItem('• Grid snap and quantization'),
-                  _buildFeatureItem('• Multi-note selection and editing'),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      );
+    }
+
+    return PianoRoll(
+      audioEngine: widget.audioEngine,
+      clipData: clipData,
+      onClipUpdated: widget.onMidiClipUpdated,
+      onClose: () {
+        // Switch back to another tab or close bottom panel
+        _tabController.index = 3; // Switch to Virtual Piano tab
+      },
     );
   }
 
@@ -239,8 +258,8 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildVirtualPianoTab() {
-    if (!widget.virtualPianoEnabled) {
+  Widget _buildInstrumentTab() {
+    if (widget.selectedTrackForInstrument == null || widget.currentInstrumentData == null) {
       return Container(
         color: const Color(0xFF707070),
         child: Center(
@@ -254,7 +273,7 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
               ),
               const SizedBox(height: 16),
               const Text(
-                'Virtual Piano',
+                'Instrument',
                 style: TextStyle(
                   color: Color(0xFF202020),
                   fontSize: 20,
@@ -263,23 +282,12 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
               ),
               const SizedBox(height: 8),
               Text(
-                'Click the piano button in the transport bar to enable',
+                'Select a track with an instrument to edit',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: widget.onVirtualPianoClose, // This will toggle it on
-                icon: const Icon(Icons.piano, size: 18),
-                label: const Text('Enable Virtual Piano'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
               ),
             ],
           ),
@@ -287,11 +295,18 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
       );
     }
 
-    // Show virtual piano when enabled
-    return VirtualPiano(
+    // Show synthesizer panel when track with instrument selected
+    return SynthesizerPanel(
       audioEngine: widget.audioEngine,
-      isEnabled: widget.virtualPianoEnabled,
-      onClose: widget.onVirtualPianoClose,
+      trackId: widget.selectedTrackForInstrument!,
+      instrumentData: widget.currentInstrumentData,
+      onParameterChanged: (instrumentData) {
+        widget.onInstrumentParameterChanged?.call(instrumentData);
+      },
+      onClose: () {
+        // Parent widget handles clearing selectedTrackForInstrument
+      },
     );
   }
+
 }

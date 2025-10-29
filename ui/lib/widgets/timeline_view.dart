@@ -6,6 +6,8 @@ import 'package:cross_file/cross_file.dart';
 import '../audio_engine.dart';
 import '../utils/track_colors.dart';
 import '../models/clip_data.dart';
+import '../models/midi_note_data.dart';
+import 'instrument_browser.dart';
 
 /// Track data model for timeline
 class TimelineTrackData {
@@ -42,6 +44,18 @@ class TimelineView extends StatefulWidget {
   final AudioEngine? audioEngine;
   final VoidCallback? onSeek; // callback when user clicks timeline
 
+  // MIDI editing state
+  final int? selectedMidiTrackId;
+  final int? selectedMidiClipId;
+  final MidiClipData? currentEditingClip;
+  final Function(int?)? onMidiTrackSelected;
+  final Function(int?, MidiClipData?)? onMidiClipSelected;
+  final Function(MidiClipData)? onMidiClipUpdated;
+
+  // Instrument drag-and-drop
+  final Function(int trackId, Instrument instrument)? onInstrumentDropped;
+  final Function(Instrument instrument)? onInstrumentDroppedOnEmpty;
+
   const TimelineView({
     super.key,
     required this.playheadPosition,
@@ -49,6 +63,14 @@ class TimelineView extends StatefulWidget {
     this.waveformPeaks = const [],
     this.audioEngine,
     this.onSeek,
+    this.selectedMidiTrackId,
+    this.selectedMidiClipId,
+    this.currentEditingClip,
+    this.onMidiTrackSelected,
+    this.onMidiClipSelected,
+    this.onMidiClipUpdated,
+    this.onInstrumentDropped,
+    this.onInstrumentDroppedOnEmpty,
   });
 
   @override
@@ -66,6 +88,9 @@ class _TimelineViewState extends State<TimelineView> {
   PreviewClip? _previewClip;
   int? _dragHoveredTrackId;
 
+  // MIDI clip management
+  Map<int, MidiClipData> _midiClips = {}; // clipId -> MidiClipData
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +100,23 @@ class _TimelineViewState extends State<TimelineView> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadTracksAsync();
     });
+
+    // Initialize with current editing clip if present
+    if (widget.currentEditingClip != null) {
+      _midiClips[widget.currentEditingClip!.clipId] = widget.currentEditingClip!;
+    }
+  }
+
+  @override
+  void didUpdateWidget(TimelineView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Update MIDI clips when currentEditingClip changes
+    if (widget.currentEditingClip != null) {
+      setState(() {
+        _midiClips[widget.currentEditingClip!.clipId] = widget.currentEditingClip!;
+      });
+    }
   }
 
   @override
@@ -274,8 +316,66 @@ class _TimelineViewState extends State<TimelineView> {
           );
         }),
 
-        // Spacer to push master track to bottom
-        const Spacer(),
+        // Empty space drop target - wraps spacer to push master track to bottom
+        Expanded(
+          child: DragTarget<Instrument>(
+            onWillAcceptWithDetails: (details) {
+              debugPrint('🎯 onWillAccept EMPTY SPACE: instrument=${details.data.name}');
+              return true; // Always accept instruments
+            },
+            onAcceptWithDetails: (details) {
+              debugPrint('🎯 onAccept EMPTY SPACE: instrument=${details.data.name}');
+              widget.onInstrumentDroppedOnEmpty?.call(details.data);
+            },
+            builder: (context, candidateInstruments, rejectedInstruments) {
+              final isInstrumentHovering = candidateInstruments.isNotEmpty;
+
+              return Container(
+                decoration: isInstrumentHovering
+                    ? BoxDecoration(
+                        color: const Color(0xFF4CAF50).withOpacity(0.1),
+                        border: Border.all(
+                          color: const Color(0xFF4CAF50),
+                          width: 3,
+                          style: BorderStyle.solid,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      )
+                    : null,
+                child: isInstrumentHovering
+                    ? Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.add_circle_outline,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Drop to create new MIDI track with ${candidateInstruments.first?.name ?? "instrument"}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox.expand(),
+              );
+            },
+          ),
+        ),
 
         // Master track at bottom
         if (masterTrack.id != -1)
@@ -391,47 +491,80 @@ class _TimelineViewState extends State<TimelineView> {
 
     // Find clips for this track
     final trackClips = _clips.where((c) => c.trackId == track.id).toList();
+    final trackMidiClips = _midiClips.values.where((c) => c.trackId == track.id).toList();
     final isHovered = _dragHoveredTrackId == track.id;
+    final isSelected = widget.selectedMidiTrackId == track.id;
+    final isMidiTrack = track.type.toLowerCase() == 'midi';
 
-    return DropTarget(
-      onDragEntered: (details) {
-        setState(() {
-          _dragHoveredTrackId = track.id;
-        });
+    return DragTarget<Instrument>(
+      onWillAcceptWithDetails: (details) {
+        debugPrint('🎯 onWillAccept: track=${track.id} (${track.type}), isMidiTrack=$isMidiTrack, instrument=${details.data.name}');
+        return isMidiTrack;
       },
-      onDragExited: (details) {
-        setState(() {
-          _dragHoveredTrackId = null;
-          _previewClip = null;
-        });
+      onAcceptWithDetails: (details) {
+        debugPrint('🎯 onAccept: track=${track.id}, instrument=${details.data.name}');
+        widget.onInstrumentDropped?.call(track.id, details.data);
       },
-      onDragUpdated: (details) {
-        // Update preview position
-        final fileName = 'Preview'; // We don't have filename yet
-        final startTime = _calculateTimelinePosition(details.localPosition);
+      builder: (context, candidateInstruments, rejectedInstruments) {
+        final isInstrumentHovering = candidateInstruments.isNotEmpty;
+        final isInstrumentRejected = rejectedInstruments.isNotEmpty;
 
-        setState(() {
-          _previewClip = PreviewClip(
-            fileName: fileName,
-            startTime: startTime,
-            trackId: track.id,
-            mousePosition: details.localPosition,
-          );
-        });
-      },
-      onDragDone: (details) async {
-        await _handleFileDrop(details.files, track.id, details.localPosition);
-      },
-      child: Container(
+        return DropTarget(
+          onDragEntered: (details) {
+            setState(() {
+              _dragHoveredTrackId = track.id;
+            });
+          },
+          onDragExited: (details) {
+            setState(() {
+              _dragHoveredTrackId = null;
+              _previewClip = null;
+            });
+          },
+          onDragUpdated: (details) {
+            // Update preview position
+            final fileName = 'Preview'; // We don't have filename yet
+            final startTime = _calculateTimelinePosition(details.localPosition);
+
+            setState(() {
+              _previewClip = PreviewClip(
+                fileName: fileName,
+                startTime: startTime,
+                trackId: track.id,
+                mousePosition: details.localPosition,
+              );
+            });
+          },
+          onDragDone: (details) async {
+            await _handleFileDrop(details.files, track.id, details.localPosition);
+          },
+          child: GestureDetector(
+        onTap: isMidiTrack
+            ? () {
+                // Select MIDI track when clicked
+                widget.onMidiTrackSelected?.call(track.id);
+              }
+            : null,
+        child: Container(
         height: 100,
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: isHovered
               ? const Color(0xFF505050) // Lighter when hovered
-              : const Color(0xFF404040),
+              : (isSelected
+                  ? const Color(0xFF454545) // Slightly lighter when selected
+                  : const Color(0xFF404040)),
           border: Border.all(
-            color: isHovered ? trackColor.withOpacity(0.8) : trackColor,
-            width: isHovered ? 3 : 2,
+            color: isInstrumentHovering
+                ? const Color(0xFF4CAF50) // Green when valid instrument drag
+                : (isInstrumentRejected
+                    ? Colors.red.withOpacity(0.8) // Red when invalid drop
+                    : (isSelected
+                        ? trackColor.withOpacity(1.0)
+                        : (isHovered ? trackColor.withOpacity(0.8) : trackColor))),
+            width: (isInstrumentHovering || isInstrumentRejected)
+                ? 3
+                : (isSelected ? 3 : (isHovered ? 3 : 2)),
           ),
         ),
         child: Column(
@@ -465,12 +598,18 @@ class _TimelineViewState extends State<TimelineView> {
                     painter: _GridPatternPainter(),
                   ),
 
-                  // Render actual clips for this track
+                  // Render audio clips for this track
                   ...trackClips.map((clip) => _buildClip(
                         clip.duration,
                         clip.waveformPeaks,
                         clip.startTime,
                         clip.fileName,
+                      )),
+
+                  // Render MIDI clips for this track
+                  ...trackMidiClips.map((midiClip) => _buildMidiClip(
+                        midiClip,
+                        trackColor,
                       )),
 
                   // Show preview clip if hovering over this track
@@ -482,6 +621,9 @@ class _TimelineViewState extends State<TimelineView> {
           ],
         ),
       ),
+    ),
+        );
+      },
     );
   }
 
@@ -569,6 +711,106 @@ class _TimelineViewState extends State<TimelineView> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMidiClip(MidiClipData midiClip, Color trackColor) {
+    final clipWidth = midiClip.duration * _pixelsPerSecond;
+    final clipX = midiClip.startTime * _pixelsPerSecond;
+    final isSelected = widget.selectedMidiClipId == midiClip.clipId;
+
+    return Positioned(
+      left: clipX,
+      top: 4,
+      child: GestureDetector(
+        onDoubleTap: () {
+          // Double-click to open in piano roll
+          widget.onMidiClipSelected?.call(midiClip.clipId, midiClip);
+        },
+        child: Container(
+          width: clipWidth,
+          height: 72,
+          decoration: BoxDecoration(
+            color: const Color(0xFF505050),
+            border: Border.all(
+              color: isSelected ? trackColor.withOpacity(1.0) : trackColor.withOpacity(0.7),
+              width: isSelected ? 3 : 2,
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Stack(
+            children: [
+              // Mini piano roll preview
+              if (midiClip.notes.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: CustomPaint(
+                    painter: _MidiClipPainter(
+                      notes: midiClip.notes,
+                      clipDuration: midiClip.duration,
+                      color: trackColor,
+                    ),
+                  ),
+                ),
+
+              // Clip name label
+              Positioned(
+                top: 2,
+                left: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.piano,
+                        size: 10,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        midiClip.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Show note count
+              if (midiClip.notes.isNotEmpty)
+                Positioned(
+                  bottom: 2,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Text(
+                      '${midiClip.notes.length} notes',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -841,5 +1083,71 @@ class _GridPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GridPatternPainter oldDelegate) => false;
+}
+
+/// Painter for mini MIDI clip preview
+class _MidiClipPainter extends CustomPainter {
+  final List<MidiNoteData> notes;
+  final double clipDuration;
+  final Color color;
+
+  _MidiClipPainter({
+    required this.notes,
+    required this.clipDuration,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (notes.isEmpty || clipDuration == 0) return;
+
+    // Find note range for vertical scaling
+    final minNote = notes.map((n) => n.note).reduce(math.min);
+    final maxNote = notes.map((n) => n.note).reduce(math.max);
+    final noteRange = (maxNote - minNote).toDouble();
+    final effectiveRange = noteRange == 0 ? 12.0 : noteRange; // At least one octave
+
+    // Calculate scaling factors
+    final secondsPerPixel = clipDuration / size.width;
+    final pixelsPerNote = size.height / (effectiveRange + 4); // Add padding
+
+    // Draw each note as a rectangle
+    for (final note in notes) {
+      // Calculate note position in beats, then convert to seconds
+      final noteStartInBeats = note.startTime;
+      final noteDurationInBeats = note.duration;
+
+      // For display, assume 120 BPM (2 beats per second)
+      // This is just for visualization in the mini preview
+      final tempo = 120.0;
+      final noteStartInSeconds = (noteStartInBeats / tempo) * 60.0;
+      final noteDurationInSeconds = (noteDurationInBeats / tempo) * 60.0;
+
+      // Calculate pixel coordinates
+      final x = noteStartInSeconds / secondsPerPixel;
+      final width = noteDurationInSeconds / secondsPerPixel;
+      final y = size.height - ((note.note - minNote + 2) * pixelsPerNote);
+      final height = pixelsPerNote * 0.8; // Slight gap between notes
+
+      // Draw note rectangle
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, y, math.max(width, 2.0), height),
+        const Radius.circular(1),
+      );
+
+      final notePaint = Paint()
+        ..color = note.velocityColor.withOpacity(0.8)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawRRect(rect, notePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MidiClipPainter oldDelegate) {
+    return notes != oldDelegate.notes ||
+           clipDuration != oldDelegate.clipDuration ||
+           color != oldDelegate.color;
+  }
 }
 

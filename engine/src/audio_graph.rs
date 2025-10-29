@@ -5,7 +5,7 @@ use crate::recorder::Recorder;
 use crate::midi::MidiClip;
 use crate::midi_input::MidiInputManager;
 use crate::midi_recorder::MidiRecorder;
-use crate::synth::Synthesizer;
+use crate::synth::{Synthesizer, TrackSynthManager};
 use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackId, TrackManager};  // Import from track module
 use crate::effects::{Effect, EffectManager, Limiter};  // Import from effects module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -52,6 +52,10 @@ pub struct AudioGraph {
     pub effect_manager: Arc<Mutex<EffectManager>>,
     /// Master limiter (prevents clipping)
     pub master_limiter: Arc<Mutex<Limiter>>,
+
+    // --- M6: Per-Track Synthesizers ---
+    /// Per-track synthesizer manager
+    pub track_synth_manager: Arc<Mutex<TrackSynthManager>>,
 }
 
 // SAFETY: AudioGraph is only accessed through a Mutex in the API layer,
@@ -95,6 +99,7 @@ impl AudioGraph {
             track_manager: Arc::new(Mutex::new(track_manager)),
             effect_manager: Arc::new(Mutex::new(effect_manager)),
             master_limiter: Arc::new(Mutex::new(master_limiter)),
+            track_synth_manager: Arc::new(Mutex::new(TrackSynthManager::new(TARGET_SAMPLE_RATE as f32))),
         })
     }
 
@@ -311,6 +316,9 @@ impl AudioGraph {
         let effect_manager = self.effect_manager.clone();
         let master_limiter = self.master_limiter.clone();
 
+        // M6: Clone track synth manager
+        let track_synth_manager = self.track_synth_manager.clone();
+
         let stream = device.build_output_stream(
             &config.into(),
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
@@ -526,6 +534,13 @@ impl AudioGraph {
                                     }
                                 }
                             }
+                        }
+
+                        // Add per-track synthesizer output (M6)
+                        if let Ok(mut synth_manager) = track_synth_manager.lock() {
+                            let synth_sample = synth_manager.process_sample(track_snap.id);
+                            track_left += synth_sample;
+                            track_right += synth_sample;
                         }
 
                         // Apply track volume (from snapshot)

@@ -8,12 +8,14 @@ class VirtualPiano extends StatefulWidget {
   final AudioEngine? audioEngine;
   final bool isEnabled;
   final VoidCallback? onClose;
+  final int? selectedTrackId;
 
   const VirtualPiano({
     super.key,
     required this.audioEngine,
     required this.isEnabled,
     this.onClose,
+    this.selectedTrackId,
   });
 
   @override
@@ -98,9 +100,6 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
 
   // Track which keyboard keys are currently held down (to prevent repeat)
   final Set<LogicalKeyboardKey> _heldKeys = {};
-
-  // Current oscillator type (0=Sine, 1=Saw, 2=Square)
-  int _currentOscillator = 1; // Default to Saw
 
   // Animation controller for slide-in effect
   late AnimationController _animationController;
@@ -214,12 +213,15 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
       _pressedNotes.add(midiNote);
     });
 
-    // Send MIDI note on to synthesizer with velocity 100 (forte)
-    try {
-      widget.audioEngine?.sendMidiNoteOn(midiNote, 100);
-    } catch (e) {
-      print('Error playing note: $e');
+    // Send MIDI note on to selected track's instrument with velocity 100 (forte)
+    if (widget.selectedTrackId != null) {
+      try {
+        widget.audioEngine?.sendTrackMidiNoteOn(widget.selectedTrackId!, midiNote, 100);
+      } catch (e) {
+        print('Error playing note on track ${widget.selectedTrackId}: $e');
+      }
     }
+    // If no track selected, piano is silent (do nothing)
   }
 
   void _noteOff(int midiNote) {
@@ -227,11 +229,13 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
       _pressedNotes.remove(midiNote);
     });
 
-    // Send MIDI note off to synthesizer
-    try {
-      widget.audioEngine?.sendMidiNoteOff(midiNote, 0);
-    } catch (e) {
-      print('Error stopping note: $e');
+    // Send MIDI note off to selected track's instrument
+    if (widget.selectedTrackId != null) {
+      try {
+        widget.audioEngine?.sendTrackMidiNoteOff(widget.selectedTrackId!, midiNote, 0);
+      } catch (e) {
+        print('Error stopping note on track ${widget.selectedTrackId}: $e');
+      }
     }
   }
 
@@ -239,19 +243,6 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
     // A4 (MIDI 69) = 440 Hz
     // f = 440 * 2^((n - 69) / 12)
     return 440.0 * pow(2.0, (midiNote - 69) / 12.0);
-  }
-
-  void _setOscillatorType(int type) {
-    setState(() {
-      _currentOscillator = type;
-    });
-
-    try {
-      widget.audioEngine?.setSynthOscillatorType(type);
-      print('Oscillator type set to: ${["Sine", "Saw", "Square"][type]}');
-    } catch (e) {
-      print('Error setting oscillator type: $e');
-    }
   }
 
   @override
@@ -271,9 +262,14 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
           focusNode: _focusNode,
           autofocus: widget.isEnabled,
           onKeyEvent: (node, event) {
-            print('🎹 [VirtualPiano] Key event: ${event.logicalKey}');
-            _onKeyEvent(event);
-            return KeyEventResult.handled;
+            // Only handle keys that are mapped to piano notes
+            if (_keyboardMapping.containsKey(event.logicalKey)) {
+              print('🎹 [VirtualPiano] Handling piano key: ${event.logicalKey}');
+              _onKeyEvent(event);
+              return KeyEventResult.handled;
+            }
+            // Let other keys propagate to other widgets (for text input, etc.)
+            return KeyEventResult.ignored;
           },
           child: Container(
             height: 200,
@@ -343,11 +339,6 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
           ),
           const Spacer(),
 
-          // Waveform selector
-          _buildWaveformSelector(),
-
-          const SizedBox(width: 16),
-
           // Close button
           IconButton(
             icon: const Icon(Icons.keyboard_arrow_down),
@@ -359,50 +350,6 @@ class _VirtualPianoState extends State<VirtualPiano> with SingleTickerProviderSt
             tooltip: 'Hide Piano',
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildWaveformSelector() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'Waveform:',
-          style: TextStyle(
-            color: Color(0xFFA0A0A0),
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(width: 8),
-        _buildWaveformButton('Sine', 0),
-        const SizedBox(width: 4),
-        _buildWaveformButton('Saw', 1),
-        const SizedBox(width: 4),
-        _buildWaveformButton('Square', 2),
-      ],
-    );
-  }
-
-  Widget _buildWaveformButton(String label, int type) {
-    final isActive = _currentOscillator == type;
-
-    return GestureDetector(
-      onTap: () => _setOscillatorType(type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF4CAF50) : const Color(0xFF404040),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : const Color(0xFFA0A0A0),
-            fontSize: 11,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
       ),
     );
   }

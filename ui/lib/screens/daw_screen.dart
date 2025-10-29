@@ -10,6 +10,9 @@ import '../widgets/track_mixer_panel.dart';
 import '../widgets/library_panel.dart';
 import '../widgets/bottom_panel.dart';
 import '../widgets/resizable_divider.dart';
+import '../widgets/instrument_browser.dart';
+import '../models/midi_note_data.dart';
+import '../models/instrument_data.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -54,7 +57,7 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M6: UI panel state
   bool _libraryPanelCollapsed = false;
-  bool _bottomPanelVisible = false;
+  bool _bottomPanelVisible = true; // Show piano roll by default for M6 testing
 
   // M7: Resizable panels state
   double _libraryPanelWidth = 200.0;
@@ -66,6 +69,15 @@ class _DAWScreenState extends State<DAWScreen> {
   static const double _mixerMaxWidth = 600.0;
   static const double _bottomMinHeight = 100.0;
   static const double _bottomMaxHeight = 500.0;
+
+  // M8: MIDI editing state
+  int? _selectedMidiTrackId;
+  int? _selectedMidiClipId;
+  MidiClipData? _currentEditingClip;
+
+  // M9: Instrument state
+  Map<int, InstrumentData> _trackInstruments = {}; // trackId -> InstrumentData
+  int? _selectedTrackForInstrument;
 
   @override
   void initState() {
@@ -479,11 +491,156 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
+  // M9: Instrument methods
+  void _onInstrumentSelected(int trackId, String instrumentId) {
+    setState(() {
+      // Create default instrument data for the track
+      final instrumentData = InstrumentData.defaultSynthesizer(trackId);
+      _trackInstruments[trackId] = instrumentData;
+      _selectedTrackForInstrument = trackId;
+      _bottomPanelVisible = true; // Show bottom panel when instrument selected
+
+      // Call audio engine to set instrument
+      if (_audioEngine != null) {
+        _audioEngine!.setTrackInstrument(trackId, instrumentId);
+      }
+    });
+    debugPrint('🎹 Track $trackId instrument set to: $instrumentId');
+  }
+
+  void _onInstrumentDropped(int trackId, Instrument instrument) {
+    debugPrint('🎹 _onInstrumentDropped CALLED: track=$trackId, instrument=${instrument.name}');
+    // Reuse the same logic as _onInstrumentSelected
+    _onInstrumentSelected(trackId, instrument.id);
+    debugPrint('🎹 Instrument "${instrument.name}" dropped on track $trackId');
+  }
+
+  void _onInstrumentDroppedOnEmpty(Instrument instrument) {
+    debugPrint('🎹 _onInstrumentDroppedOnEmpty CALLED: instrument=${instrument.name}');
+    if (_audioEngine == null) {
+      debugPrint('❌ Audio engine is null');
+      return;
+    }
+
+    // Create a new MIDI track
+    final trackId = _audioEngine!.createTrack('midi', 'MIDI');
+    if (trackId < 0) {
+      debugPrint('❌ Failed to create new MIDI track');
+      return;
+    }
+
+    // Assign the instrument to the new track
+    _onInstrumentSelected(trackId, instrument.id);
+    debugPrint('✅ Created new MIDI track $trackId with instrument "${instrument.name}"');
+  }
+
+  void _onInstrumentParameterChanged(InstrumentData instrumentData) {
+    setState(() {
+      _trackInstruments[instrumentData.trackId] = instrumentData;
+    });
+    debugPrint('🎹 Updated instrument parameters for track ${instrumentData.trackId}');
+  }
+
   // M6: Panel toggle methods
   void _toggleLibraryPanel() {
     setState(() {
       _libraryPanelCollapsed = !_libraryPanelCollapsed;
     });
+  }
+
+  // M8: MIDI track/clip selection methods
+  void _onMidiTrackSelected(int? trackId) {
+    setState(() {
+      _selectedMidiTrackId = trackId;
+      if (trackId != null) {
+        // Open piano roll when MIDI track selected
+        _bottomPanelVisible = true;
+        // Clear clip selection when selecting just a track
+        _selectedMidiClipId = null;
+        _currentEditingClip = null;
+      }
+    });
+  }
+
+  void _onMidiClipSelected(int? clipId, MidiClipData? clipData) {
+    setState(() {
+      _selectedMidiClipId = clipId;
+      _currentEditingClip = clipData;
+      if (clipId != null && clipData != null) {
+        // Open piano roll and set the selected track
+        _bottomPanelVisible = true;
+        _selectedMidiTrackId = clipData.trackId;
+      }
+    });
+  }
+
+  void _onMidiClipUpdated(MidiClipData updatedClip) {
+    setState(() {
+      // Check if this is a new clip (clipId == -1) with notes - auto-create it
+      if (updatedClip.clipId == -1 && updatedClip.notes.isNotEmpty) {
+        // Generate a unique clip ID (use timestamp for now)
+        final newClipId = DateTime.now().millisecondsSinceEpoch;
+
+        // Create clip at playhead position
+        _currentEditingClip = updatedClip.copyWith(
+          clipId: newClipId,
+          startTime: _playheadPosition, // Use current playhead position
+        );
+        _selectedMidiClipId = newClipId;
+
+        debugPrint('✅ Auto-created MIDI clip $newClipId at ${_playheadPosition.toStringAsFixed(2)}s');
+      } else {
+        // Just update existing clip
+        _currentEditingClip = updatedClip;
+      }
+    });
+
+    // Schedule MIDI clip for playback
+    if (_audioEngine != null && _currentEditingClip != null) {
+      _scheduleMidiClipPlayback(_currentEditingClip!);
+    }
+  }
+
+  /// Schedule MIDI clip notes for playback during transport
+  void _scheduleMidiClipPlayback(MidiClipData clip) {
+    debugPrint('🎵 Scheduling ${clip.notes.length} MIDI notes for playback');
+    debugPrint('   Clip: ${clip.name} (ID: ${clip.clipId})');
+    debugPrint('   Track: ${clip.trackId}');
+    debugPrint('   Start time: ${clip.startTime}s');
+
+    // TODO: Implement MIDI clip scheduling in Rust audio engine
+    // For now, this logs what would be scheduled
+    // The Rust side needs to:
+    // 1. Store MIDI clip data with timing information
+    // 2. During transport play, trigger notes at correct timestamps
+    // 3. Handle tempo/BPM conversion from beats to seconds
+
+    for (final note in clip.notes) {
+      final tempo = _tempo; // Current tempo
+      final startTimeInSeconds = note.startTimeInSeconds(tempo) + clip.startTime;
+      final durationInSeconds = note.durationInSeconds(tempo);
+
+      debugPrint('   Note: ${note.noteName} at ${startTimeInSeconds.toStringAsFixed(3)}s for ${durationInSeconds.toStringAsFixed(3)}s');
+    }
+
+    // Example immediate playback (for testing - remove once scheduling is implemented):
+    // Uncomment to hear notes immediately when drawn
+    // _playMidiClipImmediately(clip);
+  }
+
+  /// Play MIDI clip immediately (for testing/preview)
+  void _playMidiClipImmediately(MidiClipData clip) {
+    for (final note in clip.notes) {
+      // Trigger note on
+      _audioEngine?.sendMidiNoteOn(note.note, note.velocity);
+
+      // Schedule note off after duration
+      final tempo = _tempo;
+      final durationMs = (note.durationInSeconds(tempo) * 1000).toInt();
+      Future.delayed(Duration(milliseconds: durationMs), () {
+        _audioEngine?.sendMidiNoteOff(note.note, 0);
+      });
+    }
   }
 
   // M5: Project file methods
@@ -866,7 +1023,20 @@ class _DAWScreenState extends State<DAWScreen> {
 
                       // Center: Timeline area
                       Expanded(
-                        child: _buildTimelineView(),
+                        child: TimelineView(
+                          playheadPosition: _playheadPosition,
+                          clipDuration: _clipDuration,
+                          waveformPeaks: _waveformPeaks,
+                          audioEngine: _audioEngine,
+                          selectedMidiTrackId: _selectedMidiTrackId,
+                          selectedMidiClipId: _selectedMidiClipId,
+                          currentEditingClip: _currentEditingClip,
+                          onMidiTrackSelected: _onMidiTrackSelected,
+                          onMidiClipSelected: _onMidiClipSelected,
+                          onMidiClipUpdated: _onMidiClipUpdated,
+                          onInstrumentDropped: _onInstrumentDropped,
+                          onInstrumentDroppedOnEmpty: _onInstrumentDroppedOnEmpty,
+                        ),
                       ),
 
                       // Right: Track mixer panel (always visible)
@@ -893,6 +1063,10 @@ class _DAWScreenState extends State<DAWScreen> {
                           child: TrackMixerPanel(
                             audioEngine: _audioEngine,
                             onFXButtonClicked: _onFXButtonClicked,
+                            selectedMidiTrackId: _selectedMidiTrackId,
+                            onMidiTrackSelected: _onMidiTrackSelected,
+                            onInstrumentSelected: _onInstrumentSelected,
+                            trackInstruments: _trackInstruments,
                           ),
                         ),
                       ],
@@ -927,7 +1101,15 @@ class _DAWScreenState extends State<DAWScreen> {
                       audioEngine: _audioEngine,
                       virtualPianoEnabled: _virtualPianoEnabled,
                       selectedTrackForFX: _selectedTrackForFX,
+                      selectedTrackForInstrument: _selectedTrackForInstrument,
+                      currentInstrumentData: _selectedTrackForInstrument != null
+                          ? _trackInstruments[_selectedTrackForInstrument]
+                          : null,
                       onVirtualPianoClose: _toggleVirtualPiano,
+                      currentEditingClip: _currentEditingClip,
+                      selectedMidiTrackId: _selectedMidiTrackId,
+                      onMidiClipUpdated: _onMidiClipUpdated,
+                      onInstrumentParameterChanged: _onInstrumentParameterChanged,
                     ),
                   ),
                 ],
@@ -942,15 +1124,7 @@ class _DAWScreenState extends State<DAWScreen> {
     );
   }
 
-  Widget _buildTimelineView() {
-    // Always show timeline (no empty state)
-    return TimelineView(
-      playheadPosition: _playheadPosition,
-      clipDuration: _clipDuration,
-      waveformPeaks: _waveformPeaks,
-      audioEngine: _audioEngine,
-    );
-  }
+  // Removed _buildTimelineView - now built inline in build method
 
   Widget _buildStatusBar() {
     return Container(

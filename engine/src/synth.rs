@@ -11,6 +11,19 @@ pub enum OscillatorType {
     Sine,
     Saw,
     Square,
+    Triangle,
+}
+
+impl OscillatorType {
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "sine" => OscillatorType::Sine,
+            "saw" => OscillatorType::Saw,
+            "square" => OscillatorType::Square,
+            "triangle" => OscillatorType::Triangle,
+            _ => OscillatorType::Sine,
+        }
+    }
 }
 
 /// ADSR envelope state
@@ -187,6 +200,9 @@ impl Voice {
                 } else {
                     -1.0
                 }
+            }
+            OscillatorType::Triangle => {
+                4.0 * (self.phase - 0.5).abs() - 1.0
             }
         };
 
@@ -392,5 +408,527 @@ mod tests {
         }
 
         assert_eq!(synth.active_voice_count(), 5);
+    }
+}
+
+// ============================================================================
+// PER-TRACK SYNTHESIZER (M6)
+// ============================================================================
+
+use std::collections::HashMap;
+
+/// Filter types
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FilterType {
+    LowPass,
+    HighPass,
+    BandPass,
+}
+
+impl FilterType {
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "lowpass" => FilterType::LowPass,
+            "highpass" => FilterType::HighPass,
+            "bandpass" => FilterType::BandPass,
+            _ => FilterType::LowPass,
+        }
+    }
+}
+
+/// Biquad Filter (Audio EQ Cookbook)
+#[derive(Debug, Clone)]
+pub struct BiquadFilter {
+    filter_type: FilterType,
+    cutoff: f32,      // 0.0 to 1.0
+    resonance: f32,   // 0.0 to 1.0
+    sample_rate: f32,
+
+    // Biquad coefficients
+    a0: f32,
+    a1: f32,
+    a2: f32,
+    b1: f32,
+    b2: f32,
+
+    // State
+    x1: f32,
+    x2: f32,
+    y1: f32,
+    y2: f32,
+}
+
+impl BiquadFilter {
+    pub fn new(sample_rate: f32) -> Self {
+        let mut filter = Self {
+            filter_type: FilterType::LowPass,
+            cutoff: 0.8,
+            resonance: 0.2,
+            sample_rate,
+            a0: 1.0,
+            a1: 0.0,
+            a2: 0.0,
+            b1: 0.0,
+            b2: 0.0,
+            x1: 0.0,
+            x2: 0.0,
+            y1: 0.0,
+            y2: 0.0,
+        };
+        filter.update_coefficients();
+        filter
+    }
+
+    pub fn set_filter_type(&mut self, filter_type: FilterType) {
+        self.filter_type = filter_type;
+        self.update_coefficients();
+    }
+
+    pub fn set_cutoff(&mut self, cutoff: f32) {
+        self.cutoff = cutoff.clamp(0.0, 1.0);
+        self.update_coefficients();
+    }
+
+    pub fn set_resonance(&mut self, resonance: f32) {
+        self.resonance = resonance.clamp(0.0, 1.0);
+        self.update_coefficients();
+    }
+
+    fn update_coefficients(&mut self) {
+        // Map cutoff (0-1) to frequency (50Hz - 10kHz)
+        let freq = 50.0 * (5.3 * self.cutoff).exp();
+        let freq = freq.min(self.sample_rate * 0.49);
+
+        // Map resonance (0-1) to Q factor (0.5 - 10.0)
+        let q = 0.5 + self.resonance * 9.5;
+
+        let omega = 2.0 * PI * freq / self.sample_rate;
+        let sin_omega = omega.sin();
+        let cos_omega = omega.cos();
+        let alpha = sin_omega / (2.0 * q);
+
+        match self.filter_type {
+            FilterType::LowPass => {
+                let b0 = (1.0 - cos_omega) / 2.0;
+                let b1 = 1.0 - cos_omega;
+                let b2 = (1.0 - cos_omega) / 2.0;
+                let a0 = 1.0 + alpha;
+                let a1 = -2.0 * cos_omega;
+                let a2 = 1.0 - alpha;
+
+                self.a0 = b0 / a0;
+                self.a1 = b1 / a0;
+                self.a2 = b2 / a0;
+                self.b1 = a1 / a0;
+                self.b2 = a2 / a0;
+            }
+            FilterType::HighPass => {
+                let b0 = (1.0 + cos_omega) / 2.0;
+                let b1 = -(1.0 + cos_omega);
+                let b2 = (1.0 + cos_omega) / 2.0;
+                let a0 = 1.0 + alpha;
+                let a1 = -2.0 * cos_omega;
+                let a2 = 1.0 - alpha;
+
+                self.a0 = b0 / a0;
+                self.a1 = b1 / a0;
+                self.a2 = b2 / a0;
+                self.b1 = a1 / a0;
+                self.b2 = a2 / a0;
+            }
+            FilterType::BandPass => {
+                let b0 = alpha;
+                let b1 = 0.0;
+                let b2 = -alpha;
+                let a0 = 1.0 + alpha;
+                let a1 = -2.0 * cos_omega;
+                let a2 = 1.0 - alpha;
+
+                self.a0 = b0 / a0;
+                self.a1 = b1 / a0;
+                self.a2 = b2 / a0;
+                self.b1 = a1 / a0;
+                self.b2 = a2 / a0;
+            }
+        }
+    }
+
+    pub fn process(&mut self, input: f32) -> f32 {
+        let output = self.a0 * input + self.a1 * self.x1 + self.a2 * self.x2
+            - self.b1 * self.y1 - self.b2 * self.y2;
+
+        self.x2 = self.x1;
+        self.x1 = input;
+        self.y2 = self.y1;
+        self.y1 = output;
+
+        output
+    }
+}
+
+/// Dual Oscillator with Detune
+#[derive(Debug, Clone)]
+struct DualOscillator {
+    osc1_type: OscillatorType,
+    osc2_type: OscillatorType,
+    osc1_level: f32,
+    osc2_level: f32,
+    osc1_detune: f32,  // cents
+    osc2_detune: f32,  // cents
+    phase1: f32,
+    phase2: f32,
+    frequency: f32,
+    sample_rate: f32,
+}
+
+impl DualOscillator {
+    fn new(sample_rate: f32) -> Self {
+        Self {
+            osc1_type: OscillatorType::Saw,
+            osc2_type: OscillatorType::Square,
+            osc1_level: 0.8,
+            osc2_level: 0.4,
+            osc1_detune: 0.0,
+            osc2_detune: 7.0,
+            phase1: 0.0,
+            phase2: 0.0,
+            frequency: 440.0,
+            sample_rate,
+        }
+    }
+
+    fn set_frequency(&mut self, freq: f32) {
+        self.frequency = freq;
+    }
+
+    fn reset_phase(&mut self) {
+        self.phase1 = 0.0;
+        self.phase2 = 0.0;
+    }
+
+    fn process(&mut self) -> f32 {
+        // Osc 1 with detune
+        let detune1_ratio = 2.0_f32.powf(self.osc1_detune / 1200.0);
+        let freq1 = self.frequency * detune1_ratio;
+        let sample1 = self.generate_waveform(self.osc1_type, self.phase1);
+        self.phase1 += freq1 / self.sample_rate;
+        if self.phase1 >= 1.0 {
+            self.phase1 -= 1.0;
+        }
+
+        // Osc 2 with detune
+        let detune2_ratio = 2.0_f32.powf(self.osc2_detune / 1200.0);
+        let freq2 = self.frequency * detune2_ratio;
+        let sample2 = self.generate_waveform(self.osc2_type, self.phase2);
+        self.phase2 += freq2 / self.sample_rate;
+        if self.phase2 >= 1.0 {
+            self.phase2 -= 1.0;
+        }
+
+        // Mix
+        sample1 * self.osc1_level + sample2 * self.osc2_level
+    }
+
+    fn generate_waveform(&self, osc_type: OscillatorType, phase: f32) -> f32 {
+        match osc_type {
+            OscillatorType::Sine => (phase * 2.0 * PI).sin(),
+            OscillatorType::Saw => 2.0 * phase - 1.0,
+            OscillatorType::Square => if phase < 0.5 { 1.0 } else { -1.0 },
+            OscillatorType::Triangle => 4.0 * (phase - 0.5).abs() - 1.0,
+        }
+    }
+}
+
+/// Single voice for per-track synthesizer
+struct TrackVoice {
+    oscillator: DualOscillator,
+    envelope: Envelope,
+    filter: BiquadFilter,
+    note: u8,
+    is_active: bool,
+}
+
+impl TrackVoice {
+    fn new(sample_rate: f32) -> Self {
+        Self {
+            oscillator: DualOscillator::new(sample_rate),
+            envelope: Envelope::new(EnvelopeParams::default()),
+            filter: BiquadFilter::new(sample_rate),
+            note: 0,
+            is_active: false,
+        }
+    }
+
+    fn note_on(&mut self, note: u8, _velocity: u8) {
+        let freq = midi_note_to_frequency(note);
+        self.oscillator.set_frequency(freq);
+        self.oscillator.reset_phase();
+        self.envelope.note_on();
+        self.note = note;
+        self.is_active = true;
+    }
+
+    fn note_off(&mut self) {
+        self.envelope.note_off();
+    }
+
+    fn process(&mut self) -> f32 {
+        if !self.envelope.is_active() {
+            self.is_active = false;
+            return 0.0;
+        }
+
+        let osc_output = self.oscillator.process();
+        let env_level = self.envelope.process();
+        let enveloped = osc_output * env_level;
+        let filtered = self.filter.process(enveloped);
+
+        filtered
+    }
+}
+
+/// Per-Track Synthesizer (Polyphonic)
+pub struct TrackSynthesizer {
+    voices: [TrackVoice; MAX_VOICES],
+    // Shared parameters that get applied to all voices
+    osc1_type: OscillatorType,
+    osc1_level: f32,
+    osc1_detune: f32,
+    osc2_type: OscillatorType,
+    osc2_level: f32,
+    osc2_detune: f32,
+    filter_type: FilterType,
+    filter_cutoff: f32,
+    filter_resonance: f32,
+    envelope_params: EnvelopeParams,
+    sample_rate: f32,
+}
+
+impl TrackSynthesizer {
+    pub fn new(sample_rate: f32) -> Self {
+        // Initialize voice array with default voices
+        let voices = std::array::from_fn(|_| TrackVoice::new(sample_rate));
+
+        Self {
+            voices,
+            osc1_type: OscillatorType::Saw,
+            osc1_level: 0.8,
+            osc1_detune: 0.0,
+            osc2_type: OscillatorType::Square,
+            osc2_level: 0.4,
+            osc2_detune: 7.0,
+            filter_type: FilterType::LowPass,
+            filter_cutoff: 0.8,
+            filter_resonance: 0.2,
+            envelope_params: EnvelopeParams::default(),
+            sample_rate,
+        }
+    }
+
+    pub fn set_parameter(&mut self, key: &str, value: &str) {
+        match key {
+            "osc1_type" => {
+                self.osc1_type = OscillatorType::from_str(value);
+                for voice in &mut self.voices {
+                    voice.oscillator.osc1_type = self.osc1_type;
+                }
+            }
+            "osc1_level" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.osc1_level = val.clamp(0.0, 1.0);
+                    for voice in &mut self.voices {
+                        voice.oscillator.osc1_level = self.osc1_level;
+                    }
+                }
+            }
+            "osc1_detune" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.osc1_detune = val.clamp(-50.0, 50.0);
+                    for voice in &mut self.voices {
+                        voice.oscillator.osc1_detune = self.osc1_detune;
+                    }
+                }
+            }
+            "osc2_type" => {
+                self.osc2_type = OscillatorType::from_str(value);
+                for voice in &mut self.voices {
+                    voice.oscillator.osc2_type = self.osc2_type;
+                }
+            }
+            "osc2_level" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.osc2_level = val.clamp(0.0, 1.0);
+                    for voice in &mut self.voices {
+                        voice.oscillator.osc2_level = self.osc2_level;
+                    }
+                }
+            }
+            "osc2_detune" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.osc2_detune = val.clamp(-50.0, 50.0);
+                    for voice in &mut self.voices {
+                        voice.oscillator.osc2_detune = self.osc2_detune;
+                    }
+                }
+            }
+            "filter_type" => {
+                self.filter_type = FilterType::from_str(value);
+                for voice in &mut self.voices {
+                    voice.filter.set_filter_type(self.filter_type);
+                }
+            }
+            "filter_cutoff" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.filter_cutoff = val;
+                    for voice in &mut self.voices {
+                        voice.filter.set_cutoff(self.filter_cutoff);
+                    }
+                }
+            }
+            "filter_resonance" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.filter_resonance = val;
+                    for voice in &mut self.voices {
+                        voice.filter.set_resonance(self.filter_resonance);
+                    }
+                }
+            }
+            "env_attack" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.envelope_params.attack = val.max(0.001);
+                    for voice in &mut self.voices {
+                        voice.envelope.params.attack = self.envelope_params.attack;
+                    }
+                }
+            }
+            "env_decay" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.envelope_params.decay = val.max(0.001);
+                    for voice in &mut self.voices {
+                        voice.envelope.params.decay = self.envelope_params.decay;
+                    }
+                }
+            }
+            "env_sustain" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.envelope_params.sustain = val.clamp(0.0, 1.0);
+                    for voice in &mut self.voices {
+                        voice.envelope.params.sustain = self.envelope_params.sustain;
+                    }
+                }
+            }
+            "env_release" => {
+                if let Ok(val) = value.parse::<f32>() {
+                    self.envelope_params.release = val.max(0.001);
+                    for voice in &mut self.voices {
+                        voice.envelope.params.release = self.envelope_params.release;
+                    }
+                }
+            }
+            _ => println!("⚠️ Unknown synth parameter: {}", key),
+        }
+    }
+
+    /// Find a free voice or steal the oldest one
+    fn find_free_voice(&mut self) -> &mut TrackVoice {
+        // First, try to find an inactive voice
+        let inactive_index = self.voices.iter().position(|v| !v.is_active);
+
+        if let Some(index) = inactive_index {
+            return &mut self.voices[index];
+        }
+
+        // All voices active - steal the first one (simple voice stealing)
+        // TODO: Could implement more sophisticated stealing (oldest, quietest, etc.)
+        &mut self.voices[0]
+    }
+
+    pub fn note_on(&mut self, note: u8, velocity: u8) {
+        let voice = self.find_free_voice();
+        voice.note_on(note, velocity);
+        println!("🎹 Track synth note ON: {} (polyphonic)", note);
+    }
+
+    pub fn note_off(&mut self, note: u8, _velocity: u8) {
+        // Find all voices playing this note and release them
+        for voice in &mut self.voices {
+            if voice.is_active && voice.note == note {
+                voice.note_off();
+                println!("🎹 Track synth note OFF: {}", note);
+            }
+        }
+    }
+
+    pub fn process_sample(&mut self) -> f32 {
+        let mut output = 0.0;
+
+        // Mix all active voices
+        for voice in &mut self.voices {
+            if voice.is_active {
+                output += voice.process();
+            }
+        }
+
+        output * 0.5  // Output gain (adjusted for polyphony)
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.voices.iter().any(|v| v.is_active)
+    }
+
+    pub fn active_voice_count(&self) -> usize {
+        self.voices.iter().filter(|v| v.is_active).count()
+    }
+}
+
+/// Manager for per-track synthesizers
+pub struct TrackSynthManager {
+    synths: HashMap<u64, TrackSynthesizer>,
+    sample_rate: f32,
+}
+
+impl TrackSynthManager {
+    pub fn new(sample_rate: f32) -> Self {
+        Self {
+            synths: HashMap::new(),
+            sample_rate,
+        }
+    }
+
+    pub fn create_synth(&mut self, track_id: u64) -> u64 {
+        let synth = TrackSynthesizer::new(self.sample_rate);
+        self.synths.insert(track_id, synth);
+        println!("✅ Created track synthesizer for track {}", track_id);
+        track_id
+    }
+
+    pub fn set_parameter(&mut self, track_id: u64, key: &str, value: &str) {
+        if let Some(synth) = self.synths.get_mut(&track_id) {
+            synth.set_parameter(key, value);
+        }
+    }
+
+    pub fn note_on(&mut self, track_id: u64, note: u8, velocity: u8) {
+        if let Some(synth) = self.synths.get_mut(&track_id) {
+            synth.note_on(note, velocity);
+        }
+    }
+
+    pub fn note_off(&mut self, track_id: u64, note: u8, velocity: u8) {
+        if let Some(synth) = self.synths.get_mut(&track_id) {
+            synth.note_off(note, velocity);
+        }
+    }
+
+    pub fn process_sample(&mut self, track_id: u64) -> f32 {
+        if let Some(synth) = self.synths.get_mut(&track_id) {
+            synth.process_sample()
+        } else {
+            0.0
+        }
+    }
+
+    pub fn has_synth(&self, track_id: u64) -> bool {
+        self.synths.contains_key(&track_id)
     }
 }
