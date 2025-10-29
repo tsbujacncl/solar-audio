@@ -225,21 +225,14 @@ class _LibraryPanelState extends State<LibraryPanel> {
   Widget _buildItem(String name) {
     // Try to find matching instrument for dragging
     final instrument = _findInstrumentByName(name);
-    debugPrint('📚 Building library item "$name", instrument found: ${instrument != null ? instrument.name : "NONE"}');
 
     if (instrument != null) {
       // Instrument items are draggable (instant drag, no long press)
       return Draggable<Instrument>(
         data: instrument,
-        onDragStarted: () {
-          debugPrint('🎯 DRAG STARTED from library: ${instrument.name}');
-        },
-        onDragEnd: (details) {
-          debugPrint('🎯 DRAG ENDED: wasAccepted=${details.wasAccepted}, velocity=${details.velocity}');
-        },
-        onDraggableCanceled: (velocity, offset) {
-          debugPrint('🎯 DRAG CANCELED at offset $offset');
-        },
+        onDragStarted: () {},
+        onDragEnd: (details) {},
+        onDraggableCanceled: (velocity, offset) {},
         feedback: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(8),
@@ -282,9 +275,7 @@ class _LibraryPanelState extends State<LibraryPanel> {
         child: MouseRegion(
           cursor: SystemMouseCursors.grab,
           child: InkWell(
-            onTap: () {
-              debugPrint('📚 Library item tapped: $name');
-            },
+            onTap: () {},
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
               child: Text(
@@ -302,9 +293,7 @@ class _LibraryPanelState extends State<LibraryPanel> {
 
     // Non-instrument items are not draggable
     return InkWell(
-      onTap: () {
-        debugPrint('📚 Library item tapped: $name');
-      },
+      onTap: () {},
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         child: Text(

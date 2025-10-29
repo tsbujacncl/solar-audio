@@ -351,6 +351,19 @@ pub extern "C" fn create_midi_clip_ffi() -> i64 {
     }
 }
 
+/// Add a MIDI clip to a track's timeline for playback
+#[no_mangle]
+pub extern "C" fn add_midi_clip_to_track_ffi(
+    track_id: u64,
+    clip_id: u64,
+    start_time_seconds: f64,
+) -> i64 {
+    match api::add_midi_clip_to_track(track_id, clip_id, start_time_seconds) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
 /// Add a MIDI note to a clip
 #[no_mangle]
 pub extern "C" fn add_midi_note_to_clip_ffi(
@@ -361,6 +374,15 @@ pub extern "C" fn add_midi_note_to_clip_ffi(
     duration: f64,
 ) -> *mut c_char {
     match api::add_midi_note_to_clip(clip_id, note, velocity, start_time, duration) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Clear all notes from a MIDI clip
+#[no_mangle]
+pub extern "C" fn clear_midi_clip_ffi(clip_id: u64) -> *mut c_char {
+    match api::clear_midi_clip(clip_id) {
         Ok(msg) => CString::new(msg).unwrap().into_raw(),
         Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
     }

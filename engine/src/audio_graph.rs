@@ -82,8 +82,6 @@ impl AudioGraph {
         let effect_manager = EffectManager::new();
         let master_limiter = Limiter::new();
 
-        eprintln!("🎚️ [AudioGraph] M4 initialized: TrackManager, EffectManager, Master Limiter");
-
         Ok(Self {
             clips: Arc::new(Mutex::new(Vec::new())),
             midi_clips: Arc::new(Mutex::new(Vec::new())),
@@ -138,9 +136,8 @@ impl AudioGraph {
             id,
             clip,
             start_time,
+            track_id: None, // Will be set when added to a track
         });
-
-        eprintln!("🎹 [AudioGraph] Added MIDI clip {} at time {:.2}s", id, start_time);
 
         id
     }
@@ -164,10 +161,8 @@ impl AudioGraph {
                 offset: 0.0,
                 duration: None,
             });
-            eprintln!("🎵 [AudioGraph] Added audio clip {} to track {} at time {:.2}s", id, track_id, start_time);
             Some(id)
         } else {
-            eprintln!("❌ [AudioGraph] Track {} not found, cannot add clip", track_id);
             None
         }
     }
@@ -188,11 +183,10 @@ impl AudioGraph {
                 id,
                 clip,
                 start_time,
+                track_id: Some(track_id),
             });
-            eprintln!("🎹 [AudioGraph] Added MIDI clip {} to track {} at time {:.2}s", id, track_id, start_time);
             Some(id)
         } else {
-            eprintln!("❌ [AudioGraph] Track {} not found, cannot add MIDI clip", track_id);
             None
         }
     }
@@ -218,6 +212,15 @@ impl AudioGraph {
         }
 
         false
+    }
+
+    /// Remove all MIDI clips belonging to a specific track
+    pub fn remove_midi_clips_for_track(&self, track_id: TrackId) -> usize {
+        let mut midi_clips = self.midi_clips.lock().unwrap();
+        let initial_count = midi_clips.len();
+        midi_clips.retain(|clip| clip.track_id != Some(track_id));
+        let removed_count = initial_count - midi_clips.len();
+        removed_count
     }
 
     /// Get the current playhead position in seconds
@@ -365,7 +368,6 @@ impl AudioGraph {
                             }
                         } else {
                             // Failed to acquire input manager lock - audio samples will be dropped
-                            eprintln!("⚠️  [AudioGraph] Input mutex lock contention - samples dropped!");
                             (0.0, 0.0)
                         };
 
@@ -394,14 +396,6 @@ impl AudioGraph {
                     let midi_clips_lock = midi_clips.lock().unwrap();
                     midi_clips_lock.clone()
                 };
-
-                // Debug: Log clip count periodically
-                static PLAYBACK_FRAME_COUNTER: AtomicU64 = AtomicU64::new(0);
-                let frame_count = PLAYBACK_FRAME_COUNTER.fetch_add(1, Ordering::Relaxed);
-                if frame_count % 4800 == 0 {  // Log every ~0.1s
-                    eprintln!("🔊 [Playback] {} audio clips, {} MIDI clips on timeline, playhead: {:.2}s",
-                        clips_snapshot.len(), midi_clips_snapshot.len(), current_playhead as f64 / TARGET_SAMPLE_RATE as f64);
-                }
 
                 // Process MIDI events for this buffer
                 // We need to check all MIDI clips for events in this time range
@@ -727,8 +721,6 @@ impl AudioGraph {
         use crate::effects::EffectType as ET;
         use std::collections::HashMap;
 
-        eprintln!("📦 [AudioGraph] Exporting project data...");
-
         // Get all tracks
         let track_manager = self.track_manager.lock().unwrap();
         let effect_manager = self.effect_manager.lock().unwrap();
@@ -863,8 +855,6 @@ impl AudioGraph {
         use crate::project::*;
         use crate::effects::*;
         use crate::track::TrackType;
-
-        eprintln!("📥 [AudioGraph] Restoring project data: {}", project_data.name);
 
         // Stop playback
         let _ = self.stop();
@@ -1021,7 +1011,6 @@ impl AudioGraph {
         // This is deferred because we need access to the loaded AudioClip objects
         // which are handled in the API layer
 
-        eprintln!("✅ [AudioGraph] Project data restored");
         Ok(())
     }
 }

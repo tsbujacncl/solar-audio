@@ -74,6 +74,8 @@ class _DAWScreenState extends State<DAWScreen> {
   int? _selectedMidiTrackId;
   int? _selectedMidiClipId;
   MidiClipData? _currentEditingClip;
+  List<MidiClipData> _midiClips = []; // All MIDI clips for timeline
+  Map<int, int> _dartToRustClipIds = {}; // Maps Dart clip ID -> Rust clip ID
 
   // M9: Instrument state
   Map<int, InstrumentData> _trackInstruments = {}; // trackId -> InstrumentData
@@ -508,6 +510,30 @@ class _DAWScreenState extends State<DAWScreen> {
     debugPrint('🎹 Track $trackId instrument set to: $instrumentId');
   }
 
+  void _onTrackDeleted(int trackId) {
+    setState(() {
+      // Find all MIDI clips on this track and remove their mappings
+      final clipsToRemove = _midiClips.where((clip) => clip.trackId == trackId).toList();
+      for (final clip in clipsToRemove) {
+        _dartToRustClipIds.remove(clip.clipId);
+      }
+
+      // Remove all MIDI clips associated with this track
+      _midiClips.removeWhere((clip) => clip.trackId == trackId);
+
+      // Clear current editing clip if it was on this track
+      if (_currentEditingClip != null && _currentEditingClip!.trackId == trackId) {
+        _currentEditingClip = null;
+        _selectedMidiClipId = null;
+      }
+
+      // Remove instrument mapping
+      _trackInstruments.remove(trackId);
+
+      debugPrint('🧹 Cleaned up MIDI state for deleted track $trackId');
+    });
+  }
+
   void _onTrackDuplicated(int sourceTrackId, int newTrackId) {
     setState(() {
       // Copy instrument mapping from source track to new track if it exists
@@ -592,22 +618,76 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _onMidiClipUpdated(MidiClipData updatedClip) {
     setState(() {
-      // Check if this is a new clip (clipId == -1) with notes - auto-create it
-      if (updatedClip.clipId == -1 && updatedClip.notes.isNotEmpty) {
-        // Generate a unique clip ID (use timestamp for now)
-        final newClipId = DateTime.now().millisecondsSinceEpoch;
+      // Calculate clip duration based on notes (convert from beats to seconds)
+      double durationInSeconds;
 
-        // Create clip at playhead position
-        _currentEditingClip = updatedClip.copyWith(
-          clipId: newClipId,
-          startTime: _playheadPosition, // Use current playhead position
-        );
-        _selectedMidiClipId = newClipId;
-
-        debugPrint('✅ Auto-created MIDI clip $newClipId at ${_playheadPosition.toStringAsFixed(2)}s');
+      if (updatedClip.notes.isEmpty) {
+        // Default to 4 bars (16 beats) if no notes
+        final defaultBeats = 16.0;
+        durationInSeconds = (defaultBeats / _tempo) * 60.0;
       } else {
-        // Just update existing clip
-        _currentEditingClip = updatedClip;
+        // Find the furthest note end time (in beats)
+        final furthestBeat = updatedClip.notes
+            .map((note) => note.startTime + note.duration)
+            .reduce((a, b) => a > b ? a : b);
+
+        // Add 1 bar (4 beats) of padding after the last note
+        final totalBeats = furthestBeat + 4.0;
+
+        // Convert beats to seconds: seconds = (beats / BPM) * 60
+        durationInSeconds = (totalBeats / _tempo) * 60.0;
+      }
+
+      // Check if we're editing an existing clip or need to create a new one
+      if (updatedClip.clipId == -1) {
+        // No clip ID provided - check if we're editing an existing clip
+        if (_currentEditingClip != null && _currentEditingClip!.clipId != -1) {
+          // Reuse the existing clip we're editing
+          _currentEditingClip = updatedClip.copyWith(
+            clipId: _currentEditingClip!.clipId,
+            startTime: _currentEditingClip!.startTime,
+            duration: durationInSeconds,
+          );
+
+          // Update in clips list
+          final index = _midiClips.indexWhere((c) => c.clipId == _currentEditingClip!.clipId);
+          if (index != -1) {
+            _midiClips[index] = _currentEditingClip!;
+          }
+
+          debugPrint('✅ Updated existing MIDI clip ${_currentEditingClip!.clipId} (duration: ${durationInSeconds.toStringAsFixed(2)}s)');
+        } else if (updatedClip.notes.isNotEmpty) {
+          // Create a brand new clip only if we have notes and no clip is being edited
+          final newClipId = DateTime.now().millisecondsSinceEpoch;
+
+          _currentEditingClip = updatedClip.copyWith(
+            clipId: newClipId,
+            startTime: _playheadPosition,
+            duration: durationInSeconds,
+          );
+          _selectedMidiClipId = newClipId;
+
+          // Add to clips list for timeline visualization
+          _midiClips.add(_currentEditingClip!);
+
+          debugPrint('✅ Auto-created MIDI clip $newClipId at ${_playheadPosition.toStringAsFixed(2)}s (duration: ${durationInSeconds.toStringAsFixed(2)}s)');
+        } else {
+          // No notes and no existing clip - just update current editing clip
+          _currentEditingClip = updatedClip.copyWith(
+            duration: durationInSeconds,
+          );
+        }
+      } else {
+        // Clip ID provided - update existing clip with new duration
+        _currentEditingClip = updatedClip.copyWith(
+          duration: durationInSeconds,
+        );
+
+        // Update in clips list
+        final index = _midiClips.indexWhere((c) => c.clipId == updatedClip.clipId);
+        if (index != -1) {
+          _midiClips[index] = _currentEditingClip!;
+        }
       }
     });
 
@@ -619,29 +699,77 @@ class _DAWScreenState extends State<DAWScreen> {
 
   /// Schedule MIDI clip notes for playback during transport
   void _scheduleMidiClipPlayback(MidiClipData clip) {
-    debugPrint('🎵 Scheduling ${clip.notes.length} MIDI notes for playback');
-    debugPrint('   Clip: ${clip.name} (ID: ${clip.clipId})');
+    if (_audioEngine == null) return;
+
+    debugPrint('🎵 Syncing MIDI clip to Rust audio graph');
+    debugPrint('   Clip: ${clip.name} (Dart ID: ${clip.clipId})');
     debugPrint('   Track: ${clip.trackId}');
     debugPrint('   Start time: ${clip.startTime}s');
+    debugPrint('   ${clip.notes.length} notes');
 
-    // TODO: Implement MIDI clip scheduling in Rust audio engine
-    // For now, this logs what would be scheduled
-    // The Rust side needs to:
-    // 1. Store MIDI clip data with timing information
-    // 2. During transport play, trigger notes at correct timestamps
-    // 3. Handle tempo/BPM conversion from beats to seconds
+    // Check if this Dart clip already has a Rust clip
+    int rustClipId;
+    bool isNewClip = false;
 
-    for (final note in clip.notes) {
-      final tempo = _tempo; // Current tempo
-      final startTimeInSeconds = note.startTimeInSeconds(tempo) + clip.startTime;
-      final durationInSeconds = note.durationInSeconds(tempo);
+    if (_dartToRustClipIds.containsKey(clip.clipId)) {
+      // Existing clip - reuse the Rust clip ID
+      rustClipId = _dartToRustClipIds[clip.clipId]!;
+      debugPrint('   Reusing existing Rust clip ID: $rustClipId');
 
-      debugPrint('   Note: ${note.noteName} at ${startTimeInSeconds.toStringAsFixed(3)}s for ${durationInSeconds.toStringAsFixed(3)}s');
+      // Clear existing notes (we'll re-add all of them)
+      final clearResult = _audioEngine!.clearMidiClip(rustClipId);
+      if (clearResult.startsWith('Error')) {
+        debugPrint('   ⚠️  Failed to clear clip: $clearResult');
+      } else {
+        debugPrint('   ✓ Cleared existing notes');
+      }
+    } else {
+      // New clip - create in Rust
+      rustClipId = _audioEngine!.createMidiClip();
+      if (rustClipId < 0) {
+        debugPrint('❌ Failed to create Rust MIDI clip');
+        return;
+      }
+      _dartToRustClipIds[clip.clipId] = rustClipId;
+      isNewClip = true;
+      debugPrint('   Created new Rust clip ID: $rustClipId');
     }
 
-    // Example immediate playback (for testing - remove once scheduling is implemented):
-    // Uncomment to hear notes immediately when drawn
-    // _playMidiClipImmediately(clip);
+    // Add all notes to the Rust clip
+    for (final note in clip.notes) {
+      // Convert beats to seconds using current tempo
+      final startTimeSeconds = note.startTimeInSeconds(_tempo);
+      final durationSeconds = note.durationInSeconds(_tempo);
+
+      final result = _audioEngine!.addMidiNoteToClip(
+        rustClipId,
+        note.note,
+        note.velocity,
+        startTimeSeconds,
+        durationSeconds,
+      );
+
+      if (result.startsWith('Error')) {
+        debugPrint('   ⚠️  Failed to add note ${note.noteName}: $result');
+      }
+    }
+
+    // Only add to timeline if this is a new clip
+    if (isNewClip) {
+      final result = _audioEngine!.addMidiClipToTrack(
+        clip.trackId,
+        rustClipId,
+        clip.startTime,
+      );
+
+      if (result == 0) {
+        debugPrint('✅ MIDI clip synced to audio graph successfully');
+      } else {
+        debugPrint('❌ Failed to add MIDI clip to track timeline (result: $result)');
+      }
+    } else {
+      debugPrint('✅ MIDI clip notes updated (${clip.notes.length} notes)');
+    }
   }
 
   /// Play MIDI clip immediately (for testing/preview)
@@ -681,7 +809,14 @@ class _DAWScreenState extends State<DAWScreen> {
                 _loadedClipId = null;
                 _waveformPeaks = [];
                 _statusMessage = 'New project created';
+
+                // Clear MIDI state
+                _midiClips.clear();
+                _dartToRustClipIds.clear();
+                _selectedMidiClipId = null;
+                _currentEditingClip = null;
               });
+              debugPrint('🧹 Cleared MIDI clip state for new project');
             },
             child: const Text('Create'),
           ),
@@ -723,6 +858,10 @@ class _DAWScreenState extends State<DAWScreen> {
 
         try {
           final loadResult = _audioEngine!.loadProject(path);
+
+          // Clear MIDI clip ID mappings since Rust side has reset
+          _dartToRustClipIds.clear();
+          debugPrint('🧹 Cleared MIDI clip ID mappings on project load');
 
           // Load UI layout data
           _loadUILayout(path);
@@ -1047,6 +1186,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           selectedMidiTrackId: _selectedMidiTrackId,
                           selectedMidiClipId: _selectedMidiClipId,
                           currentEditingClip: _currentEditingClip,
+                          midiClips: _midiClips, // Pass all MIDI clips for visualization
                           onMidiTrackSelected: _onMidiTrackSelected,
                           onMidiClipSelected: _onMidiClipSelected,
                           onMidiClipUpdated: _onMidiClipUpdated,
@@ -1083,6 +1223,7 @@ class _DAWScreenState extends State<DAWScreen> {
                             onMidiTrackSelected: _onMidiTrackSelected,
                             onInstrumentSelected: _onInstrumentSelected,
                             onTrackDuplicated: _onTrackDuplicated,
+                            onTrackDeleted: _onTrackDeleted,
                             trackInstruments: _trackInstruments,
                           ),
                         ),

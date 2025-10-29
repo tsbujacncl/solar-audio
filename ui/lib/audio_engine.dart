@@ -43,6 +43,10 @@ class AudioEngine {
   late final _SetSynthVolumeFfi _setSynthVolume;
   late final _SendMidiNoteOnFfi _sendMidiNoteOn;
   late final _SendMidiNoteOffFfi _sendMidiNoteOff;
+  late final _CreateMidiClipFfi _createMidiClip;
+  late final _AddMidiNoteToClipFfi _addMidiNoteToClip;
+  late final _AddMidiClipToTrackFfi _addMidiClipToTrack;
+  late final _ClearMidiClipFfi _clearMidiClip;
 
   // M6 functions - Per-track Synthesizer
   late final _SetTrackInstrumentFfi _setTrackInstrument;
@@ -291,6 +295,30 @@ class AudioEngine {
               'send_midi_note_off_ffi')
           .asFunction();
       print('  ✅ send_midi_note_off_ffi bound');
+
+      _createMidiClip = _lib
+          .lookup<ffi.NativeFunction<_CreateMidiClipFfiNative>>(
+              'create_midi_clip_ffi')
+          .asFunction();
+      print('  ✅ create_midi_clip_ffi bound');
+
+      _addMidiNoteToClip = _lib
+          .lookup<ffi.NativeFunction<_AddMidiNoteToClipFfiNative>>(
+              'add_midi_note_to_clip_ffi')
+          .asFunction();
+      print('  ✅ add_midi_note_to_clip_ffi bound');
+
+      _addMidiClipToTrack = _lib
+          .lookup<ffi.NativeFunction<_AddMidiClipToTrackFfiNative>>(
+              'add_midi_clip_to_track_ffi')
+          .asFunction();
+      print('  ✅ add_midi_clip_to_track_ffi bound');
+
+      _clearMidiClip = _lib
+          .lookup<ffi.NativeFunction<_ClearMidiClipFfiNative>>(
+              'clear_midi_clip_ffi')
+          .asFunction();
+      print('  ✅ clear_midi_clip_ffi bound');
 
       // Bind M4 functions
       _createTrack = _lib
@@ -858,6 +886,56 @@ class AudioEngine {
     }
   }
 
+  /// Create a new empty MIDI clip in Rust
+  /// Returns clip ID or -1 on error
+  int createMidiClip() {
+    try {
+      return _createMidiClip();
+    } catch (e) {
+      print('❌ [AudioEngine] Create MIDI clip failed: $e');
+      return -1;
+    }
+  }
+
+  /// Add a MIDI note to a clip
+  /// Returns success message or error
+  String addMidiNoteToClip(int clipId, int note, int velocity, double startTime, double duration) {
+    try {
+      final resultPtr = _addMidiNoteToClip(clipId, note, velocity, startTime, duration);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Add MIDI note to clip failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Add a MIDI clip to a track's timeline for playback
+  /// Returns 0 on success, -1 on error
+  int addMidiClipToTrack(int trackId, int clipId, double startTimeSeconds) {
+    try {
+      return _addMidiClipToTrack(trackId, clipId, startTimeSeconds);
+    } catch (e) {
+      print('❌ [AudioEngine] Add MIDI clip to track failed: $e');
+      return -1;
+    }
+  }
+
+  /// Clear all MIDI notes from a clip
+  /// Returns success message or error
+  String clearMidiClip(int clipId) {
+    try {
+      final resultPtr = _clearMidiClip(clipId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Clear MIDI clip failed: $e');
+      return 'Error: $e';
+    }
+  }
+
   // ========================================================================
   // M4 API - Tracks & Mixer
   // ========================================================================
@@ -1365,6 +1443,19 @@ typedef _SendMidiNoteOnFfi = ffi.Pointer<Utf8> Function(int, int);
 
 typedef _SendMidiNoteOffFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint8, ffi.Uint8);
 typedef _SendMidiNoteOffFfi = ffi.Pointer<Utf8> Function(int, int);
+
+// MIDI Clip Management
+typedef _CreateMidiClipFfiNative = ffi.Int64 Function();
+typedef _CreateMidiClipFfi = int Function();
+
+typedef _AddMidiNoteToClipFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint8, ffi.Uint8, ffi.Double, ffi.Double);
+typedef _AddMidiNoteToClipFfi = ffi.Pointer<Utf8> Function(int, int, int, double, double);
+
+typedef _AddMidiClipToTrackFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Uint64, ffi.Double);
+typedef _AddMidiClipToTrackFfi = int Function(int, int, double);
+
+typedef _ClearMidiClipFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _ClearMidiClipFfi = ffi.Pointer<Utf8> Function(int);
 
 // M4 types - Tracks & Mixer
 typedef _CreateTrackFfiNative = ffi.Int64 Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>);

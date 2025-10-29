@@ -895,6 +895,39 @@ pub fn quantize_midi_clip(clip_id: u64, grid_division: u32) -> Result<String, St
     Ok(format!("Quantized to 1/{} note grid", grid_division))
 }
 
+/// Add a MIDI clip to a track's timeline for playback
+///
+/// # Arguments
+/// * `track_id` - The track to add the clip to
+/// * `clip_id` - The MIDI clip ID (must exist)
+/// * `start_time_seconds` - Start time on the timeline in seconds
+pub fn add_midi_clip_to_track(track_id: u64, clip_id: u64, start_time_seconds: f64) -> Result<(), String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Get the MIDI clip from global storage and update its track_id
+    let clip_arc = {
+        let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+        let timeline_clip = midi_clips
+            .iter_mut()
+            .find(|c| c.id == clip_id)
+            .ok_or(format!("MIDI clip {} not found", clip_id))?;
+
+        // Update the track_id in the global collection
+        timeline_clip.track_id = Some(track_id);
+
+        // Clone the clip Arc for adding to the track
+        timeline_clip.clip.clone()
+    };
+
+    // Add the clip to the track's timeline
+    graph.add_midi_clip_to_track(track_id, clip_arc, start_time_seconds)
+        .ok_or(format!("Failed to add MIDI clip to track {}", track_id))?;
+
+    Ok(())
+}
+
 // ============================================================================
 // M4: TRACK & MIXING API
 // ============================================================================
@@ -1318,6 +1351,15 @@ pub fn delete_track(track_id: TrackId) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Stop any playing notes on the synthesizer to prevent stuck notes
+    if let Ok(mut synth) = graph.synthesizer.lock() {
+        synth.all_notes_off();
+    }
+
+    // Remove all MIDI clips belonging to this track from the global collection
+    graph.remove_midi_clips_for_track(track_id);
+
     let mut track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
 
     if track_manager.remove_track(track_id) {

@@ -279,9 +279,6 @@ impl Synthesizer {
         // Find an available voice (prefer inactive, then oldest)
         if let Some(voice) = self.find_free_voice() {
             voice.note_on(note, velocity_normalized, envelope_params);
-            eprintln!("🎹 [SYNTH] Note On: {} (vel: {})", note, velocity);
-        } else {
-            eprintln!("⚠️ [SYNTH] No free voices for note {}", note);
         }
     }
 
@@ -291,8 +288,16 @@ impl Synthesizer {
         for voice in &mut self.voices {
             if voice.is_active && voice.note == note {
                 voice.note_off();
-                eprintln!("🎹 [SYNTH] Note Off: {}", note);
                 break;
+            }
+        }
+    }
+
+    /// Turn off all active notes (panic/all notes off)
+    pub fn all_notes_off(&mut self) {
+        for voice in &mut self.voices {
+            if voice.is_active {
+                voice.note_off();
             }
         }
     }

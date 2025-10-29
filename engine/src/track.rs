@@ -37,6 +37,8 @@ pub struct TimelineMidiClip {
     pub clip: Arc<MidiClip>,
     /// Position on timeline in seconds
     pub start_time: f64,
+    /// Track ID this clip belongs to (for cleanup on track deletion)
+    pub track_id: Option<TrackId>,
 }
 
 /// Track types supported in Solar Audio
@@ -225,18 +227,6 @@ impl TrackManager {
 
         self.tracks.push(track);
 
-        eprintln!("🎚️ [TrackManager] Created {} track '{}' (ID: {})",
-            match track_type {
-                TrackType::Audio => "Audio",
-                TrackType::Midi => "MIDI",
-                TrackType::Return => "Return",
-                TrackType::Group => "Group",
-                TrackType::Master => "Master",
-            },
-            self.tracks.last().unwrap().lock().unwrap().name,
-            id
-        );
-
         id
     }
 
@@ -260,13 +250,11 @@ impl TrackManager {
     /// Remove a track (cannot remove master)
     pub fn remove_track(&mut self, id: TrackId) -> bool {
         if id == self.master_track_id {
-            eprintln!("❌ [TrackManager] Cannot remove master track");
             return false;
         }
 
         if let Some(pos) = self.tracks.iter().position(|t| t.lock().unwrap().id == id) {
             self.tracks.remove(pos);
-            eprintln!("🗑️ [TrackManager] Removed track {}", id);
             true
         } else {
             false

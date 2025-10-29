@@ -49,12 +49,14 @@ class MixerPanel extends StatefulWidget {
   final AudioEngine? audioEngine;
   final VoidCallback onClose;
   final Function(int?)? onFXButtonClicked;
+  final Function(int)? onTrackDeleted;
 
   const MixerPanel({
     super.key,
     required this.audioEngine,
     required this.onClose,
     this.onFXButtonClicked,
+    this.onTrackDeleted,
   });
 
   @override
@@ -442,6 +444,7 @@ class _MixerPanelState extends State<MixerPanel> {
           TextButton(
             onPressed: () {
               widget.audioEngine?.deleteTrack(track.id);
+              widget.onTrackDeleted?.call(track.id);
               Navigator.of(context).pop();
               _loadTracksAsync();
             },

@@ -56,6 +56,7 @@ class TrackMixerPanel extends StatefulWidget {
   final Function(int?)? onMidiTrackSelected;
   final Function(int, String)? onInstrumentSelected; // (trackId, instrumentId)
   final Function(int, int)? onTrackDuplicated; // (sourceTrackId, newTrackId)
+  final Function(int)? onTrackDeleted; // (trackId)
   final Map<int, InstrumentData>? trackInstruments;
 
   const TrackMixerPanel({
@@ -67,6 +68,7 @@ class TrackMixerPanel extends StatefulWidget {
     this.onMidiTrackSelected,
     this.onInstrumentSelected,
     this.onTrackDuplicated,
+    this.onTrackDeleted,
     this.trackInstruments,
   });
 
@@ -214,6 +216,7 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
           TextButton(
             onPressed: () {
               widget.audioEngine?.deleteTrack(track.id);
+              widget.onTrackDeleted?.call(track.id);
               Navigator.of(context).pop();
               _loadTracksAsync();
             },
