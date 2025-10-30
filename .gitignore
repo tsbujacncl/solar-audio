@@ -24,8 +24,8 @@ Cargo.lock
 *.swo
 *~
 
-# Claude Code (keep PREFERENCES.md but ignore user settings)
-.claude/settings.local.json
+# Claude Code
+.claude/
 
 # Generated FFI
 /ui/lib/bridge_generated.dart
