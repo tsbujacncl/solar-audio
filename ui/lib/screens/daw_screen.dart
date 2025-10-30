@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
@@ -12,8 +13,10 @@ import '../widgets/library_panel.dart';
 import '../widgets/editor_panel.dart';
 import '../widgets/resizable_divider.dart';
 import '../widgets/instrument_browser.dart';
+import '../widgets/vst3_plugin_browser.dart';
 import '../models/midi_note_data.dart';
 import '../models/instrument_data.dart';
+import '../models/vst3_plugin_data.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -80,10 +83,25 @@ class _DAWScreenState extends State<DAWScreen> {
   // M9: Instrument state
   Map<int, InstrumentData> _trackInstruments = {}; // trackId -> InstrumentData
 
+  // M10: VST3 Plugin state
+  List<Map<String, String>> _availableVst3Plugins = []; // Scanned plugin list
+  Map<int, List<int>> _trackVst3Effects = {}; // trackId -> [effectIds]
+  Map<int, Map<String, String>> _vst3PluginCache = {}; // effectId -> plugin metadata
+  bool _pluginsScanned = false;
+  bool _isScanningVst3Plugins = false;
+
   @override
   void initState() {
     super.initState();
-    _initAudioEngine();
+    // CRITICAL: Schedule audio engine initialization with a delay to prevent UI freeze
+    // Even with postFrameCallback, FFI calls to Rust/C++ can block the main thread
+    // Use Future.delayed to ensure UI renders multiple frames before any FFI initialization
+    // DO NOT move this back to initState() or earlier - it will freeze the app on startup
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _initAudioEngine();
+      }
+    });
   }
 
   @override
@@ -100,22 +118,23 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _initAudioEngine() async {
     try {
+      // Called after 800ms delay from initState, so UI has rendered
       _audioEngine = AudioEngine();
       _audioEngine!.initAudioEngine();
-      
-      // Initialize audio graph immediately
+
+      // Initialize audio graph
       final result = _audioEngine!.initAudioGraph();
-      
+
       // Initialize recording settings
       try {
         _audioEngine!.setCountInBars(2); // Default: 2 bars
         _audioEngine!.setTempo(120.0);   // Default: 120 BPM
         _audioEngine!.setMetronomeEnabled(true); // Default: enabled
-        
+
         // Get initial values
         final tempo = _audioEngine!.getTempo();
         final metronome = _audioEngine!.isMetronomeEnabled();
-        
+
         debugPrint('🎵 Recording settings initialized:');
         debugPrint('   - Count-in: 2 bars');
         debugPrint('   - Tempo: $tempo BPM');
@@ -123,19 +142,29 @@ class _DAWScreenState extends State<DAWScreen> {
       } catch (e) {
         debugPrint('⚠️  Failed to initialize recording settings: $e');
       }
-      
-      setState(() {
-        _audioGraphInitialized = true;
-        _statusMessage = 'Ready to record or load audio files';
-        _tempo = 120.0;
-        _metronomeEnabled = true;
-      });
-      
+
+      if (mounted) {
+        setState(() {
+          _audioGraphInitialized = true;
+          _statusMessage = 'Ready to record or load audio files';
+          _tempo = 120.0;
+          _metronomeEnabled = true;
+        });
+      }
+
       debugPrint('✅ Audio graph initialized: $result');
+
+      // Scan VST3 plugins after audio graph is ready
+      if (!_pluginsScanned && mounted) {
+        debugPrint('📦 Starting deferred VST3 plugin scan...');
+        _scanVst3Plugins();
+      }
     } catch (e) {
-      setState(() {
-        _statusMessage = 'Failed to initialize: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Failed to initialize: $e';
+        });
+      }
       debugPrint('❌ Audio engine init failed: $e');
     }
   }
@@ -624,11 +653,564 @@ class _DAWScreenState extends State<DAWScreen> {
     debugPrint('✅ Created new MIDI track $trackId with instrument "${instrument.name}"');
   }
 
+  // VST3 Instrument drop handlers
+  void _onVst3InstrumentDropped(int trackId, Vst3Plugin plugin) async {
+    debugPrint('🎹 _onVst3InstrumentDropped CALLED: track=$trackId, plugin=${plugin.name}');
+    if (_audioEngine == null) {
+      debugPrint('❌ Audio engine is null');
+      return;
+    }
+
+    try {
+      // Load the VST3 plugin as a track instrument
+      final effectId = _audioEngine!.addVst3EffectToTrack(trackId, plugin.path);
+      if (effectId < 0) {
+        debugPrint('❌ Failed to load VST3 instrument: ${plugin.name}');
+        return;
+      }
+
+      // Create and store InstrumentData for this VST3 instrument
+      setState(() {
+        _trackInstruments[trackId] = InstrumentData.vst3Instrument(
+          trackId: trackId,
+          pluginPath: plugin.path,
+          pluginName: plugin.name,
+          effectId: effectId,
+        );
+      });
+
+      debugPrint('✅ VST3 instrument "${plugin.name}" loaded on track $trackId (effectId: $effectId)');
+    } catch (e) {
+      debugPrint('❌ Error loading VST3 instrument: $e');
+    }
+  }
+
+  void _onVst3InstrumentDroppedOnEmpty(Vst3Plugin plugin) async {
+    debugPrint('🎹 _onVst3InstrumentDroppedOnEmpty CALLED: plugin=${plugin.name}');
+    if (_audioEngine == null) {
+      debugPrint('❌ Audio engine is null');
+      return;
+    }
+
+    try {
+      // Create a new MIDI track
+      final trackId = _audioEngine!.createTrack('midi', 'MIDI');
+      if (trackId < 0) {
+        debugPrint('❌ Failed to create new MIDI track');
+        return;
+      }
+
+      // Load the VST3 plugin as a track instrument
+      final effectId = _audioEngine!.addVst3EffectToTrack(trackId, plugin.path);
+      if (effectId < 0) {
+        debugPrint('❌ Failed to load VST3 instrument: ${plugin.name}');
+        return;
+      }
+
+      // Create and store InstrumentData for this VST3 instrument
+      setState(() {
+        _trackInstruments[trackId] = InstrumentData.vst3Instrument(
+          trackId: trackId,
+          pluginPath: plugin.path,
+          pluginName: plugin.name,
+          effectId: effectId,
+        );
+      });
+
+      debugPrint('✅ Created new MIDI track $trackId with VST3 instrument "${plugin.name}" (effectId: $effectId)');
+    } catch (e) {
+      debugPrint('❌ Error creating MIDI track with VST3 instrument: $e');
+    }
+  }
+
   void _onInstrumentParameterChanged(InstrumentData instrumentData) {
     setState(() {
       _trackInstruments[instrumentData.trackId] = instrumentData;
     });
     debugPrint('🎹 Updated instrument parameters for track ${instrumentData.trackId}');
+  }
+
+  // M10: VST3 Plugin methods
+  Future<void> _loadCachedVst3Plugins() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedVersion = prefs.getInt('vst3_cache_version') ?? 0;
+      const currentVersion = 8; // Incremented - default to INSTRUMENT instead of EFFECT
+
+      debugPrint('📦 Cache check: cached version=$cachedVersion, current version=$currentVersion');
+
+      // Invalidate cache if version doesn't match
+      if (cachedVersion != currentVersion) {
+        debugPrint('📦 ❌ Cache version MISMATCH - deleting old cache and forcing fresh scan');
+        await prefs.remove('vst3_plugins_cache');
+        debugPrint('📦 ✅ Old cache deleted');
+        await prefs.remove('vst3_plugins_cache');
+        await prefs.remove('vst3_scan_timestamp');
+        await prefs.setInt('vst3_cache_version', currentVersion);
+        return;
+      }
+
+      final cachedJson = prefs.getString('vst3_plugins_cache');
+
+      if (cachedJson != null) {
+        debugPrint('📦 Loading VST3 cache from SharedPreferences');
+        final List<dynamic> decoded = jsonDecode(cachedJson);
+        final plugins = decoded.map((item) => Map<String, String>.from(item as Map)).toList();
+
+        debugPrint('📦 Decoded ${plugins.length} plugins from cache:');
+        for (var plugin in plugins) {
+          debugPrint('  - ${plugin['name']} at ${plugin['path']} (instrument: ${plugin['is_instrument']}, effect: ${plugin['is_effect']})');
+        }
+
+        // Verify that plugins have type information
+        bool hasTypeInfo = plugins.every((plugin) =>
+          plugin.containsKey('is_instrument') && plugin.containsKey('is_effect')
+        );
+
+        if (!hasTypeInfo) {
+          debugPrint('⚠️  Cache missing type information - invalidating cache');
+          await prefs.remove('vst3_plugins_cache');
+          return;
+        }
+
+        setState(() {
+          _availableVst3Plugins = plugins;
+          _pluginsScanned = true;
+        });
+
+        debugPrint('✅ Loaded ${plugins.length} VST3 plugins from cache');
+        debugPrint('✅ _availableVst3Plugins now has ${_availableVst3Plugins.length} items');
+      } else {
+        debugPrint('⚠️  No VST3 cache found in SharedPreferences');
+      }
+    } catch (e) {
+      debugPrint('⚠️  Failed to load VST3 cache: $e');
+    }
+  }
+
+  Future<void> _saveVst3PluginsCache(List<Map<String, String>> plugins) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = jsonEncode(plugins);
+      await prefs.setString('vst3_plugins_cache', json);
+      await prefs.setInt('vst3_scan_timestamp', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt('vst3_cache_version', 8); // Save cache version
+      debugPrint('✅ Saved ${plugins.length} VST3 plugins to cache (version 8)');
+    } catch (e) {
+      debugPrint('⚠️  Failed to save VST3 cache: $e');
+    }
+  }
+
+  void _scanVst3Plugins({bool forceRescan = false}) async {
+    if (_audioEngine == null || _isScanningVst3Plugins) return;
+
+    debugPrint('📦 _scanVst3Plugins called (forceRescan=$forceRescan, _pluginsScanned=$_pluginsScanned)');
+
+    // Load from cache if not forcing rescan
+    if (!forceRescan && !_pluginsScanned) {
+      debugPrint('📦 Attempting to load from cache...');
+      await _loadCachedVst3Plugins();
+
+      // If cache loaded successfully, we're done
+      if (_availableVst3Plugins.isNotEmpty) {
+        debugPrint('📦 ✅ Cache loaded successfully, skipping fresh scan');
+        return;
+      }
+      debugPrint('📦 ⚠️  Cache empty, proceeding to fresh scan');
+    }
+
+    setState(() {
+      _isScanningVst3Plugins = true;
+      _statusMessage = forceRescan ? 'Rescanning VST3 plugins...' : 'Scanning VST3 plugins...';
+    });
+
+    try {
+      debugPrint('📦 🔍 Starting fresh VST3 plugin scan from C++...');
+      final plugins = _audioEngine!.scanVst3PluginsStandard();
+      debugPrint('📦 🔍 Scan returned ${plugins.length} plugins');
+
+      // Log each plugin's categorization
+      for (final plugin in plugins) {
+        debugPrint('📦 Plugin: ${plugin['name']} | is_instrument: ${plugin['is_instrument']} | is_effect: ${plugin['is_effect']}');
+      }
+
+      // Save to cache
+      await _saveVst3PluginsCache(plugins);
+
+      setState(() {
+        _availableVst3Plugins = plugins;
+        _pluginsScanned = true;
+        _isScanningVst3Plugins = false;
+        _statusMessage = 'Found ${plugins.length} VST3 plugin${plugins.length == 1 ? '' : 's'}';
+      });
+
+      debugPrint('✅ Found ${plugins.length} VST3 plugins');
+    } catch (e) {
+      setState(() {
+        _isScanningVst3Plugins = false;
+        _statusMessage = 'VST3 scan failed: $e';
+      });
+      debugPrint('❌ VST3 scan failed: $e');
+    }
+  }
+
+  void _addVst3PluginToTrack(int trackId, Map<String, String> plugin) {
+    if (_audioEngine == null) return;
+
+    debugPrint('🔌 Adding VST3 plugin "${plugin['name']}" to track $trackId');
+
+    try {
+      final pluginPath = plugin['path'] ?? '';
+      final effectId = _audioEngine!.addVst3EffectToTrack(trackId, pluginPath);
+
+      if (effectId >= 0) {
+        setState(() {
+          _trackVst3Effects[trackId] ??= [];
+          _trackVst3Effects[trackId]!.add(effectId);
+          _vst3PluginCache[effectId] = plugin;
+          _statusMessage = 'Added ${plugin['name']} to track $trackId';
+        });
+
+        // Show success snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Added ${plugin['name']} to track'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: const Color(0xFF4CAF50),
+          ),
+        );
+
+        debugPrint('✅ VST3 plugin added with effect ID: $effectId');
+      } else {
+        setState(() {
+          _statusMessage = 'Failed to add VST3 plugin';
+        });
+
+        // Show error snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to load ${plugin['name']}'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: const Color(0xFFFF5722),
+          ),
+        );
+
+        debugPrint('❌ Failed to add VST3 plugin');
+      }
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error adding plugin: $e';
+      });
+
+      // Show error snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error: $e'),
+          duration: const Duration(seconds: 3),
+          backgroundColor: const Color(0xFFFF5722),
+        ),
+      );
+
+      debugPrint('❌ Error adding VST3 plugin: $e');
+    }
+  }
+
+  void _removeVst3Plugin(int effectId) {
+    if (_audioEngine == null) return;
+
+    debugPrint('🗑️ Removing VST3 plugin effect $effectId');
+
+    // Find which track this effect is on
+    int? trackId;
+    for (final entry in _trackVst3Effects.entries) {
+      if (entry.value.contains(effectId)) {
+        trackId = entry.key;
+        break;
+      }
+    }
+
+    if (trackId == null) {
+      debugPrint('❌ Could not find track for effect $effectId');
+      return;
+    }
+
+    try {
+      // Remove via audio engine (uses existing removeEffectFromTrack)
+      _audioEngine!.removeEffectFromTrack(trackId, effectId);
+
+      setState(() {
+        _trackVst3Effects[trackId]?.remove(effectId);
+        _vst3PluginCache.remove(effectId);
+        _statusMessage = 'Removed VST3 plugin';
+      });
+
+      debugPrint('✅ VST3 plugin removed');
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Error removing plugin: $e';
+      });
+      debugPrint('❌ Error removing VST3 plugin: $e');
+    }
+  }
+
+  void _showVst3PluginBrowser(int trackId) async {
+    if (_audioEngine == null) return;
+
+    debugPrint('🔍 Opening VST3 browser with ${_availableVst3Plugins.length} plugins');
+    debugPrint('🔍 _pluginsScanned: $_pluginsScanned, _isScanningVst3Plugins: $_isScanningVst3Plugins');
+    for (var plugin in _availableVst3Plugins) {
+      debugPrint('  - ${plugin['name']} (${plugin['path']})');
+    }
+
+    // Import the browser
+    final vst3Browser = await showVst3PluginBrowser(
+      context,
+      availablePlugins: _availableVst3Plugins,
+      isScanning: _isScanningVst3Plugins,
+      onRescanRequested: () {
+        _scanVst3Plugins(forceRescan: true);
+      },
+    );
+
+    if (vst3Browser != null) {
+      // User selected a plugin - add it to the track
+      _addVst3PluginToTrack(trackId, {
+        'name': vst3Browser.name,
+        'path': vst3Browser.path,
+        'vendor': vst3Browser.vendor ?? '',
+      });
+    }
+  }
+
+  void _onVst3PluginDropped(int trackId, Vst3Plugin plugin) {
+    debugPrint('🎯 VST3 plugin dropped on track $trackId: ${plugin.name}');
+
+    // Add the plugin to the track
+    _addVst3PluginToTrack(trackId, {
+      'name': plugin.name,
+      'path': plugin.path,
+      'vendor': plugin.vendor ?? '',
+    });
+  }
+
+  Map<int, int> _getTrackVst3PluginCounts() {
+    final counts = <int, int>{};
+    for (final entry in _trackVst3Effects.entries) {
+      counts[entry.key] = entry.value.length;
+    }
+    return counts;
+  }
+
+  List<Vst3PluginInstance> _getTrackVst3Plugins(int trackId) {
+    final effectIds = _trackVst3Effects[trackId] ?? [];
+    final plugins = <Vst3PluginInstance>[];
+
+    for (final effectId in effectIds) {
+      final pluginInfo = _vst3PluginCache[effectId];
+      if (pluginInfo != null && _audioEngine != null) {
+        try {
+          // Fetch parameter count and info
+          final paramCount = _audioEngine!.getVst3ParameterCount(effectId);
+          final parameters = <int, Vst3ParameterInfo>{};
+          final parameterValues = <int, double>{};
+
+          for (int i = 0; i < paramCount; i++) {
+            final info = _audioEngine!.getVst3ParameterInfo(effectId, i);
+            if (info != null) {
+              parameters[i] = Vst3ParameterInfo(
+                index: i,
+                name: info['name'] as String? ?? 'Parameter $i',
+                min: (info['min'] as num?)?.toDouble() ?? 0.0,
+                max: (info['max'] as num?)?.toDouble() ?? 1.0,
+                defaultValue: (info['default'] as num?)?.toDouble() ?? 0.5,
+                unit: '',
+              );
+
+              // Fetch current value
+              parameterValues[i] = _audioEngine!.getVst3ParameterValue(effectId, i);
+            }
+          }
+
+          plugins.add(Vst3PluginInstance(
+            effectId: effectId,
+            pluginName: pluginInfo['name'] ?? 'Unknown',
+            pluginPath: pluginInfo['path'] ?? '',
+            parameters: parameters,
+            parameterValues: parameterValues,
+          ));
+        } catch (e) {
+          debugPrint('❌ Error fetching VST3 plugin info for effect $effectId: $e');
+        }
+      }
+    }
+
+    return plugins;
+  }
+
+  void _onVst3ParameterChanged(int effectId, int paramIndex, double value) {
+    if (_audioEngine == null) return;
+
+    try {
+      _audioEngine!.setVst3ParameterValue(effectId, paramIndex, value);
+      debugPrint('🎛️  VST3 parameter changed: effect=$effectId, param=$paramIndex, value=$value');
+    } catch (e) {
+      debugPrint('❌ Error setting VST3 parameter: $e');
+    }
+  }
+
+  void _showVst3PluginEditor(int trackId) {
+    final effectIds = _trackVst3Effects[trackId] ?? [];
+    if (effectIds.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Plugins - Track $trackId'),
+        content: SizedBox(
+          width: 400,
+          child: ListView.builder(
+            itemCount: effectIds.length,
+            itemBuilder: (context, index) {
+              final effectId = effectIds[index];
+              final pluginInfo = _vst3PluginCache[effectId];
+              final pluginName = pluginInfo?['name'] ?? 'Unknown Plugin';
+
+              return ListTile(
+                title: Text(pluginName),
+                trailing: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showPluginParameterEditor(effectId, pluginName);
+                  },
+                  child: const Text('Edit'),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPluginParameterEditor(int effectId, String pluginName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$pluginName - Parameters'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Parameter editing',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Drag the sliders to adjust plugin parameters.',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('🎛️  Native editor support coming soon! For now, use the parameter sliders.'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.open_in_new, size: 16),
+                            label: const Text('Open GUI'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Show a few example parameters
+                      ..._buildParameterSliders(effectId),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildParameterSliders(int effectId) {
+    // Show first 8 parameters or however many are available
+    List<Widget> sliders = [];
+
+    for (int i = 0; i < 8; i++) {
+      sliders.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Parameter ${i + 1}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '0.50',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Slider(
+                value: 0.5,
+                min: 0.0,
+                max: 1.0,
+                divisions: 100,
+                onChanged: (value) {
+                  _onVst3ParameterChanged(effectId, i, value);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return sliders;
   }
 
   // M6: Panel toggle methods
@@ -1584,6 +2166,7 @@ class _DAWScreenState extends State<DAWScreen> {
                         child: LibraryPanel(
                           isCollapsed: _libraryPanelCollapsed,
                           onToggle: _toggleLibraryPanel,
+                          availableVst3Plugins: _availableVst3Plugins,
                         ),
                       ),
 
@@ -1620,6 +2203,8 @@ class _DAWScreenState extends State<DAWScreen> {
                           onMidiClipUpdated: _onMidiClipUpdated,
                           onInstrumentDropped: _onInstrumentDropped,
                           onInstrumentDroppedOnEmpty: _onInstrumentDroppedOnEmpty,
+                          onVst3InstrumentDropped: _onVst3InstrumentDropped,
+                          onVst3InstrumentDroppedOnEmpty: _onVst3InstrumentDroppedOnEmpty,
                         ),
                       ),
 
@@ -1652,6 +2237,10 @@ class _DAWScreenState extends State<DAWScreen> {
                             onTrackDuplicated: _onTrackDuplicated,
                             onTrackDeleted: _onTrackDeleted,
                             trackInstruments: _trackInstruments,
+                            trackVst3PluginCounts: _getTrackVst3PluginCounts(), // M10
+                            onFxButtonPressed: _showVst3PluginBrowser, // M10
+                            onVst3PluginDropped: _onVst3PluginDropped, // M10
+                            onEditPluginsPressed: _showVst3PluginEditor, // M10
                           ),
                         ),
                       ],
@@ -1693,6 +2282,11 @@ class _DAWScreenState extends State<DAWScreen> {
                       currentEditingClip: _currentEditingClip,
                       onMidiClipUpdated: _onMidiClipUpdated,
                       onInstrumentParameterChanged: _onInstrumentParameterChanged,
+                      currentTrackPlugins: _selectedTrackId != null // M10
+                          ? _getTrackVst3Plugins(_selectedTrackId!)
+                          : null,
+                      onVst3ParameterChanged: _onVst3ParameterChanged, // M10
+                      onVst3PluginRemoved: _removeVst3Plugin, // M10
                     ),
                   ),
                 ],

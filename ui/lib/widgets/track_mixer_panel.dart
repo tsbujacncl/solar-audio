@@ -4,6 +4,7 @@ import '../audio_engine.dart';
 import 'track_mixer_strip.dart';
 import '../utils/track_colors.dart';
 import '../models/instrument_data.dart';
+import '../models/vst3_plugin_data.dart';
 
 /// Track data model
 class TrackData {
@@ -58,6 +59,12 @@ class TrackMixerPanel extends StatefulWidget {
   final Function(int)? onTrackDeleted; // (trackId)
   final Map<int, InstrumentData>? trackInstruments;
 
+  // M10: VST3 Plugin support
+  final Map<int, int>? trackVst3PluginCounts; // trackId -> plugin count
+  final Function(int)? onFxButtonPressed; // (trackId)
+  final Function(int, Vst3Plugin)? onVst3PluginDropped; // (trackId, plugin)
+  final Function(int)? onEditPluginsPressed; // (trackId) - M10
+
   const TrackMixerPanel({
     super.key,
     required this.audioEngine,
@@ -68,6 +75,10 @@ class TrackMixerPanel extends StatefulWidget {
     this.onTrackDuplicated,
     this.onTrackDeleted,
     this.trackInstruments,
+    this.trackVst3PluginCounts,
+    this.onFxButtonPressed,
+    this.onVst3PluginDropped,
+    this.onEditPluginsPressed, // M10
   });
 
   @override
@@ -368,6 +379,10 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
                     onInstrumentSelect: (instrumentId) {
                       widget.onInstrumentSelected?.call(track.id, instrumentId);
                     },
+                    vst3PluginCount: widget.trackVst3PluginCounts?[track.id] ?? 0, // M10
+                    onFxButtonPressed: () => widget.onFxButtonPressed?.call(track.id), // M10
+                    onVst3PluginDropped: (plugin) => widget.onVst3PluginDropped?.call(track.id, plugin), // M10
+                    onEditPluginsPressed: () => widget.onEditPluginsPressed?.call(track.id), // M10
                     onTap: () {
                       widget.onTrackSelected?.call(track.id);
                     },

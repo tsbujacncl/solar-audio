@@ -7,6 +7,7 @@ import '../audio_engine.dart';
 import '../utils/track_colors.dart';
 import '../models/clip_data.dart';
 import '../models/midi_note_data.dart';
+import '../models/vst3_plugin_data.dart';
 import 'instrument_browser.dart';
 
 /// Track data model for timeline
@@ -57,6 +58,10 @@ class TimelineView extends StatefulWidget {
   final Function(int trackId, Instrument instrument)? onInstrumentDropped;
   final Function(Instrument instrument)? onInstrumentDroppedOnEmpty;
 
+  // VST3 instrument drag-and-drop
+  final Function(int trackId, Vst3Plugin plugin)? onVst3InstrumentDropped;
+  final Function(Vst3Plugin plugin)? onVst3InstrumentDroppedOnEmpty;
+
   const TimelineView({
     super.key,
     required this.playheadPosition,
@@ -73,6 +78,8 @@ class TimelineView extends StatefulWidget {
     this.onMidiClipUpdated,
     this.onInstrumentDropped,
     this.onInstrumentDroppedOnEmpty,
+    this.onVst3InstrumentDropped,
+    this.onVst3InstrumentDroppedOnEmpty,
   });
 
   @override
@@ -302,17 +309,29 @@ class _TimelineViewState extends State<TimelineView> {
 
         // Empty space drop target - wraps spacer to push master track to bottom
         Expanded(
-          child: DragTarget<Instrument>(
+          child: DragTarget<Vst3Plugin>(
             onWillAcceptWithDetails: (details) {
-              debugPrint('🎯 onWillAccept EMPTY SPACE: instrument=${details.data.name}');
-              return true; // Always accept instruments
+              debugPrint('🎯 VST3 onWillAccept EMPTY SPACE: plugin=${details.data.name}, isInstrument=${details.data.isInstrument}');
+              return details.data.isInstrument; // Only accept VST3 instruments
             },
             onAcceptWithDetails: (details) {
-              debugPrint('🎯 onAccept EMPTY SPACE: instrument=${details.data.name}');
-              widget.onInstrumentDroppedOnEmpty?.call(details.data);
+              debugPrint('🎯 VST3 onAccept EMPTY SPACE: plugin=${details.data.name}');
+              widget.onVst3InstrumentDroppedOnEmpty?.call(details.data);
             },
-            builder: (context, candidateInstruments, rejectedInstruments) {
-              final isInstrumentHovering = candidateInstruments.isNotEmpty;
+            builder: (context, candidateVst3Plugins, rejectedVst3Plugins) {
+              final isVst3PluginHovering = candidateVst3Plugins.isNotEmpty;
+
+              return DragTarget<Instrument>(
+                onWillAcceptWithDetails: (details) {
+                  debugPrint('🎯 onWillAccept EMPTY SPACE: instrument=${details.data.name}');
+                  return true; // Always accept instruments
+                },
+                onAcceptWithDetails: (details) {
+                  debugPrint('🎯 onAccept EMPTY SPACE: instrument=${details.data.name}');
+                  widget.onInstrumentDroppedOnEmpty?.call(details.data);
+                },
+                builder: (context, candidateInstruments, rejectedInstruments) {
+                  final isInstrumentHovering = candidateInstruments.isNotEmpty || isVst3PluginHovering;
 
               return Container(
                 decoration: isInstrumentHovering
@@ -344,7 +363,7 @@ class _TimelineViewState extends State<TimelineView> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Drop to create new MIDI track with ${candidateInstruments.first?.name ?? "instrument"}',
+                                'Drop to create new MIDI track with ${candidateVst3Plugins.isNotEmpty ? candidateVst3Plugins.first?.name : candidateInstruments.first?.name ?? "instrument"}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -356,6 +375,8 @@ class _TimelineViewState extends State<TimelineView> {
                         ),
                       )
                     : const SizedBox.expand(),
+                  );
+                },
               );
             },
           ),
@@ -480,18 +501,33 @@ class _TimelineViewState extends State<TimelineView> {
     final isSelected = widget.selectedMidiTrackId == track.id;
     final isMidiTrack = track.type.toLowerCase() == 'midi';
 
-    return DragTarget<Instrument>(
+    // Wrap with VST3Plugin drag target first
+    return DragTarget<Vst3Plugin>(
       onWillAcceptWithDetails: (details) {
-        debugPrint('🎯 onWillAccept: track=${track.id} (${track.type}), isMidiTrack=$isMidiTrack, instrument=${details.data.name}');
-        return isMidiTrack;
+        debugPrint('🎯 VST3 onWillAccept: track=${track.id} (${track.type}), isMidiTrack=$isMidiTrack, plugin=${details.data.name}, isInstrument=${details.data.isInstrument}');
+        return isMidiTrack && details.data.isInstrument;
       },
       onAcceptWithDetails: (details) {
-        debugPrint('🎯 onAccept: track=${track.id}, instrument=${details.data.name}');
-        widget.onInstrumentDropped?.call(track.id, details.data);
+        debugPrint('🎯 VST3 onAccept: track=${track.id}, plugin=${details.data.name}');
+        widget.onVst3InstrumentDropped?.call(track.id, details.data);
       },
-      builder: (context, candidateInstruments, rejectedInstruments) {
-        final isInstrumentHovering = candidateInstruments.isNotEmpty;
-        final isInstrumentRejected = rejectedInstruments.isNotEmpty;
+      builder: (context, candidateVst3Plugins, rejectedVst3Plugins) {
+        final isVst3PluginHovering = candidateVst3Plugins.isNotEmpty;
+        final isVst3PluginRejected = rejectedVst3Plugins.isNotEmpty;
+
+        // Nest Instrument drag target inside
+        return DragTarget<Instrument>(
+          onWillAcceptWithDetails: (details) {
+            debugPrint('🎯 onWillAccept: track=${track.id} (${track.type}), isMidiTrack=$isMidiTrack, instrument=${details.data.name}');
+            return isMidiTrack;
+          },
+          onAcceptWithDetails: (details) {
+            debugPrint('🎯 onAccept: track=${track.id}, instrument=${details.data.name}');
+            widget.onInstrumentDropped?.call(track.id, details.data);
+          },
+          builder: (context, candidateInstruments, rejectedInstruments) {
+            final isInstrumentHovering = candidateInstruments.isNotEmpty || isVst3PluginHovering;
+            final isInstrumentRejected = rejectedInstruments.isNotEmpty || isVst3PluginRejected;
 
         return DropTarget(
           onDragEntered: (details) {
@@ -606,6 +642,8 @@ class _TimelineViewState extends State<TimelineView> {
         ),
       ),
     ),
+        );
+          },
         );
       },
     );

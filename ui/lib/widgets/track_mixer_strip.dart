@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../audio_engine.dart';
 import 'instrument_browser.dart';
 import '../models/instrument_data.dart';
+import '../models/vst3_plugin_data.dart';
 
 /// Unified track strip combining track info and mixer controls
 /// Displayed on the right side of timeline, aligned with each track row
@@ -31,6 +32,12 @@ class TrackMixerStrip extends StatelessWidget {
   final InstrumentData? instrumentData;
   final Function(String)? onInstrumentSelect; // Callback with instrument ID
 
+  // M10: VST3 Plugin support
+  final int vst3PluginCount;
+  final VoidCallback? onFxButtonPressed;
+  final Function(Vst3Plugin)? onVst3PluginDropped;
+  final VoidCallback? onEditPluginsPressed; // New: Edit active plugins
+
   const TrackMixerStrip({
     super.key,
     required this.trackId,
@@ -53,27 +60,43 @@ class TrackMixerStrip extends StatelessWidget {
     this.isSelected = false,
     this.instrumentData,
     this.onInstrumentSelect,
+    this.vst3PluginCount = 0,
+    this.onFxButtonPressed,
+    this.onVst3PluginDropped,
+    this.onEditPluginsPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap, // Track selection on left-click
-      onSecondaryTapDown: (TapDownDetails details) {
-        _showContextMenu(context, details.globalPosition);
+    return DragTarget<Vst3Plugin>(
+      onAcceptWithDetails: (details) {
+        onVst3PluginDropped?.call(details.data);
       },
-      child: Container(
-        width: 380,
-        height: 100, // Matches timeline track row height
-        margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
-        decoration: BoxDecoration(
-          // Ableton-style selection: brighter background and thicker border when selected
-          color: isSelected ? const Color(0xFF505050) : null,
-          border: Border.all(
-            color: isSelected ? (trackColor ?? const Color(0xFF4CAF50)) : const Color(0xFF909090),
-            width: isSelected ? 3 : 1,
-          ),
-        ),
+      builder: (context, candidateData, rejectedData) {
+        final isHovered = candidateData.isNotEmpty;
+
+        return GestureDetector(
+          onTap: onTap, // Track selection on left-click
+          onSecondaryTapDown: (TapDownDetails details) {
+            _showContextMenu(context, details.globalPosition);
+          },
+          child: Container(
+            width: 380,
+            height: 100, // Matches timeline track row height
+            margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
+            decoration: BoxDecoration(
+              // Ableton-style selection: brighter background and thicker border when selected
+              // M10: Highlight when VST3 plugin is being dragged over
+              color: isHovered
+                  ? const Color(0xFF4CAF50).withOpacity(0.2)
+                  : (isSelected ? const Color(0xFF505050) : null),
+              border: Border.all(
+                color: isHovered
+                    ? const Color(0xFF4CAF50)
+                    : (isSelected ? (trackColor ?? const Color(0xFF4CAF50)) : const Color(0xFF909090)),
+                width: isHovered ? 2 : (isSelected ? 3 : 1),
+              ),
+            ),
         child: Row(
         children: [
           // Left section: Colored track name area (Ableton style)
@@ -109,9 +132,11 @@ class TrackMixerStrip extends StatelessWidget {
               ),
             ),
           ),
-        ],
+            ],
+          ),
         ),
-      ),
+      );
+      },
     );
   }
 
@@ -195,6 +220,10 @@ class TrackMixerStrip extends StatelessWidget {
           const SizedBox(height: 4),
           _buildInstrumentSelector(),
         ],
+
+        // M10: VST3 FX button (all tracks)
+        const SizedBox(height: 4),
+        _buildFxButton(),
       ],
     );
   }
@@ -254,6 +283,62 @@ class TrackMixerStrip extends StatelessWidget {
         ),
       ),
     ),
+    );
+  }
+
+  Widget _buildFxButton() {
+    return GestureDetector(
+      onLongPress: vst3PluginCount > 0 ? onEditPluginsPressed : null,
+      onTap: onFxButtonPressed,
+      child: Tooltip(
+        message: vst3PluginCount > 0
+            ? 'Click to browse plugins, long-press to edit'
+            : 'Click to add plugins',
+        child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: vst3PluginCount > 0
+              ? const Color(0xFF4CAF50).withOpacity(0.3) // Green tint when plugins loaded
+              : Colors.black.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(
+            color: vst3PluginCount > 0
+                ? const Color(0xFF4CAF50)
+                : Colors.black.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              vst3PluginCount > 0 ? Icons.extension : Icons.add_circle_outline,
+              size: 10,
+              color: vst3PluginCount > 0
+                  ? const Color(0xFF4CAF50)
+                  : Colors.black.withOpacity(0.5),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                vst3PluginCount > 0
+                    ? 'FX ($vst3PluginCount)'
+                    : 'Add FX',
+                style: TextStyle(
+                  color: vst3PluginCount > 0
+                      ? const Color(0xFF4CAF50)
+                      : Colors.black.withOpacity(0.6),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        ),
+      ),
     );
   }
 

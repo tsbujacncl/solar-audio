@@ -4,8 +4,10 @@ import 'virtual_piano.dart';
 import 'effect_parameter_panel.dart';
 import 'piano_roll.dart';
 import 'synthesizer_panel.dart';
+import 'vst3_plugin_parameter_panel.dart';
 import '../models/midi_note_data.dart';
 import '../models/instrument_data.dart';
+import '../models/vst3_plugin_data.dart';
 
 /// Editor panel widget - tabbed interface for Piano Roll, FX Chain, Instrument, and Virtual Piano
 class EditorPanel extends StatefulWidget {
@@ -18,6 +20,11 @@ class EditorPanel extends StatefulWidget {
   final Function(MidiClipData)? onMidiClipUpdated;
   final Function(InstrumentData)? onInstrumentParameterChanged;
 
+  // M10: VST3 Plugin support
+  final List<Vst3PluginInstance>? currentTrackPlugins;
+  final Function(int effectId, int paramIndex, double value)? onVst3ParameterChanged;
+  final Function(int effectId)? onVst3PluginRemoved;
+
   const EditorPanel({
     super.key,
     this.audioEngine,
@@ -28,6 +35,9 @@ class EditorPanel extends StatefulWidget {
     this.currentEditingClip,
     this.onMidiClipUpdated,
     this.onInstrumentParameterChanged,
+    this.currentTrackPlugins,
+    this.onVst3ParameterChanged,
+    this.onVst3PluginRemoved,
   });
 
   @override
@@ -40,7 +50,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // M10: Plugin params merged into Instrument tab
   }
 
   @override
@@ -110,7 +120,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               tabs: const [
                 Tab(text: 'Piano Roll'),
                 Tab(text: 'FX Chain'),
-                Tab(text: 'Instrument'),
+                Tab(text: 'Instrument'), // M10: Now includes VST3 Plugin parameters
               ],
             ),
           ),
@@ -122,7 +132,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               children: [
                 _buildPianoRollTab(),
                 _buildFXChainTab(),
-                _buildInstrumentTab(),
+                _buildInstrumentTab(), // M10: Now includes VST3 Plugin parameters
               ],
             ),
           ),
@@ -298,7 +308,19 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
       );
     }
 
-    // Show synthesizer panel when track with instrument selected
+    // Check if this is a VST3 instrument
+    if (widget.currentInstrumentData!.isVst3) {
+      // Show VST3 plugin parameter panel for VST3 instruments
+      return Vst3PluginParameterPanel(
+        audioEngine: widget.audioEngine,
+        trackId: widget.selectedTrackId!,
+        plugins: widget.currentTrackPlugins ?? [],
+        onParameterChanged: widget.onVst3ParameterChanged,
+        onRemovePlugin: widget.onVst3PluginRemoved,
+      );
+    }
+
+    // Show synthesizer panel for built-in instruments
     return SynthesizerPanel(
       audioEngine: widget.audioEngine,
       trackId: widget.selectedTrackId!,

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'instrument_browser.dart';
+import '../models/vst3_plugin_data.dart';
 
 /// Library panel widget - left sidebar with browsable content categories
 class LibraryPanel extends StatefulWidget {
   final bool isCollapsed;
   final VoidCallback? onToggle;
+  final List<Map<String, String>> availableVst3Plugins;
 
   const LibraryPanel({
     super.key,
     this.isCollapsed = false,
     this.onToggle,
+    this.availableVst3Plugins = const [],
   });
 
   @override
@@ -97,13 +100,35 @@ class _LibraryPanelState extends State<LibraryPanel> {
                     'Limiter',
                   ],
                 ),
+                // VST3 Instruments category
                 _buildCategory(
                   index: 3,
-                  icon: Icons.extension,
-                  title: 'Plug-Ins',
-                  items: [
-                    'No VST3 plugins found',
-                  ],
+                  icon: Icons.piano,
+                  title: 'VST3 Instruments',
+                  items: () {
+                    final instruments = widget.availableVst3Plugins
+                        .where((plugin) => plugin['is_instrument'] == '1')
+                        .map((plugin) => plugin['name'] ?? 'Unknown')
+                        .toList();
+                    return instruments.isEmpty ? ['No VST3 instruments found'] : instruments;
+                  }(),
+                  isVst3Category: true,
+                  isVst3Instrument: true,
+                ),
+                // VST3 Effects category
+                _buildCategory(
+                  index: 4,
+                  icon: Icons.graphic_eq,
+                  title: 'VST3 Effects',
+                  items: () {
+                    final effects = widget.availableVst3Plugins
+                        .where((plugin) => plugin['is_effect'] == '1')
+                        .map((plugin) => plugin['name'] ?? 'Unknown')
+                        .toList();
+                    return effects.isEmpty ? ['No VST3 effects found'] : effects;
+                  }(),
+                  isVst3Category: true,
+                  isVst3Instrument: false,
                 ),
               ],
             ),
@@ -160,6 +185,8 @@ class _LibraryPanelState extends State<LibraryPanel> {
     required IconData icon,
     required String title,
     required List<String> items,
+    bool isVst3Category = false,
+    bool isVst3Instrument = false,
   }) {
     final isExpanded = _expandedCategoryIndex == index;
 
@@ -214,7 +241,7 @@ class _LibraryPanelState extends State<LibraryPanel> {
               padding: const EdgeInsets.only(left: 20, bottom: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: items.map((item) => _buildItem(item)).toList(),
+                children: items.map((item) => _buildItem(item, isVst3: isVst3Category, isVst3Instrument: isVst3Instrument)).toList(),
               ),
             ),
         ],
@@ -222,7 +249,15 @@ class _LibraryPanelState extends State<LibraryPanel> {
     );
   }
 
-  Widget _buildItem(String name) {
+  Widget _buildItem(String name, {bool isVst3 = false, bool isVst3Instrument = false}) {
+    // Handle VST3 plugins
+    if (isVst3 && name != 'No VST3 plugins found' && name != 'No VST3 instruments found' && name != 'No VST3 effects found') {
+      final vst3Plugin = _findVst3PluginByName(name);
+      if (vst3Plugin != null) {
+        return _buildVst3PluginItem(vst3Plugin, isInstrument: isVst3Instrument);
+      }
+    }
+
     // Try to find matching instrument for dragging
     final instrument = _findInstrumentByName(name);
 
@@ -316,5 +351,86 @@ class _LibraryPanelState extends State<LibraryPanel> {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Find VST3 plugin by name from available plugins
+  Vst3Plugin? _findVst3PluginByName(String name) {
+    try {
+      final pluginData = widget.availableVst3Plugins.firstWhere(
+        (plugin) => plugin['name'] == name,
+      );
+      return Vst3Plugin.fromMap(pluginData);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Build a draggable VST3 plugin item
+  Widget _buildVst3PluginItem(Vst3Plugin plugin, {required bool isInstrument}) {
+    return Draggable<Vst3Plugin>(
+      data: plugin,
+      onDragStarted: () {},
+      onDragEnd: (details) {},
+      onDraggableCanceled: (velocity, offset) {},
+      feedback: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4CAF50),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                plugin.isInstrument ? Icons.piano : Icons.graphic_eq,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                plugin.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          child: Text(
+            plugin.name,
+            style: const TextStyle(
+              color: Color(0xFF404040),
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: InkWell(
+          onTap: () {},
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+            child: Text(
+              plugin.name,
+              style: const TextStyle(
+                color: Color(0xFF404040),
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
