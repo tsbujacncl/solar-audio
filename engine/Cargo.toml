@@ -28,3 +28,12 @@ hound = "3.5"                    # WAV encoding/decoding
 
 # FFI bridge
 flutter_rust_bridge = "2"        # Flutter-Rust bridge
+
+# VST3 Plugin Hosting (M7)
+# Note: VST3 hosting will require custom FFI bindings to VST3 SDK
+# For now, adding supporting libraries for plugin infrastructure
+lazy_static = "1.4"              # Plugin registry singleton
+parking_lot = "0.12"             # Better mutexes for plugin thread safety
+flate2 = "1.0"                   # Plugin state compression
+base64 = "0.21"                  # Base64 encoding for plugin state
+walkdir = "2.4"                  # Directory traversal for plugin scanning

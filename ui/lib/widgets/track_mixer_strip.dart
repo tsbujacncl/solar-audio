@@ -22,10 +22,10 @@ class TrackMixerStrip extends StatelessWidget {
   final Function(double)? onPanChanged;
   final VoidCallback? onMuteToggle;
   final VoidCallback? onSoloToggle;
-  final VoidCallback? onFXPressed;
+  final VoidCallback? onTap; // Unified track selection callback
   final VoidCallback? onDeletePressed;
   final VoidCallback? onDuplicatePressed;
-  final bool isFXActive;
+  final bool isSelected; // Track selection state
 
   // MIDI instrument selection
   final InstrumentData? instrumentData;
@@ -47,10 +47,10 @@ class TrackMixerStrip extends StatelessWidget {
     this.onPanChanged,
     this.onMuteToggle,
     this.onSoloToggle,
-    this.onFXPressed,
+    this.onTap,
     this.onDeletePressed,
     this.onDuplicatePressed,
-    this.isFXActive = false,
+    this.isSelected = false,
     this.instrumentData,
     this.onInstrumentSelect,
   });
@@ -58,6 +58,7 @@ class TrackMixerStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onTap: onTap, // Track selection on left-click
       onSecondaryTapDown: (TapDownDetails details) {
         _showContextMenu(context, details.globalPosition);
       },
@@ -66,7 +67,12 @@ class TrackMixerStrip extends StatelessWidget {
         height: 100, // Matches timeline track row height
         margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFF909090)),
+          // Ableton-style selection: brighter background and thicker border when selected
+          color: isSelected ? const Color(0xFF505050) : null,
+          border: Border.all(
+            color: isSelected ? (trackColor ?? const Color(0xFF4CAF50)) : const Color(0xFF909090),
+            width: isSelected ? 3 : 1,
+          ),
         ),
         child: Row(
         children: [

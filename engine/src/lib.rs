@@ -12,6 +12,7 @@ mod synth;
 mod track;      // M4: Track system
 mod effects;    // M4: Audio effects
 mod project;    // M5: Project serialization
+mod vst3_host;  // M7: VST3 plugin hosting
 
 // Re-export API functions
 pub use api::*;
@@ -26,6 +27,7 @@ pub use synth::*;
 pub use track::*;
 pub use effects::*;
 pub use project::*;
+pub use vst3_host::*;
 // FFI exports are handled by #[no_mangle] in ffi.rs
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};

@@ -50,10 +50,9 @@ class TrackData {
 /// Track mixer panel - displays track mixer strips vertically aligned with timeline
 class TrackMixerPanel extends StatefulWidget {
   final AudioEngine? audioEngine;
-  final Function(int?)? onFXButtonClicked;
   final ScrollController? scrollController; // For syncing with timeline
-  final int? selectedMidiTrackId;
-  final Function(int?)? onMidiTrackSelected;
+  final int? selectedTrackId; // Unified track selection
+  final Function(int?)? onTrackSelected; // Unified selection callback
   final Function(int, String)? onInstrumentSelected; // (trackId, instrumentId)
   final Function(int, int)? onTrackDuplicated; // (sourceTrackId, newTrackId)
   final Function(int)? onTrackDeleted; // (trackId)
@@ -62,10 +61,9 @@ class TrackMixerPanel extends StatefulWidget {
   const TrackMixerPanel({
     super.key,
     required this.audioEngine,
-    this.onFXButtonClicked,
     this.scrollController,
-    this.selectedMidiTrackId,
-    this.onMidiTrackSelected,
+    this.selectedTrackId,
+    this.onTrackSelected,
     this.onInstrumentSelected,
     this.onTrackDuplicated,
     this.onTrackDeleted,
@@ -79,7 +77,6 @@ class TrackMixerPanel extends StatefulWidget {
 class _TrackMixerPanelState extends State<TrackMixerPanel> {
   List<TrackData> _tracks = [];
   Timer? _refreshTimer;
-  int? _selectedTrackForFX;
 
   @override
   void initState() {
@@ -366,10 +363,13 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
                     peakLevel: 0.0, // TODO: Get real-time level from audio engine
                     trackColor: trackColor,
                     audioEngine: widget.audioEngine,
-                    isFXActive: _selectedTrackForFX == track.id,
+                    isSelected: widget.selectedTrackId == track.id,
                     instrumentData: widget.trackInstruments?[track.id],
                     onInstrumentSelect: (instrumentId) {
                       widget.onInstrumentSelected?.call(track.id, instrumentId);
+                    },
+                    onTap: () {
+                      widget.onTrackSelected?.call(track.id);
                     },
                     onVolumeChanged: (volumeDb) {
                       setState(() {
@@ -394,17 +394,6 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
                         track.solo = !track.solo;
                       });
                       widget.audioEngine?.setTrackSolo(track.id, track.solo);
-                    },
-                    onFXPressed: () {
-                      if (widget.onFXButtonClicked != null) {
-                        widget.onFXButtonClicked!(
-                          _selectedTrackForFX == track.id ? null : track.id
-                        );
-                      }
-                      setState(() {
-                        _selectedTrackForFX =
-                            _selectedTrackForFX == track.id ? null : track.id;
-                      });
                     },
                     onDuplicatePressed: () => _duplicateTrack(track),
                     onDeletePressed: () => _confirmDeleteTrack(track),

@@ -58,8 +58,13 @@ class _PianoRollState extends State<PianoRoll> {
 
   // Selection state
   MidiNoteData? _hoveredNote;
+  String? _hoveredEdge; // 'left', 'right', or null
   bool _isResizing = false;
   String? _resizingNoteId;
+  String? _resizingEdge; // 'left' or 'right'
+
+  // Cursor state
+  MouseCursor _currentCursor = SystemMouseCursors.basic;
 
   // Multi-select state
   bool _isSelecting = false;
@@ -254,19 +259,23 @@ class _PianoRollState extends State<PianoRoll> {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      autofocus: true,
-      onKeyEvent: (node, event) {
-        _handleKeyEvent(event);
-        return KeyEventResult.handled;
-      },
-      child: Container(
-        color: const Color(0xFFE0E0E0), // Light grey background
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildPianoRollContent(),
-          ],
+    return MouseRegion(
+      cursor: _currentCursor,
+      onHover: _onHover,
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          _handleKeyEvent(event);
+          return KeyEventResult.handled;
+        },
+        child: Container(
+          color: const Color(0xFFE0E0E0), // Light grey background
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildPianoRollContent(),
+            ],
+          ),
         ),
       ),
     );
@@ -601,12 +610,71 @@ class _PianoRollState extends State<PianoRoll> {
     return null;
   }
 
-  // Check if position is near right edge of note (for resizing)
-  bool _isNearNoteEdge(Offset position, MidiNoteData note) {
-    final beat = _getBeatAtX(position.dx);
-    final edgeBeat = note.endTime;
-    final threshold = 0.25; // 1/16th note threshold
-    return (beat - edgeBeat).abs() < threshold && note.note == _getNoteAtY(position.dy);
+  // Check if position is near left or right edge of note (FL Studio style)
+  // Returns 'left', 'right', or null
+  String? _getEdgeAtPosition(Offset position, MidiNoteData note) {
+    const edgeThreshold = 6.0; // 6 pixels (FL Studio style, zoom-aware)
+
+    final noteStartX = _calculateBeatX(note.startTime);
+    final noteEndX = _calculateBeatX(note.endTime);
+    final noteY = _calculateNoteY(note.note);
+
+    // Check vertical range (allow some tolerance - within note height)
+    final isInVerticalRange = (position.dy >= noteY) && (position.dy <= noteY + _pixelsPerNote);
+
+    if (!isInVerticalRange) return null;
+
+    // Check left edge first (priority if both are close)
+    if ((position.dx - noteStartX).abs() < edgeThreshold) {
+      return 'left';
+    }
+
+    // Check right edge
+    if ((position.dx - noteEndX).abs() < edgeThreshold) {
+      return 'right';
+    }
+
+    return null; // Not near any edge
+  }
+
+  // Handle hover for cursor feedback (FL Studio style)
+  void _onHover(PointerHoverEvent event) {
+    // Don't update cursor during active drag operations
+    if (_currentMode == InteractionMode.move || _currentMode == InteractionMode.resize) {
+      return;
+    }
+
+    final position = event.localPosition;
+    final hoveredNote = _findNoteAtPosition(position);
+
+    if (hoveredNote != null) {
+      final edge = _getEdgeAtPosition(position, hoveredNote);
+
+      if (edge != null) {
+        // Near edge - show resize cursor
+        setState(() {
+          _currentCursor = SystemMouseCursors.resizeLeftRight;
+          _hoveredNote = hoveredNote;
+          _hoveredEdge = edge;
+        });
+      } else {
+        // On note body - show grab cursor
+        setState(() {
+          _currentCursor = SystemMouseCursors.grab;
+          _hoveredNote = hoveredNote;
+          _hoveredEdge = null;
+        });
+      }
+    } else {
+      // Empty space - default cursor
+      if (_currentCursor != SystemMouseCursors.basic) {
+        setState(() {
+          _currentCursor = SystemMouseCursors.basic;
+          _hoveredNote = null;
+          _hoveredEdge = null;
+        });
+      }
+    }
   }
 
   void _onTapDown(TapDownDetails details) {
@@ -658,19 +726,25 @@ class _PianoRollState extends State<PianoRoll> {
         _currentMode = InteractionMode.select;
       });
     } else if (clickedNote != null) {
-      // Check if we're near the edge for resizing
-      if (_isNearNoteEdge(details.localPosition, clickedNote)) {
+      // Check if we're near the edge for resizing (FL Studio style)
+      final edge = _getEdgeAtPosition(details.localPosition, clickedNote);
+
+      if (edge != null) {
+        // Start resizing from left or right edge
         _saveToHistory(); // Save before resizing
         setState(() {
           _isResizing = true;
           _resizingNoteId = clickedNote.id;
+          _resizingEdge = edge; // Store which edge ('left' or 'right')
           _currentMode = InteractionMode.resize;
+          _currentCursor = SystemMouseCursors.resizeLeftRight;
         });
       } else {
-        // Start moving the note
+        // Start moving the note (clicked on body)
         _saveToHistory(); // Save before moving
         setState(() {
           _currentMode = InteractionMode.move;
+          _currentCursor = SystemMouseCursors.grabbing; // Closed hand while dragging
           // Make sure note is selected
           _currentClip = _currentClip?.copyWith(
             notes: _currentClip!.notes.map((n) {
@@ -715,14 +789,27 @@ class _PianoRollState extends State<PianoRoll> {
       });
       _notifyClipUpdated();
     } else if (_currentMode == InteractionMode.resize && _resizingNoteId != null) {
-      // Resize note
+      // Resize note from left or right edge (FL Studio style)
       setState(() {
         _currentClip = _currentClip?.copyWith(
           notes: _currentClip!.notes.map((n) {
             if (n.id == _resizingNoteId) {
-              final endBeat = _snapToGrid(_getBeatAtX(details.localPosition.dx));
-              final newDuration = (endBeat - n.startTime).clamp(_gridDivision, 64.0);
-              return n.copyWith(duration: newDuration);
+              final newBeat = _snapToGrid(_getBeatAtX(details.localPosition.dx));
+
+              if (_resizingEdge == 'right') {
+                // Right edge: change duration only
+                final newDuration = (newBeat - n.startTime).clamp(_gridDivision, 64.0);
+                return n.copyWith(duration: newDuration);
+              } else if (_resizingEdge == 'left') {
+                // Left edge: change start time and duration
+                final oldEndTime = n.endTime;
+                final newStartTime = newBeat.clamp(0.0, oldEndTime - _gridDivision);
+                final newDuration = oldEndTime - newStartTime;
+                return n.copyWith(
+                  startTime: newStartTime,
+                  duration: newDuration,
+                );
+              }
             }
             return n;
           }).toList(),
@@ -780,7 +867,9 @@ class _PianoRollState extends State<PianoRoll> {
       _dragStart = null;
       _isResizing = false;
       _resizingNoteId = null;
+      _resizingEdge = null;
       _currentMode = InteractionMode.draw;
+      _currentCursor = SystemMouseCursors.basic; // Reset cursor to default
     });
   }
 

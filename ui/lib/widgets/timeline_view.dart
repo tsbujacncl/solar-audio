@@ -48,6 +48,7 @@ class TimelineView extends StatefulWidget {
   final int? selectedMidiTrackId;
   final int? selectedMidiClipId;
   final MidiClipData? currentEditingClip;
+  final List<MidiClipData> midiClips; // All MIDI clips for visualization
   final Function(int?)? onMidiTrackSelected;
   final Function(int?, MidiClipData?)? onMidiClipSelected;
   final Function(MidiClipData)? onMidiClipUpdated;
@@ -66,6 +67,7 @@ class TimelineView extends StatefulWidget {
     this.selectedMidiTrackId,
     this.selectedMidiClipId,
     this.currentEditingClip,
+    this.midiClips = const [], // All MIDI clips for visualization
     this.onMidiTrackSelected,
     this.onMidiClipSelected,
     this.onMidiClipUpdated,
@@ -88,9 +90,6 @@ class _TimelineViewState extends State<TimelineView> {
   PreviewClip? _previewClip;
   int? _dragHoveredTrackId;
 
-  // MIDI clip management
-  Map<int, MidiClipData> _midiClips = {}; // clipId -> MidiClipData
-
   @override
   void initState() {
     super.initState();
@@ -100,23 +99,6 @@ class _TimelineViewState extends State<TimelineView> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadTracksAsync();
     });
-
-    // Initialize with current editing clip if present
-    if (widget.currentEditingClip != null) {
-      _midiClips[widget.currentEditingClip!.clipId] = widget.currentEditingClip!;
-    }
-  }
-
-  @override
-  void didUpdateWidget(TimelineView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Update MIDI clips when currentEditingClip changes
-    if (widget.currentEditingClip != null) {
-      setState(() {
-        _midiClips[widget.currentEditingClip!.clipId] = widget.currentEditingClip!;
-      });
-    }
   }
 
   @override
@@ -493,7 +475,7 @@ class _TimelineViewState extends State<TimelineView> {
 
     // Find clips for this track
     final trackClips = _clips.where((c) => c.trackId == track.id).toList();
-    final trackMidiClips = _midiClips.values.where((c) => c.trackId == track.id).toList();
+    final trackMidiClips = widget.midiClips.where((c) => c.trackId == track.id).toList();
     final isHovered = _dragHoveredTrackId == track.id;
     final isSelected = widget.selectedMidiTrackId == track.id;
     final isMidiTrack = track.type.toLowerCase() == 'midi';
@@ -746,13 +728,15 @@ class _TimelineViewState extends State<TimelineView> {
             children: [
               // Mini piano roll preview
               if (midiClip.notes.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: CustomPaint(
-                    painter: _MidiClipPainter(
-                      notes: midiClip.notes,
-                      clipDuration: midiClip.duration,
-                      color: trackColor,
+                SizedBox.expand(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: CustomPaint(
+                      painter: _MidiClipPainter(
+                        notes: midiClip.notes,
+                        clipDuration: midiClip.duration,
+                        color: trackColor,
+                      ),
                     ),
                   ),
                 ),
@@ -1131,17 +1115,14 @@ class _MidiClipPainter extends CustomPainter {
       final y = size.height - ((note.note - minNote + 2) * pixelsPerNote);
       final height = pixelsPerNote * 0.8; // Slight gap between notes
 
-      // Draw note rectangle
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, y, math.max(width, 2.0), height),
-        const Radius.circular(1),
-      );
+      // Draw note rectangle (FL Studio style: white bars with sharp corners)
+      final rect = Rect.fromLTWH(x, y, math.max(width, 2.0), height);
 
       final notePaint = Paint()
-        ..color = note.velocityColor.withOpacity(0.8)
+        ..color = const Color(0xFFF5F5F5) // Off-white for arrangement view
         ..style = PaintingStyle.fill;
 
-      canvas.drawRRect(rect, notePaint);
+      canvas.drawRect(rect, notePaint);
     }
   }
 
