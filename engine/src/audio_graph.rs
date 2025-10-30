@@ -793,6 +793,12 @@ impl AudioGraph {
                             effect_type_str = "limiter".to_string();
                             // Limiter has no user-adjustable parameters
                         }
+                        ET::VST3(vst3) => {
+                            effect_type_str = "vst3".to_string();
+                            // TODO M7: Save VST3 plugin path and state
+                            // For now, just mark the type - full state persistence coming later
+                            parameters.insert("name".to_string(), 0.0); // Placeholder
+                        }
                     }
 
                     Some(EffectData {

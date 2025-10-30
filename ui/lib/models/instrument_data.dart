@@ -1,13 +1,21 @@
-/// Data model for synthesizer instrument parameters
+/// Data model for instrument parameters (built-in or VST3)
 class InstrumentData {
   final int trackId;
-  final String type; // 'synthesizer'
+  final String type; // 'synthesizer', 'vst3', etc.
   final Map<String, dynamic> parameters;
+
+  // VST3-specific fields
+  final String? pluginPath; // Path to VST3 plugin (only for type='vst3')
+  final String? pluginName; // Display name of VST3 plugin
+  final int? effectId; // Loaded VST3 instance ID from audio engine
 
   InstrumentData({
     required this.trackId,
     required this.type,
     required this.parameters,
+    this.pluginPath,
+    this.pluginName,
+    this.effectId,
   });
 
   /// Create default synthesizer with basic settings
@@ -40,6 +48,23 @@ class InstrumentData {
     );
   }
 
+  /// Create VST3 instrument
+  factory InstrumentData.vst3Instrument({
+    required int trackId,
+    required String pluginPath,
+    required String pluginName,
+    int? effectId,
+  }) {
+    return InstrumentData(
+      trackId: trackId,
+      type: 'vst3',
+      parameters: {}, // VST3 params managed separately via audio engine
+      pluginPath: pluginPath,
+      pluginName: pluginName,
+      effectId: effectId,
+    );
+  }
+
   /// Get a parameter value with type casting
   T getParameter<T>(String key, T defaultValue) {
     final value = parameters[key];
@@ -66,6 +91,9 @@ class InstrumentData {
       'trackId': trackId,
       'type': type,
       'parameters': parameters,
+      if (pluginPath != null) 'pluginPath': pluginPath,
+      if (pluginName != null) 'pluginName': pluginName,
+      if (effectId != null) 'effectId': effectId,
     };
   }
 
@@ -75,6 +103,9 @@ class InstrumentData {
       trackId: json['trackId'] as int,
       type: json['type'] as String,
       parameters: Map<String, dynamic>.from(json['parameters'] as Map),
+      pluginPath: json['pluginPath'] as String?,
+      pluginName: json['pluginName'] as String?,
+      effectId: json['effectId'] as int?,
     );
   }
 
@@ -83,11 +114,20 @@ class InstrumentData {
     int? trackId,
     String? type,
     Map<String, dynamic>? parameters,
+    String? pluginPath,
+    String? pluginName,
+    int? effectId,
   }) {
     return InstrumentData(
       trackId: trackId ?? this.trackId,
       type: type ?? this.type,
       parameters: parameters ?? this.parameters,
+      pluginPath: pluginPath ?? this.pluginPath,
+      pluginName: pluginName ?? this.pluginName,
+      effectId: effectId ?? this.effectId,
     );
   }
+
+  /// Check if this is a VST3 instrument
+  bool get isVst3 => type == 'vst3';
 }

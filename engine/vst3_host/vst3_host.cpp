@@ -5,6 +5,9 @@
 #include <map>
 #include <memory>
 #include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 
 // VST3 SDK includes
@@ -14,6 +17,7 @@
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstevents.h"
+#include "pluginterfaces/gui/iplugview.h"
 #include "public.sdk/source/vst/hosting/module.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
@@ -49,11 +53,18 @@ struct VST3PluginInstance {
     // Event list for MIDI
     IPtr<IEventList> event_list;
 
+    // Editor view (M7 Phase 1: Native GUI support)
+    IPtr<IPlugView> editor_view;
+    void* parent_window;  // Platform-specific window handle (NSView* on macOS)
+    bool editor_open;
+
     VST3PluginInstance()
         : sample_rate(44100.0)
         , max_block_size(512)
         , initialized(false)
-        , active(false) {
+        , active(false)
+        , parent_window(nullptr)
+        , editor_open(false) {
         std::memset(&process_data, 0, sizeof(ProcessData));
     }
 };
@@ -121,10 +132,55 @@ int vst3_scan_directory(const char* directory, VST3ScanCallback callback, void* 
                         std::strncpy(info.vendor, factory_info.vendor, sizeof(info.vendor) - 1);
                         std::strncpy(info.file_path, plugin_path.c_str(), sizeof(info.file_path) - 1);
 
-                        // Try to determine if it's an instrument or effect
-                        // Default to effect for now
-                        info.is_effect = true;
+                        // Detect plugin type from subcategories and by checking MIDI input capability
+                        std::string subcat_str = class_info.subCategoriesString();
+                        std::string plugin_name = class_info.name();
+                        std::strncpy(info.category, subcat_str.c_str(), sizeof(info.category) - 1);
+
                         info.is_instrument = false;
+                        info.is_effect = false;
+
+                        // First, check if it's an instrument by looking at subcategories
+                        if (subcat_str.find("Instrument") != std::string::npos ||
+                            subcat_str.find("Synth") != std::string::npos ||
+                            subcat_str.find("Sampler") != std::string::npos ||
+                            subcat_str.find("Drum") != std::string::npos ||
+                            subcat_str.find("Piano") != std::string::npos ||
+                            subcat_str.find("SoundGenerator") != std::string::npos ||
+                            subcat_str.find("Generator") != std::string::npos) {
+                            info.is_instrument = true;
+                        }
+
+                        // Check if it's an effect by looking at subcategories
+                        if (subcat_str.find("Fx") != std::string::npos ||
+                            subcat_str.find("Effect") != std::string::npos) {
+                            info.is_effect = true;
+                        }
+
+                        // Use plugin name to detect type - most reliable approach
+                        // .vst3 bundles contain multiple classes (e.g., Serum 2 and Serum 2 FX)
+
+                        // If plugin name contains "FX" (case-insensitive), it's explicitly an effect
+                        std::string name_upper = plugin_name;
+                        std::transform(name_upper.begin(), name_upper.end(), name_upper.begin(),
+                                     [](unsigned char c) { return std::toupper(c); });
+                        if (name_upper.find(" FX") != std::string::npos || name_upper.find(" FX ") != std::string::npos) {
+                            info.is_effect = true;
+                            info.is_instrument = false;
+                        }
+
+                        // If still unknown, DEFAULT to INSTRUMENT
+                        // Most synthesizers don't declare proper VST3 subcategories,
+                        // so defaulting to instrument makes more sense than defaulting to effect.
+                        // Serum, Serum 2, etc. will correctly be identified as instruments.
+                        if (!info.is_instrument && !info.is_effect) {
+                            info.is_instrument = true;
+                        }
+
+                        // DEBUG: Log plugin detection
+                        fprintf(stdout, "🔍 VST3 Plugin: '%s' | SubCat: '%s' | Instrument: %d | Effect: %d\n",
+                                plugin_name.c_str(), subcat_str.c_str(), info.is_instrument, info.is_effect);
+                        fflush(stdout);
 
                         callback(&info, user_data);
                         count++;
@@ -449,6 +505,128 @@ int vst3_get_state(VST3PluginHandle handle, void* data, int max_size) {
 bool vst3_set_state(VST3PluginHandle handle, const void* data, int size) {
     // TODO: Implement state load
     return false;
+}
+
+// ============================================================================
+// M7 Phase 1: Native Editor Support
+// ============================================================================
+
+bool vst3_has_editor(VST3PluginHandle handle) {
+    if (!handle) return false;
+
+    auto instance = static_cast<VST3PluginInstance*>(handle);
+    if (!instance->controller) return false;
+
+    // Check if controller supports creating an editor view
+    auto view = instance->controller->createView(ViewType::kEditor);
+    if (view) {
+        view->release();
+        return true;
+    }
+
+    return false;
+}
+
+bool vst3_open_editor(VST3PluginHandle handle) {
+    if (!handle) {
+        set_error("Invalid handle");
+        return false;
+    }
+
+    auto instance = static_cast<VST3PluginInstance*>(handle);
+    if (!instance->controller) {
+        set_error("No edit controller available");
+        return false;
+    }
+
+    if (instance->editor_open) {
+        set_error("Editor is already open");
+        return false;
+    }
+
+    // Create the editor view
+    auto view = instance->controller->createView(ViewType::kEditor);
+    if (!view) {
+        set_error("Failed to create editor view");
+        return false;
+    }
+
+    instance->editor_view = view;
+    instance->editor_open = true;
+
+    return true;
+}
+
+void vst3_close_editor(VST3PluginHandle handle) {
+    if (!handle) return;
+
+    auto instance = static_cast<VST3PluginInstance*>(handle);
+
+    if (instance->editor_view) {
+        // Detach from parent if attached
+        if (instance->parent_window) {
+            instance->editor_view->removed();
+            instance->parent_window = nullptr;
+        }
+
+        // Release the view
+        instance->editor_view = nullptr;
+    }
+
+    instance->editor_open = false;
+}
+
+bool vst3_get_editor_size(VST3PluginHandle handle, int* width, int* height) {
+    if (!handle || !width || !height) {
+        set_error("Invalid parameters");
+        return false;
+    }
+
+    auto instance = static_cast<VST3PluginInstance*>(handle);
+    if (!instance->editor_view) {
+        set_error("No editor view available");
+        return false;
+    }
+
+    ViewRect rect;
+    if (instance->editor_view->getSize(&rect) != kResultOk) {
+        set_error("Failed to get editor size");
+        return false;
+    }
+
+    *width = rect.right - rect.left;
+    *height = rect.bottom - rect.top;
+
+    return true;
+}
+
+bool vst3_attach_editor(VST3PluginHandle handle, void* parent) {
+    if (!handle || !parent) {
+        set_error("Invalid parameters");
+        return false;
+    }
+
+    auto instance = static_cast<VST3PluginInstance*>(handle);
+    if (!instance->editor_view) {
+        set_error("No editor view available");
+        return false;
+    }
+
+    // Detach from previous parent if needed
+    if (instance->parent_window) {
+        instance->editor_view->removed();
+    }
+
+    // Attach to new parent
+    // On macOS, parent is NSView*
+    if (instance->editor_view->attached(parent, kPlatformTypeNSView) != kResultOk) {
+        set_error("Failed to attach editor to parent window");
+        return false;
+    }
+
+    instance->parent_window = parent;
+
+    return true;
 }
 
 const char* vst3_get_last_error() {

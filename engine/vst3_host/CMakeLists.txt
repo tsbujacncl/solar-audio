@@ -5,6 +5,13 @@ project(vst3_host)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# VST3 SDK requires one of these to be defined
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-D_DEBUG)
+else()
+    add_definitions(-DNDEBUG -DRELEASE)
+endif()
+
 # Find VST3 SDK (relative path from this CMakeLists.txt)
 set(VST3_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../vst3sdk")
 
@@ -17,6 +24,12 @@ endif()
 set(SMTG_CREATE_VST2_VERSION OFF CACHE BOOL "" FORCE)
 set(SMTG_ADD_VST3_PLUGINS_SAMPLES OFF CACHE BOOL "" FORCE)
 set(SMTG_ADD_VST3_HOSTING_SAMPLES OFF CACHE BOOL "" FORCE)
+
+# Enable ARC for Objective-C++ files (required by module_mac.mm)
+if(APPLE)
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fobjc-arc")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fobjc-arc")
+endif()
 
 # Include VST3 SDK
 add_subdirectory(${VST3_SDK_DIR} vst3sdk_build EXCLUDE_FROM_ALL)
@@ -44,10 +57,12 @@ target_link_libraries(vst3_host
 if(APPLE)
     find_library(COREFOUNDATION_FRAMEWORK CoreFoundation)
     find_library(FOUNDATION_FRAMEWORK Foundation)
+    find_library(COCOA_FRAMEWORK Cocoa)
 
     target_link_libraries(vst3_host
         ${COREFOUNDATION_FRAMEWORK}
         ${FOUNDATION_FRAMEWORK}
+        ${COCOA_FRAMEWORK}
     )
 
     # Set macOS deployment target

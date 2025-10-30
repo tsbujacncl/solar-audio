@@ -80,6 +80,21 @@ class AudioEngine {
   late final _LoadProjectFfi _loadProject;
   late final _ExportToWavFfi _exportToWav;
 
+  // M7 functions - VST3 Plugin Hosting
+  late final _ScanVst3PluginsStandardFfi _scanVst3PluginsStandard;
+  late final _AddVst3EffectToTrackFfi _addVst3EffectToTrack;
+  late final _GetVst3ParameterCountFfi _getVst3ParameterCount;
+  late final _GetVst3ParameterInfoFfi _getVst3ParameterInfo;
+  late final _GetVst3ParameterValueFfi _getVst3ParameterValue;
+  late final _SetVst3ParameterValueFfi _setVst3ParameterValue;
+
+  // M7 VST3 Editor functions
+  late final _Vst3HasEditorFfi _vst3HasEditor;
+  late final _Vst3OpenEditorFfi _vst3OpenEditor;
+  late final _Vst3CloseEditorFfi _vst3CloseEditor;
+  late final _Vst3GetEditorSizeFfi _vst3GetEditorSize;
+  late final _Vst3AttachEditorFfi _vst3AttachEditor;
+
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
@@ -466,6 +481,74 @@ class AudioEngine {
               'send_track_midi_note_off_ffi')
           .asFunction();
       print('  ✅ send_track_midi_note_off_ffi bound');
+
+      // Bind M7 functions - VST3 Plugin Hosting
+      _scanVst3PluginsStandard = _lib
+          .lookup<ffi.NativeFunction<_ScanVst3PluginsStandardFfiNative>>(
+              'scan_vst3_plugins_standard_ffi')
+          .asFunction();
+      print('  ✅ scan_vst3_plugins_standard_ffi bound');
+
+      _addVst3EffectToTrack = _lib
+          .lookup<ffi.NativeFunction<_AddVst3EffectToTrackFfiNative>>(
+              'add_vst3_effect_to_track_ffi')
+          .asFunction();
+      print('  ✅ add_vst3_effect_to_track_ffi bound');
+
+      _getVst3ParameterCount = _lib
+          .lookup<ffi.NativeFunction<_GetVst3ParameterCountFfiNative>>(
+              'get_vst3_parameter_count_ffi')
+          .asFunction();
+      print('  ✅ get_vst3_parameter_count_ffi bound');
+
+      _getVst3ParameterInfo = _lib
+          .lookup<ffi.NativeFunction<_GetVst3ParameterInfoFfiNative>>(
+              'get_vst3_parameter_info_ffi')
+          .asFunction();
+      print('  ✅ get_vst3_parameter_info_ffi bound');
+
+      _getVst3ParameterValue = _lib
+          .lookup<ffi.NativeFunction<_GetVst3ParameterValueFfiNative>>(
+              'get_vst3_parameter_value_ffi')
+          .asFunction();
+      print('  ✅ get_vst3_parameter_value_ffi bound');
+
+      _setVst3ParameterValue = _lib
+          .lookup<ffi.NativeFunction<_SetVst3ParameterValueFfiNative>>(
+              'set_vst3_parameter_value_ffi')
+          .asFunction();
+      print('  ✅ set_vst3_parameter_value_ffi bound');
+
+      // M7 VST3 Editor functions
+      _vst3HasEditor = _lib
+          .lookup<ffi.NativeFunction<_Vst3HasEditorFfiNative>>(
+              'vst3_has_editor_ffi')
+          .asFunction();
+      print('  ✅ vst3_has_editor_ffi bound');
+
+      _vst3OpenEditor = _lib
+          .lookup<ffi.NativeFunction<_Vst3OpenEditorFfiNative>>(
+              'vst3_open_editor_ffi')
+          .asFunction();
+      print('  ✅ vst3_open_editor_ffi bound');
+
+      _vst3CloseEditor = _lib
+          .lookup<ffi.NativeFunction<_Vst3CloseEditorFfiNative>>(
+              'vst3_close_editor_ffi')
+          .asFunction();
+      print('  ✅ vst3_close_editor_ffi bound');
+
+      _vst3GetEditorSize = _lib
+          .lookup<ffi.NativeFunction<_Vst3GetEditorSizeFfiNative>>(
+              'vst3_get_editor_size_ffi')
+          .asFunction();
+      print('  ✅ vst3_get_editor_size_ffi bound');
+
+      _vst3AttachEditor = _lib
+          .lookup<ffi.NativeFunction<_Vst3AttachEditorFfiNative>>(
+              'vst3_attach_editor_ffi')
+          .asFunction();
+      print('  ✅ vst3_attach_editor_ffi bound');
 
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
@@ -1339,6 +1422,226 @@ class AudioEngine {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // M7 API - VST3 Plugin Hosting
+  // ========================================================================
+
+  /// Scan standard VST3 plugin locations
+  /// Returns list of plugin info: name, path, vendor, type
+  List<Map<String, String>> scanVst3PluginsStandard() {
+    print('🔍 [AudioEngine] Scanning VST3 plugins...');
+    try {
+      final resultPtr = _scanVst3PluginsStandard();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty) {
+        print('ℹ️ [AudioEngine] No VST3 plugins found');
+        return [];
+      }
+
+      // Parse result: "PluginName|/path/to/plugin.vst3|Vendor|is_instrument|is_effect"
+      final plugins = <Map<String, String>>[];
+      for (final line in result.split('\n')) {
+        if (line.isEmpty) continue;
+        final parts = line.split('|');
+        if (parts.length >= 5) {
+          plugins.add({
+            'name': parts[0],
+            'path': parts[1],
+            'vendor': parts[2],
+            'is_instrument': parts[3],
+            'is_effect': parts[4],
+          });
+        } else if (parts.length >= 2) {
+          // Fallback for old format without type info
+          plugins.add({
+            'name': parts[0],
+            'path': parts[1],
+            'vendor': parts.length > 2 ? parts[2] : '',
+            'is_instrument': '0',
+            'is_effect': '1',
+          });
+        }
+      }
+
+      print('✅ [AudioEngine] Found ${plugins.length} VST3 plugins');
+      return plugins;
+    } catch (e) {
+      print('❌ [AudioEngine] VST3 scan failed: $e');
+      return [];
+    }
+  }
+
+  /// Add a VST3 plugin to a track's FX chain
+  /// Returns the effect ID (>= 0) or -1 on error
+  int addVst3EffectToTrack(int trackId, String pluginPath) {
+    print('🔌 [AudioEngine] Adding VST3 plugin to track $trackId: $pluginPath');
+    try {
+      final pathPtr = pluginPath.toNativeUtf8();
+      final effectId = _addVst3EffectToTrack(trackId, pathPtr.cast());
+      malloc.free(pathPtr);
+
+      if (effectId < 0) {
+        print('❌ [AudioEngine] Failed to add VST3 plugin');
+        return -1;
+      }
+
+      print('✅ [AudioEngine] VST3 plugin added with effect ID: $effectId');
+      return effectId;
+    } catch (e) {
+      print('❌ [AudioEngine] Add VST3 plugin failed: $e');
+      return -1;
+    }
+  }
+
+  /// Get the number of parameters in a VST3 plugin
+  int getVst3ParameterCount(int effectId) {
+    try {
+      final count = _getVst3ParameterCount(effectId);
+      if (count < 0) {
+        print('❌ [AudioEngine] Failed to get VST3 parameter count');
+        return 0;
+      }
+      return count;
+    } catch (e) {
+      print('❌ [AudioEngine] Get VST3 parameter count failed: $e');
+      return 0;
+    }
+  }
+
+  /// Get info about a VST3 parameter
+  /// Returns map with keys: name, min, max, default
+  Map<String, dynamic>? getVst3ParameterInfo(int effectId, int paramIndex) {
+    try {
+      final resultPtr = _getVst3ParameterInfo(effectId, paramIndex);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty) {
+        return null;
+      }
+
+      // Parse result: "name,0.0,1.0,0.5"
+      final parts = result.split(',');
+      if (parts.length >= 4) {
+        return {
+          'name': parts[0],
+          'min': double.tryParse(parts[1]) ?? 0.0,
+          'max': double.tryParse(parts[2]) ?? 1.0,
+          'default': double.tryParse(parts[3]) ?? 0.5,
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ [AudioEngine] Get VST3 parameter info failed: $e');
+      return null;
+    }
+  }
+
+  /// Get a VST3 parameter value (normalized 0.0-1.0)
+  double getVst3ParameterValue(int effectId, int paramIndex) {
+    try {
+      final value = _getVst3ParameterValue(effectId, paramIndex);
+      return value;
+    } catch (e) {
+      print('❌ [AudioEngine] Get VST3 parameter value failed: $e');
+      return 0.0;
+    }
+  }
+
+  /// Set a VST3 parameter value (normalized 0.0-1.0)
+  bool setVst3ParameterValue(int effectId, int paramIndex, double value) {
+    try {
+      final resultPtr = _setVst3ParameterValue(effectId, paramIndex, value);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result.contains('Set VST3');
+    } catch (e) {
+      print('❌ [AudioEngine] Set VST3 parameter value failed: $e');
+      return false;
+    }
+  }
+
+  // M7: VST3 Editor methods
+
+  /// Check if a VST3 plugin has an editor GUI
+  bool vst3HasEditor(int effectId) {
+    try {
+      return _vst3HasEditor(effectId);
+    } catch (e) {
+      print('❌ [AudioEngine] VST3 has editor check failed: $e');
+      return false;
+    }
+  }
+
+  /// Open VST3 plugin editor (creates IPlugView)
+  /// Returns error message or empty string on success
+  String vst3OpenEditor(int effectId) {
+    try {
+      final resultPtr = _vst3OpenEditor(effectId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] VST3 open editor failed: $e');
+      return 'Failed to open editor: $e';
+    }
+  }
+
+  /// Close VST3 plugin editor
+  void vst3CloseEditor(int effectId) {
+    try {
+      _vst3CloseEditor(effectId);
+    } catch (e) {
+      print('❌ [AudioEngine] VST3 close editor failed: $e');
+    }
+  }
+
+  /// Get VST3 editor size in pixels
+  /// Returns map with 'width' and 'height' keys, or null on error
+  Map<String, int>? vst3GetEditorSize(int effectId) {
+    try {
+      final resultPtr = _vst3GetEditorSize(effectId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty || result.startsWith('Error')) {
+        return null;
+      }
+
+      // Parse result: "width,height"
+      final parts = result.split(',');
+      if (parts.length == 2) {
+        return {
+          'width': int.tryParse(parts[0]) ?? 800,
+          'height': int.tryParse(parts[1]) ?? 600,
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ [AudioEngine] VST3 get editor size failed: $e');
+      return null;
+    }
+  }
+
+  /// Attach VST3 editor to a parent window
+  /// parentPtr: Pointer to NSView (on macOS)
+  /// Returns error message or empty string on success
+  String vst3AttachEditor(int effectId, ffi.Pointer<ffi.Void> parentPtr) {
+    try {
+      final resultPtr = _vst3AttachEditor(effectId, parentPtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] VST3 attach editor failed: $e');
+      return 'Failed to attach editor: $e';
+    }
+  }
 }
 
 // ==========================================================================
@@ -1532,3 +1835,38 @@ typedef _SendTrackMidiNoteOnFfi = ffi.Pointer<Utf8> Function(int, int, int);
 
 typedef _SendTrackMidiNoteOffFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint8, ffi.Uint8);
 typedef _SendTrackMidiNoteOffFfi = ffi.Pointer<Utf8> Function(int, int, int);
+
+// M7 types - VST3 Plugin Hosting
+typedef _ScanVst3PluginsStandardFfiNative = ffi.Pointer<Utf8> Function();
+typedef _ScanVst3PluginsStandardFfi = ffi.Pointer<Utf8> Function();
+
+typedef _AddVst3EffectToTrackFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Pointer<ffi.Char>);
+typedef _AddVst3EffectToTrackFfi = int Function(int, ffi.Pointer<ffi.Char>);
+
+typedef _GetVst3ParameterCountFfiNative = ffi.Int32 Function(ffi.Uint64);
+typedef _GetVst3ParameterCountFfi = int Function(int);
+
+typedef _GetVst3ParameterInfoFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint32);
+typedef _GetVst3ParameterInfoFfi = ffi.Pointer<Utf8> Function(int, int);
+
+typedef _GetVst3ParameterValueFfiNative = ffi.Double Function(ffi.Uint64, ffi.Uint32);
+typedef _GetVst3ParameterValueFfi = double Function(int, int);
+
+typedef _SetVst3ParameterValueFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint32, ffi.Double);
+typedef _SetVst3ParameterValueFfi = ffi.Pointer<Utf8> Function(int, int, double);
+
+// M7 VST3 Editor function typedefs
+typedef _Vst3HasEditorFfiNative = ffi.Bool Function(ffi.Uint64);
+typedef _Vst3HasEditorFfi = bool Function(int);
+
+typedef _Vst3OpenEditorFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _Vst3OpenEditorFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _Vst3CloseEditorFfiNative = ffi.Void Function(ffi.Uint64);
+typedef _Vst3CloseEditorFfi = void Function(int);
+
+typedef _Vst3GetEditorSizeFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _Vst3GetEditorSizeFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _Vst3AttachEditorFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Pointer<ffi.Void>);
+typedef _Vst3AttachEditorFfi = ffi.Pointer<Utf8> Function(int, ffi.Pointer<ffi.Void>);

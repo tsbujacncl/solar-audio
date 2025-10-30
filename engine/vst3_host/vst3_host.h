@@ -119,6 +119,25 @@ int vst3_get_state(VST3PluginHandle handle, void* data, int max_size);
 // size: size of state data
 bool vst3_set_state(VST3PluginHandle handle, const void* data, int size);
 
+// Open plugin editor window (native GUI)
+// Returns true if editor opened successfully
+bool vst3_open_editor(VST3PluginHandle handle);
+
+// Close plugin editor window
+void vst3_close_editor(VST3PluginHandle handle);
+
+// Check if editor is supported
+bool vst3_has_editor(VST3PluginHandle handle);
+
+// Get editor size
+// Returns true if size is available, false otherwise
+bool vst3_get_editor_size(VST3PluginHandle handle, int* width, int* height);
+
+// Attach editor to parent window
+// parent: platform-specific window handle (NSView* on macOS)
+// Returns true if attached successfully
+bool vst3_attach_editor(VST3PluginHandle handle, void* parent);
+
 // Error handling
 const char* vst3_get_last_error();
 
