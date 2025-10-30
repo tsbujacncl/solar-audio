@@ -1,5 +1,11 @@
 # Development Preferences
 
+## Git Commits
+
+**DO NOT** include "Generated with Claude Code" or similar attributions in commit messages.
+
+Write professional commit messages that describe the changes without mentioning AI assistance.
+
 ## Building & Running
 
 **DO NOT** run `flutter build` after making changes.
