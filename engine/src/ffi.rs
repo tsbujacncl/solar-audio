@@ -479,6 +479,15 @@ pub extern "C" fn set_track_solo_ffi(track_id: u64, solo: bool) -> *mut c_char {
     }
 }
 
+/// Set track armed (for recording)
+#[no_mangle]
+pub extern "C" fn set_track_armed_ffi(track_id: u64, armed: bool) -> *mut c_char {
+    match api::set_track_armed(track_id, armed) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
 /// Get track count
 #[no_mangle]
 pub extern "C" fn get_track_count_ffi() -> usize {

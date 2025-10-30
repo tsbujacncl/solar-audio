@@ -144,23 +144,32 @@ pub fn load_audio_file_api(path: String) -> Result<u64, String> {
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    // M5.5: Add clip to first audio track (or create one if none exists)
+    // M5.5: Add clip to armed audio track (or first audio track, or create one)
     let target_track_id = {
         let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
         let all_tracks = track_manager.get_all_tracks();
 
-        // Find first audio track
-        let mut audio_track_id = None;
+        // Find armed audio track first, then any audio track
+        let mut armed_track_id = None;
+        let mut any_audio_track_id = None;
+
         for track_arc in all_tracks {
             let track = track_arc.lock().map_err(|e| e.to_string())?;
             if track.track_type == crate::track::TrackType::Audio {
-                audio_track_id = Some(track.id);
-                break;
+                if any_audio_track_id.is_none() {
+                    any_audio_track_id = Some(track.id);
+                }
+                if track.armed {
+                    armed_track_id = Some(track.id);
+                    break; // Found armed track, stop searching
+                }
             }
         }
 
-        // If no audio track exists, create one
-        if let Some(id) = audio_track_id {
+        // Prefer armed track, fallback to any audio track, or create one
+        if let Some(id) = armed_track_id {
+            id
+        } else if let Some(id) = any_audio_track_id {
             id
         } else {
             drop(track_manager); // Release lock before creating track
@@ -173,10 +182,21 @@ pub fn load_audio_file_api(path: String) -> Result<u64, String> {
     let clip_id = graph.add_clip_to_track(target_track_id, clip_arc.clone(), 0.0)
         .ok_or(format!("Failed to add clip to track {}", target_track_id))?;
 
-    // Also add to legacy timeline for backward compatibility (will be removed in future)
-    graph.add_clip(clip_arc.clone(), 0.0);
-
     clips_map.insert(clip_id, clip_arc);
+
+    // Debug: Check how many clips are on this track now
+    let clip_count = {
+        let tm = graph.track_manager.lock().map_err(|e| e.to_string())?;
+        if let Some(track_arc) = tm.get_track(target_track_id) {
+            let track = track_arc.lock().map_err(|e| e.to_string())?;
+            track.audio_clips.len()
+        } else {
+            0
+        }
+    };
+
+    eprintln!("✅ [API] Imported clip stored with ID: {}, added to track {} at position 0.0", clip_id, target_track_id);
+    eprintln!("📊 [API] Track {} now has {} audio clips", target_track_id, clip_count);
 
     Ok(clip_id)
 }
@@ -414,19 +434,76 @@ pub fn stop_recording() -> Result<Option<u64>, String> {
     }
 
     if let Some(clip) = clip_option {
-        // Store the recorded clip and add to timeline at position 0.0
+        // Store the recorded clip and add to ALL armed tracks (Ableton-style multi-arm)
         let clip_arc = Arc::new(clip);
 
-        // Add to timeline first to get the ID
-        let clip_id = graph.add_clip(clip_arc.clone(), 0.0);
+        // Find ALL armed audio tracks
+        let target_track_ids: Vec<u64> = {
+            let mut tm = graph.track_manager.lock().map_err(|e| e.to_string())?;
+            let audio_tracks: Vec<_> = tm.get_all_tracks()
+                .into_iter()
+                .filter(|t| {
+                    if let Ok(track) = t.lock() {
+                        track.track_type == crate::track::TrackType::Audio
+                    } else {
+                        false
+                    }
+                })
+                .collect();
 
-        // Store in AUDIO_CLIPS map with the same ID
+            if audio_tracks.is_empty() {
+                // No audio tracks exist, create one
+                vec![tm.create_track(crate::track::TrackType::Audio, "Audio 1".to_string())]
+            } else {
+                // Find ALL armed tracks
+                let armed_tracks: Vec<u64> = audio_tracks.iter()
+                    .filter_map(|t| {
+                        if let Ok(track) = t.lock() {
+                            if track.armed {
+                                Some(track.id)
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                if armed_tracks.is_empty() {
+                    // No armed tracks, use first track
+                    vec![audio_tracks[0].lock().unwrap().id]
+                } else {
+                    // Use all armed tracks
+                    armed_tracks
+                }
+            }
+        };
+
+        eprintln!("🎙️ [API] Recording will be added to {} track(s): {:?}", target_track_ids.len(), target_track_ids);
+
+        // Add clip to ALL armed tracks at position 0.0
+        let mut first_clip_id = None;
+        for track_id in &target_track_ids {
+            let clip_id = graph.add_clip_to_track(*track_id, clip_arc.clone(), 0.0)
+                .ok_or(format!("Failed to add recorded clip to track {}", track_id))?;
+
+            if first_clip_id.is_none() {
+                first_clip_id = Some(clip_id);
+            }
+
+            eprintln!("✅ [API] Added clip {} to track {}", clip_id, track_id);
+        }
+
+        let clip_id = first_clip_id.ok_or("Failed to create any clips")?;
+
+        // Store in AUDIO_CLIPS map with the first clip ID
         let clips_mutex = AUDIO_CLIPS.get()
             .ok_or("Audio clips not initialized")?;
         let mut clips_map = clips_mutex.lock().map_err(|e| e.to_string())?;
         clips_map.insert(clip_id, clip_arc);
 
-        eprintln!("✅ [API] Recorded clip stored with ID: {}, added to timeline at position 0.0", clip_id);
+        eprintln!("📊 [API] Recorded clip duplicated to {} armed tracks", target_track_ids.len());
 
         Ok(Some(clip_id))
     } else {
@@ -1026,6 +1103,22 @@ pub fn set_track_mute(track_id: TrackId, mute: bool) -> Result<String, String> {
     }
 }
 
+/// Set track armed state (for recording)
+pub fn set_track_armed(track_id: TrackId, armed: bool) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.armed = armed;
+        Ok(format!("Track {} armed: {}", track_id, armed))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
 /// Set track solo state
 pub fn set_track_solo(track_id: TrackId, solo: bool) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
@@ -1071,7 +1164,7 @@ pub fn get_all_track_ids() -> Result<String, String> {
 
 /// Get track info (for UI display)
 ///
-/// Returns: "track_id,name,type,volume_db,pan,mute,solo"
+/// Returns: "track_id,name,type,volume_db,pan,mute,solo,armed"
 pub fn get_track_info(track_id: TrackId) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
@@ -1088,14 +1181,15 @@ pub fn get_track_info(track_id: TrackId) -> Result<String, String> {
             TrackType::Master => "Master",
         };
         Ok(format!(
-            "{},{},{},{:.2},{:.2},{},{}",
+            "{},{},{},{:.2},{:.2},{},{},{}",
             track.id,
             track.name,
             type_str,
             track.volume_db,
             track.pan,
             track.mute as u8,
-            track.solo as u8
+            track.solo as u8,
+            track.armed as u8
         ))
     } else {
         Err(format!("Track {} not found", track_id))

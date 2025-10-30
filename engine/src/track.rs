@@ -119,6 +119,9 @@ pub struct Track {
 impl Track {
     /// Create a new track
     pub fn new(id: TrackId, track_type: TrackType, name: String) -> Self {
+        // Audio and MIDI tracks are armed by default (ready to record)
+        let armed = matches!(track_type, TrackType::Audio | TrackType::Midi);
+
         Self {
             id,
             track_type,
@@ -132,7 +135,7 @@ impl Track {
             sends: Vec::new(),
             parent_group: None,
             fx_chain: Vec::new(),
-            armed: false,
+            armed,
             input_monitoring: false,
             peak_left: 0.0,
             peak_right: 0.0,
@@ -221,6 +224,8 @@ impl TrackManager {
         let id = self.next_id;
         self.next_id += 1;
 
+        // New tracks are armed by default (Ableton-style)
+        // Multiple tracks can be armed simultaneously
         let track = Arc::new(std::sync::Mutex::new(
             Track::new(id, track_type, name)
         ));

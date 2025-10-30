@@ -492,6 +492,15 @@ impl AudioGraph {
                 let (track_snapshots, has_solo, master_snapshot) = track_data_option
                     .unwrap_or_else(|| (Vec::new(), false, None));
 
+                // DEBUG: Log track count once
+                static TRACK_COUNT_LOGGED: AtomicBool = AtomicBool::new(false);
+                if !TRACK_COUNT_LOGGED.swap(true, Ordering::Relaxed) {
+                    eprintln!("🎵 [AudioCallback] Processing {} tracks", track_snapshots.len());
+                    for snap in &track_snapshots {
+                        eprintln!("   - Track {}: {} audio clips, {} MIDI clips", snap.id, snap.audio_clips.len(), snap.midi_clips.len());
+                    }
+                }
+
                 // Process each frame (using snapshots - NO LOCKS!)
                 for frame_idx in 0..frames {
                     let playhead_frame = current_playhead + frame_idx as u64;
@@ -553,10 +562,8 @@ impl AudioGraph {
                         track_right *= track_snap.volume_gain;
 
                         // Apply track pan (from snapshot)
-                        let panned_left = track_left * track_snap.pan_left + track_right * track_snap.pan_left;
-                        let panned_right = track_left * track_snap.pan_right + track_right * track_snap.pan_right;
-                        track_left = panned_left;
-                        track_right = panned_right;
+                        track_left *= track_snap.pan_left;
+                        track_right *= track_snap.pan_right;
 
                         // Process FX chain on this track
                         let mut fx_left = track_left;
@@ -587,8 +594,10 @@ impl AudioGraph {
                         mix_right += synth_sample;
                     }
 
-                    // Legacy: Also mix clips from global timeline (for backward compatibility)
-                    // TODO: Remove this once all clips are migrated to tracks
+                    // REMOVED: Legacy mixing that bypassed track controls
+                    // All clips now go through tracks with proper volume/pan/mute/solo
+
+                    /* LEGACY CODE REMOVED FOR MIXER FIX
                     for timeline_clip in &clips_snapshot {
                         let clip_duration = timeline_clip.duration
                             .unwrap_or(timeline_clip.clip.duration_seconds);
@@ -614,6 +623,7 @@ impl AudioGraph {
                             }
                         }
                     }
+                    */ // END LEGACY CODE REMOVAL
 
                     // Get input samples (if recording)
                     let (input_left, input_right) = if let Ok(input_mgr) = input_manager.lock() {

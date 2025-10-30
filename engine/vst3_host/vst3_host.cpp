@@ -91,6 +91,11 @@ void vst3_host_shutdown() {
 }
 
 int vst3_scan_directory(const char* directory, VST3ScanCallback callback, void* user_data) {
+    // TEMPORARY: VST3 scanning disabled for mixer testing
+    set_error("VST3 scanning temporarily disabled");
+    return 0;
+
+    /* COMMENTED OUT FOR MIXER TESTING
     if (!directory || !callback) {
         set_error("Invalid parameters");
         return 0;
@@ -194,6 +199,7 @@ int vst3_scan_directory(const char* directory, VST3ScanCallback callback, void* 
     }
 
     return count;
+    */ // END COMMENTED OUT FOR MIXER TESTING
 }
 
 int vst3_scan_standard_locations(VST3ScanCallback callback, void* user_data) {
@@ -213,6 +219,11 @@ int vst3_scan_standard_locations(VST3ScanCallback callback, void* user_data) {
 }
 
 VST3PluginHandle vst3_load_plugin(const char* file_path) {
+    // TEMPORARY: VST3 loading disabled for mixer testing
+    set_error("VST3 loading temporarily disabled");
+    return nullptr;
+
+    /* COMMENTED OUT FOR MIXER TESTING
     if (!file_path) {
         set_error("Invalid file path");
         return nullptr;
@@ -284,6 +295,7 @@ VST3PluginHandle vst3_load_plugin(const char* file_path) {
         set_error(std::string("Load error: ") + e.what());
         return nullptr;
     }
+    */ // END COMMENTED OUT FOR MIXER TESTING
 }
 
 void vst3_unload_plugin(VST3PluginHandle handle) {

@@ -11,6 +11,7 @@ class TrackData {
   double pan;
   bool mute;
   bool solo;
+  bool armed;
 
   TrackData({
     required this.id,
@@ -20,13 +21,14 @@ class TrackData {
     required this.pan,
     required this.mute,
     required this.solo,
+    required this.armed,
   });
 
-  /// Parse track info from CSV format: "track_id,name,type,volume_db,pan,mute,solo"
+  /// Parse track info from CSV format: "track_id,name,type,volume_db,pan,mute,solo,armed"
   static TrackData? fromCSV(String csv) {
     try {
       final parts = csv.split(',');
-      if (parts.length < 7) return null;
+      if (parts.length < 8) return null;
 
       return TrackData(
         id: int.parse(parts[0]),
@@ -36,6 +38,7 @@ class TrackData {
         pan: double.parse(parts[4]),
         mute: parts[5] == 'true' || parts[5] == '1',
         solo: parts[6] == 'true' || parts[6] == '1',
+        armed: parts[7] == 'true' || parts[7] == '1',
       );
     } catch (e) {
       debugPrint('❌ Failed to parse track data: $e');
@@ -686,6 +689,30 @@ class _MixerPanelState extends State<MixerPanel> {
                 minimumSize: const Size(0, 24),
               ),
               child: const Text('S', style: TextStyle(fontSize: 11)),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // Record Arm button
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  track.armed = !track.armed;
+                });
+                widget.audioEngine?.setTrackArmed(track.id, track.armed);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: track.armed
+                    ? const Color(0xFFE53935)  // Bright red when armed
+                    : const Color(0xFF909090),
+                foregroundColor: track.armed
+                    ? Colors.white
+                    : const Color(0xFF404040),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                minimumSize: const Size(0, 24),
+              ),
+              child: const Text('R', style: TextStyle(fontSize: 11)),
             ),
           ),
         ],
