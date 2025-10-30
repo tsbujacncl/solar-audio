@@ -49,7 +49,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M4: Mixer state
   bool _mixerVisible = true; // Always visible by default
-  int? _selectedTrackForFX;
 
   // M5: Project state
   String? _currentProjectPath;
@@ -71,7 +70,7 @@ class _DAWScreenState extends State<DAWScreen> {
   static const double _bottomMaxHeight = 500.0;
 
   // M8: MIDI editing state
-  int? _selectedMidiTrackId;
+  int? _selectedTrackId; // Unified track selection for piano roll, FX, and instrument panels
   int? _selectedMidiClipId;
   MidiClipData? _currentEditingClip;
   List<MidiClipData> _midiClips = []; // All MIDI clips for timeline
@@ -79,7 +78,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M9: Instrument state
   Map<int, InstrumentData> _trackInstruments = {}; // trackId -> InstrumentData
-  int? _selectedTrackForInstrument;
 
   @override
   void initState() {
@@ -187,13 +185,16 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _startPlayheadTimer() {
     _playheadTimer?.cancel();
+    print('⏱️  Starting playhead timer');
     _playheadTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (_audioEngine != null && mounted) {
         final pos = _audioEngine!.getPlayheadPosition();
-        setState(() {
-          _playheadPosition = pos;
-        });
-        
+        if (mounted) {
+          setState(() {
+            _playheadPosition = pos;
+          });
+        }
+
         // Auto-stop at end of clip
         if (_clipDuration != null && pos >= _clipDuration!) {
           _stopPlayback();
@@ -207,6 +208,7 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _play() {
+    print('▶️  [Flutter] _play() called');
     if (_audioEngine == null) return;
 
     try {
@@ -216,6 +218,7 @@ class _DAWScreenState extends State<DAWScreen> {
         _statusMessage = _loadedClipId != null ? 'Playing...' : 'Playing (empty)';
       });
       _startPlayheadTimer();
+      print('✅ [Flutter] _play() completed');
     } catch (e) {
       setState(() {
         _statusMessage = 'Play error: $e';
@@ -241,17 +244,26 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _stopPlayback() {
-    if (_audioEngine == null) return;
+    print('🛑 [Flutter] _stopPlayback() called');
+    if (_audioEngine == null) {
+      print('⚠️  [Flutter] _audioEngine is null, returning');
+      return;
+    }
 
     try {
-      _audioEngine!.transportStop();
+      print('📞 [Flutter] Calling _audioEngine.transportStop()...');
+      final result = _audioEngine!.transportStop();
+      print('✅ [Flutter] transportStop() returned: $result');
+
       setState(() {
         _isPlaying = false;
         _playheadPosition = 0.0;
         _statusMessage = 'Stopped';
       });
       _stopPlayheadTimer();
+      print('🏁 [Flutter] _stopPlayback() completed');
     } catch (e) {
+      print('❌ [Flutter] Stop error: $e');
       setState(() {
         _statusMessage = 'Stop error: $e';
       });
@@ -426,6 +438,26 @@ class _DAWScreenState extends State<DAWScreen> {
     }
   }
 
+  void _onTempoChanged(double bpm) {
+    if (_audioEngine == null) return;
+
+    // Clamp tempo to valid range (20-300 BPM)
+    final clampedBpm = bpm.clamp(20.0, 300.0);
+
+    try {
+      _audioEngine!.setTempo(clampedBpm);
+      setState(() {
+        _tempo = clampedBpm;
+      });
+      debugPrint('🎵 Tempo changed to: ${clampedBpm.toStringAsFixed(1)} BPM');
+    } catch (e) {
+      debugPrint('❌ Tempo change error: $e');
+      setState(() {
+        _statusMessage = 'Tempo change error: $e';
+      });
+    }
+  }
+
   // M3: Virtual piano methods
   void _toggleVirtualPiano() {
     debugPrint('🎹 [DEBUG] _toggleVirtualPiano called');
@@ -486,11 +518,26 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
-  void _onFXButtonClicked(int? trackId) {
+  // Unified track selection method - handles both timeline and mixer clicks
+  void _onTrackSelected(int? trackId) {
+    if (trackId == null) {
+      setState(() {
+        _selectedTrackId = null;
+        _bottomPanelVisible = false;
+      });
+      return;
+    }
+
     setState(() {
-      _selectedTrackForFX = trackId;
-      _bottomPanelVisible = trackId != null; // Show bottom panel when FX selected
+      _selectedTrackId = trackId;
+      _bottomPanelVisible = true;
+
+      // Clear clip selection when selecting just a track
+      _selectedMidiClipId = null;
+      _currentEditingClip = null;
     });
+
+    debugPrint('🎯 Track $trackId selected');
   }
 
   // M9: Instrument methods
@@ -499,7 +546,7 @@ class _DAWScreenState extends State<DAWScreen> {
       // Create default instrument data for the track
       final instrumentData = InstrumentData.defaultSynthesizer(trackId);
       _trackInstruments[trackId] = instrumentData;
-      _selectedTrackForInstrument = trackId;
+      _selectedTrackId = trackId; // Select the track when instrument is assigned
       _bottomPanelVisible = true; // Show bottom panel when instrument selected
 
       // Call audio engine to set instrument
@@ -590,20 +637,7 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
-  // M8: MIDI track/clip selection methods
-  void _onMidiTrackSelected(int? trackId) {
-    setState(() {
-      _selectedMidiTrackId = trackId;
-      if (trackId != null) {
-        // Open piano roll when MIDI track selected
-        _bottomPanelVisible = true;
-        // Clear clip selection when selecting just a track
-        _selectedMidiClipId = null;
-        _currentEditingClip = null;
-      }
-    });
-  }
-
+  // M8: MIDI clip selection methods
   void _onMidiClipSelected(int? clipId, MidiClipData? clipData) {
     setState(() {
       _selectedMidiClipId = clipId;
@@ -611,7 +645,7 @@ class _DAWScreenState extends State<DAWScreen> {
       if (clipId != null && clipData != null) {
         // Open piano roll and set the selected track
         _bottomPanelVisible = true;
-        _selectedMidiTrackId = clipData.trackId;
+        _selectedTrackId = clipData.trackId;
       }
     });
   }
@@ -1131,6 +1165,7 @@ class _DAWScreenState extends State<DAWScreen> {
             metronomeEnabled: _metronomeEnabled,
             virtualPianoEnabled: _virtualPianoEnabled,
             tempo: _tempo,
+            onTempoChanged: _onTempoChanged,
             // New parameters for file menu and mixer toggle
             onNewProject: _newProject,
             onOpenProject: _openProject,
@@ -1183,11 +1218,11 @@ class _DAWScreenState extends State<DAWScreen> {
                           clipDuration: _clipDuration,
                           waveformPeaks: _waveformPeaks,
                           audioEngine: _audioEngine,
-                          selectedMidiTrackId: _selectedMidiTrackId,
+                          selectedMidiTrackId: _selectedTrackId,
                           selectedMidiClipId: _selectedMidiClipId,
                           currentEditingClip: _currentEditingClip,
                           midiClips: _midiClips, // Pass all MIDI clips for visualization
-                          onMidiTrackSelected: _onMidiTrackSelected,
+                          onMidiTrackSelected: _onTrackSelected,
                           onMidiClipSelected: _onMidiClipSelected,
                           onMidiClipUpdated: _onMidiClipUpdated,
                           onInstrumentDropped: _onInstrumentDropped,
@@ -1218,9 +1253,8 @@ class _DAWScreenState extends State<DAWScreen> {
                           width: _mixerPanelWidth,
                           child: TrackMixerPanel(
                             audioEngine: _audioEngine,
-                            onFXButtonClicked: _onFXButtonClicked,
-                            selectedMidiTrackId: _selectedMidiTrackId,
-                            onMidiTrackSelected: _onMidiTrackSelected,
+                            selectedTrackId: _selectedTrackId,
+                            onTrackSelected: _onTrackSelected,
                             onInstrumentSelected: _onInstrumentSelected,
                             onTrackDuplicated: _onTrackDuplicated,
                             onTrackDeleted: _onTrackDeleted,
@@ -1258,14 +1292,12 @@ class _DAWScreenState extends State<DAWScreen> {
                     child: BottomPanel(
                       audioEngine: _audioEngine,
                       virtualPianoEnabled: _virtualPianoEnabled,
-                      selectedTrackForFX: _selectedTrackForFX,
-                      selectedTrackForInstrument: _selectedTrackForInstrument,
-                      currentInstrumentData: _selectedTrackForInstrument != null
-                          ? _trackInstruments[_selectedTrackForInstrument]
+                      selectedTrackId: _selectedTrackId,
+                      currentInstrumentData: _selectedTrackId != null
+                          ? _trackInstruments[_selectedTrackId]
                           : null,
                       onVirtualPianoClose: _toggleVirtualPiano,
                       currentEditingClip: _currentEditingClip,
-                      selectedMidiTrackId: _selectedMidiTrackId,
                       onMidiClipUpdated: _onMidiClipUpdated,
                       onInstrumentParameterChanged: _onInstrumentParameterChanged,
                     ),

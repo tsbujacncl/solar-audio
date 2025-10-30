@@ -82,7 +82,7 @@ impl AudioGraph {
         let effect_manager = EffectManager::new();
         let master_limiter = Limiter::new();
 
-        Ok(Self {
+        let mut graph = Self {
             clips: Arc::new(Mutex::new(Vec::new())),
             midi_clips: Arc::new(Mutex::new(Vec::new())),
             playhead_samples,
@@ -98,7 +98,17 @@ impl AudioGraph {
             effect_manager: Arc::new(Mutex::new(effect_manager)),
             master_limiter: Arc::new(Mutex::new(master_limiter)),
             track_synth_manager: Arc::new(Mutex::new(TrackSynthManager::new(TARGET_SAMPLE_RATE as f32))),
-        })
+        };
+
+        // Create audio stream immediately (prevents deadlock on first play)
+        eprintln!("🔊 [AudioGraph] Creating audio stream during initialization...");
+        let stream = graph.create_audio_stream()?;
+        // Pause immediately - stream will be started on play()
+        stream.pause()?;
+        graph.stream = Some(stream);
+        eprintln!("✅ [AudioGraph] Audio stream created and paused");
+
+        Ok(graph)
     }
 
     /// Add a clip to the timeline
@@ -250,16 +260,11 @@ impl AudioGraph {
             *state = TransportState::Playing;
         }
 
-        // If no stream exists, create one
-        if self.stream.is_none() {
-            let stream = self.create_audio_stream()?;
+        // Stream is pre-created during initialization
+        if let Some(stream) = &self.stream {
             stream.play()?;
-            self.stream = Some(stream);
         } else {
-            // Resume existing stream
-            if let Some(stream) = &self.stream {
-                stream.play()?;
-            }
+            return Err(anyhow::anyhow!("Audio stream not initialized"));
         }
 
         Ok(())
@@ -281,6 +286,8 @@ impl AudioGraph {
 
     /// Stop playback (resets to start)
     pub fn stop(&mut self) -> anyhow::Result<()> {
+        eprintln!("⏹️  [AudioGraph] stop() called - resetting playhead and metronome");
+
         {
             let mut state = self.state.lock().unwrap();
             *state = TransportState::Stopped;
@@ -291,7 +298,11 @@ impl AudioGraph {
         }
 
         // Reset playhead to start
-        self.playhead_samples.store(0, Ordering::SeqCst);
+        let old_playhead = self.playhead_samples.swap(0, Ordering::SeqCst);
+        eprintln!("   Playhead reset: {} → 0", old_playhead);
+
+        // Reset metronome beat position
+        self.recorder.reset_metronome();
 
         Ok(())
     }
@@ -372,7 +383,7 @@ impl AudioGraph {
                         };
 
                         // Process recording and get metronome output
-                        let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right);
+                        let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right, false);
 
                         // Output only metronome when not playing
                         data[frame_idx * 2] = met_left;
@@ -627,7 +638,7 @@ impl AudioGraph {
                     };
 
                     // Process recording and get metronome output
-                    let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right);
+                    let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right, true);
 
                     // Mix playback + metronome
                     mix_left += met_left;

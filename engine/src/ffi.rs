@@ -86,6 +86,7 @@ pub extern "C" fn transport_pause_ffi() -> *mut c_char {
 /// Stop playback
 #[no_mangle]
 pub extern "C" fn transport_stop_ffi() -> *mut c_char {
+    eprintln!("🔴 [FFI] transport_stop_ffi() called from Flutter");
     match api::transport_stop() {
         Ok(msg) => CString::new(msg).unwrap().into_raw(),
         Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),

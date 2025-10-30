@@ -199,11 +199,16 @@ pub fn transport_pause() -> Result<String, String> {
 
 /// Stop playback and reset to start
 pub fn transport_stop() -> Result<String, String> {
+    eprintln!("🟠 [API] transport_stop() called");
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
+
+    eprintln!("🟠 [API] Acquiring AudioGraph lock...");
     let mut graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
+    eprintln!("🟠 [API] Lock acquired, calling graph.stop()...");
+
     graph.stop().map_err(|e| e.to_string())?;
+    eprintln!("🟠 [API] graph.stop() completed");
     Ok("Stopped".to_string())
 }
 

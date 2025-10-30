@@ -16,6 +16,7 @@ class TransportBar extends StatelessWidget {
   final bool metronomeEnabled;
   final bool virtualPianoEnabled;
   final double tempo;
+  final Function(double)? onTempoChanged;
 
   // File menu callbacks
   final VoidCallback? onNewProject;
@@ -43,6 +44,7 @@ class TransportBar extends StatelessWidget {
     this.metronomeEnabled = true,
     this.virtualPianoEnabled = false,
     this.tempo = 120.0,
+    this.onTempoChanged,
     this.onNewProject,
     this.onOpenProject,
     this.onSaveProject,
@@ -133,33 +135,10 @@ class TransportBar extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          // Tempo display
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF656565),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF909090)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.speed,
-                  size: 14,
-                  color: Color(0xFF404040),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '${tempo.toStringAsFixed(0)} BPM',
-                  style: const TextStyle(
-                    color: Color(0xFF202020),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+          // Tempo control with drag and tap
+          _TempoControl(
+            tempo: tempo,
+            onTempoChanged: onTempoChanged,
           ),
           
           const SizedBox(width: 24),
@@ -504,6 +483,151 @@ class _PianoButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Tempo control widget with drag interaction and tap tempo (Ableton-style)
+class _TempoControl extends StatefulWidget {
+  final double tempo;
+  final Function(double)? onTempoChanged;
+
+  const _TempoControl({
+    required this.tempo,
+    this.onTempoChanged,
+  });
+
+  @override
+  State<_TempoControl> createState() => _TempoControlState();
+}
+
+class _TempoControlState extends State<_TempoControl> {
+  bool _isDragging = false;
+  double _dragStartY = 0.0;
+  double _dragStartTempo = 120.0;
+  List<DateTime> _tapTimes = [];
+
+  void _onTapTempo() {
+    final now = DateTime.now();
+    setState(() {
+      // Remove taps older than 3 seconds
+      _tapTimes.removeWhere((time) => now.difference(time).inSeconds > 3);
+
+      // Add current tap
+      _tapTimes.add(now);
+
+      // Need at least 2 taps to calculate tempo
+      if (_tapTimes.length >= 2) {
+        // Calculate average interval between taps
+        double totalInterval = 0.0;
+        for (int i = 1; i < _tapTimes.length; i++) {
+          totalInterval += _tapTimes[i].difference(_tapTimes[i - 1]).inMilliseconds;
+        }
+        final avgInterval = totalInterval / (_tapTimes.length - 1);
+
+        // Convert interval to BPM (60000ms = 1 minute)
+        final bpm = (60000.0 / avgInterval).clamp(20.0, 300.0).roundToDouble();
+        widget.onTempoChanged?.call(bpm);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Always show integers (tempo is rounded to whole numbers)
+    final tempoText = widget.tempo.toStringAsFixed(0);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Tap tempo button
+        InkWell(
+          onTap: _onTapTempo,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _tapTimes.isNotEmpty &&
+                     DateTime.now().difference(_tapTimes.last).inMilliseconds < 500
+                  ? const Color(0xFF4CAF50).withOpacity(0.3)
+                  : const Color(0xFF656565),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF909090)),
+            ),
+            child: const Text(
+              'Tap',
+              style: TextStyle(
+                color: Color(0xFF202020),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 4),
+
+        // Tempo display with drag interaction
+        GestureDetector(
+          onVerticalDragStart: (details) {
+            setState(() {
+              _isDragging = true;
+              _dragStartY = details.globalPosition.dy;
+              _dragStartTempo = widget.tempo;
+            });
+          },
+          onVerticalDragUpdate: (details) {
+            if (widget.onTempoChanged != null) {
+              // Drag up = increase tempo, drag down = decrease tempo
+              final deltaY = _dragStartY - details.globalPosition.dy;
+              // ~0.5 BPM per pixel (like Ableton)
+              final deltaTempo = deltaY * 0.5;
+              final newTempo = (_dragStartTempo + deltaTempo).clamp(20.0, 300.0).roundToDouble();
+              widget.onTempoChanged!(newTempo);
+            }
+          },
+          onVerticalDragEnd: (details) {
+            setState(() {
+              _isDragging = false;
+            });
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpDown,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _isDragging
+                    ? const Color(0xFF4CAF50).withOpacity(0.2)
+                    : const Color(0xFF656565),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: _isDragging
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFF909090),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.speed,
+                    size: 14,
+                    color: Color(0xFF404040),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$tempoText BPM',
+                    style: const TextStyle(
+                      color: Color(0xFF202020),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

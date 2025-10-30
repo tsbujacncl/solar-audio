@@ -174,6 +174,12 @@ impl Recorder {
         let frame_count = sample_count / 2; // Stereo
         frame_count as f64 / TARGET_SAMPLE_RATE as f64
     }
+
+    /// Reset metronome beat position (called when transport stops)
+    pub fn reset_metronome(&self) {
+        let old_value = self.sample_counter.swap(0, Ordering::SeqCst);
+        eprintln!("🔄 [Recorder] Metronome reset: {} → 0", old_value);
+    }
 }
 
 /// References for use in audio callback
@@ -194,9 +200,31 @@ impl RecorderCallbackRefs {
         &self,
         input_left: f32,
         input_right: f32,
+        is_playing: bool,
     ) -> (f32, f32) {
-        let mut state = self.state.lock().unwrap();
-        let sample_idx = self.sample_counter.fetch_add(1, Ordering::SeqCst);
+        // Read state once and drop lock immediately to avoid blocking UI thread
+        let current_state = {
+            let state = self.state.lock().unwrap();
+            *state
+        }; // Lock released here
+
+        // Only increment counter when playing or recording
+        // This ensures metronome resets properly when stopped
+        let should_tick = is_playing || current_state != RecordingState::Idle;
+
+        let sample_idx = if should_tick {
+            self.sample_counter.fetch_add(1, Ordering::SeqCst)
+        } else {
+            let val = self.sample_counter.load(Ordering::SeqCst);
+            // Debug: Log when we're NOT ticking (should stay at 0 after reset)
+            static LAST_LOGGED: AtomicU64 = AtomicU64::new(u64::MAX);
+            if val != LAST_LOGGED.load(Ordering::Relaxed) && val % 96000 == 0 {
+                eprintln!("🔇 [Recorder] Not ticking, counter at: {} (is_playing={}, state={:?})",
+                    val, is_playing, current_state);
+                LAST_LOGGED.store(val, Ordering::Relaxed);
+            }
+            val
+        };
 
         let tempo = *self.tempo.lock().unwrap();
         let time_sig = *self.time_signature.lock().unwrap();
@@ -208,31 +236,39 @@ impl RecorderCallbackRefs {
 
         // Generate metronome click
         let mut metronome_output = 0.0;
-        
+
         if metronome_enabled {
             let position_in_bar = sample_idx % samples_per_bar;
             let beat_in_bar = position_in_bar / samples_per_beat;
             let position_in_beat = position_in_bar % samples_per_beat;
 
+            // Debug logging at the start of each beat (only when actually ticking)
+            if position_in_beat == 0 && should_tick {
+                eprintln!("🔔 Metronome beat! sample_idx={}, beat={}/{}, tempo={} BPM, samples_per_beat={}",
+                    sample_idx, beat_in_bar + 1, time_sig, tempo, samples_per_beat);
+            }
+
             // Generate click (short sine burst)
-            if position_in_beat < 2000 { // ~40ms click at 48kHz
+            if position_in_beat < 4000 { // ~80ms click at 48kHz (increased from 40ms for better audibility)
                 let t = position_in_beat as f32 / TARGET_SAMPLE_RATE as f32;
                 let freq = if beat_in_bar == 0 { 1200.0 } else { 800.0 }; // Higher pitch on downbeat
-                let envelope = (1.0 - (position_in_beat as f32 / 2000.0)).powi(2);
-                metronome_output = (2.0 * PI * freq * t).sin() * 0.3 * envelope;
+                let envelope = (1.0 - (position_in_beat as f32 / 4000.0)).powi(2);
+                metronome_output = (2.0 * PI * freq * t).sin() * 0.6 * envelope; // Increased volume from 0.3 to 0.6
             }
         }
 
         // Handle count-in and recording state transitions
-        match *state {
+        match current_state {
             RecordingState::CountingIn => {
                 let count_in_bars = *self.count_in_bars.lock().unwrap();
                 let count_in_samples = samples_per_bar * count_in_bars as u64;
 
                 if sample_idx >= count_in_samples {
-                    // Count-in finished, start recording
+                    // Count-in finished, start recording (need to re-acquire lock for state change)
                     eprintln!("✅ [Recorder] Count-in complete! Transitioning to Recording state (sample: {})", sample_idx);
+                    let mut state = self.state.lock().unwrap();
                     *state = RecordingState::Recording;
+                    drop(state); // Release immediately
                     self.sample_counter.store(0, Ordering::SeqCst);
                 }
                 // During count-in, only output metronome, don't record
@@ -251,10 +287,8 @@ impl RecorderCallbackRefs {
                 }
             }
             RecordingState::Idle => {
-                // Reset counter when idle
-                if sample_idx > 0 {
-                    self.sample_counter.store(0, Ordering::SeqCst);
-                }
+                // Don't reset counter - allow metronome to continue counting through beats
+                // Counter only resets when starting a new recording (via start_recording method)
             }
         }
 
