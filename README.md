@@ -6,7 +6,7 @@ A modern, cross-platform DAW (Digital Audio Workstation) designed for **speed, s
 
 Solar Audio combines professional workflows with beginner-friendly UX. Built with Flutter (UI) and Rust (audio engine), it's designed to work seamlessly across macOS, iPad, and eventually web, Windows, Linux, iOS, and Android.
 
-**Current Status:** ✅ M6.1 Complete - MIDI & Instruments | Ready for M7 (VST3)
+**Current Status:** ✅ M6.2 Complete - UI Improvements | Ready for M7 (VST3)
 
 ## Core Features (v1 MVP)
 
@@ -20,7 +20,16 @@ Solar Audio combines professional workflows with beginner-friendly UX. Built wit
 - ⌨️ **Keyboard-driven** - Command palette (⌘K) and comprehensive shortcuts
 - 🎨 **Modern UI** - Flat design, clip gain handles, sample preview
 
-## Recent Updates (M6.1 - October 29, 2025)
+## Recent Updates (M6.2 - October 30, 2025)
+
+✅ **Toolbar Reorganization:**
+- Reorganized transport bar with grouped controls for better workflow
+- New layout: `[Logo] [File] | [Transport Controls] | [Metronome Piano Tap BPM Time Position] | [Mixer]`
+- Enhanced File menu with 10 actions (New, Open, Save, Save As, Make Copy, Export Audio, Export MIDI, Project Settings, Close Project)
+- Visual dividers between control groups for improved clarity
+- File menu now uses Material icons instead of emojis
+
+## Previous Updates (M6.1 - October 29, 2025)
 
 ✅ **MIDI & Instruments Complete:**
 - Piano roll editor with FL Studio-style layout
@@ -149,6 +158,7 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for detailed mi
 | **M5.6**  | Track Duplication           | ✅ Complete |
 | **M6**    | MIDI & Piano Roll           | ✅ Complete |
 | **M6.1**  | MIDI Playback Fixes         | ✅ Complete |
+| **M6.2**  | Toolbar Reorganization      | ✅ Complete |
 | **M7**    | VST3 Plugin Support         | 🚧 Ready    |
 | **M8**    | Stock Instruments           | 📋 Planned  |
 | **M9**    | Polish & UX                 | 📋 Planned  |

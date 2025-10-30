@@ -1,7 +1,7 @@
 # Solar Audio - Development Roadmap
 
-**Last Updated:** October 29, 2025
-**Current Status:** M6 Complete (MIDI & Instruments), M7 Ready to Start
+**Last Updated:** October 30, 2025
+**Current Status:** M6.2 Complete (Toolbar Reorganization), M7 Ready to Start
 
 ---
 
@@ -35,6 +35,7 @@ Week 0    Week 10   Week 15   Week 22
 - M5.5: UI Redesign & Polish (3-panel layout, light grey theme)
 - M6: MIDI & Instruments (piano roll, synthesizer, drag-and-drop)
 - M6.1: MIDI Playback Fixes (clip playback, track cleanup, stuck notes)
+- M6.2: Toolbar Reorganization (grouped controls, enhanced File menu)
 
 **📋 Ready to Start:**
 - M7: VST3 Plugin Support
@@ -68,6 +69,24 @@ Week 0    Week 10   Week 15   Week 22
 **Deferred to Future:**
 - MIDI recording (planned for M7/M8)
 - Quantize options (planned for M7/M8)
+
+---
+
+### M6.2: Toolbar Reorganization ✅
+
+**Completed:** October 30, 2025
+
+**Implemented:**
+- ✅ Reorganized transport bar with logical grouping
+- ✅ New layout: [Logo] [File] | [Transport] | [Tools & Time] | [Mixer]
+- ✅ Enhanced File menu with 10 actions:
+  - New Project, Open Project
+  - Save, Save As, Make a Copy
+  - Export Audio, Export MIDI
+  - Project Settings, Close Project
+- ✅ Visual dividers between control groups
+- ✅ Material icons throughout menu (no emojis)
+- ✅ Placeholder dialogs for future features (MIDI export, settings)
 
 ---
 

@@ -1083,7 +1083,7 @@ class _DAWScreenState extends State<DAWScreen> {
     }
   }
 
-  void _exportProject() {
+  void _exportAudio() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1143,6 +1143,180 @@ class _DAWScreenState extends State<DAWScreen> {
     );
   }
 
+  void _exportMidi() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export MIDI'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Export MIDI functionality coming soon.'),
+            SizedBox(height: 16),
+            Text('This will export:'),
+            Text('• All MIDI tracks as .mid file'),
+            Text('• Preserve tempo and time signatures'),
+            Text('• Include all note data and velocities'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _makeCopy() async {
+    if (_currentProjectPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No project to copy')),
+      );
+      return;
+    }
+
+    // Show dialog to enter copy name
+    final nameController = TextEditingController(text: '$_currentProjectName Copy');
+
+    final copyName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Make a Copy'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Copy Name',
+            hintText: 'Enter name for the copy',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, nameController.text),
+            child: const Text('Create Copy'),
+          ),
+        ],
+      ),
+    );
+
+    if (copyName == null || copyName.isEmpty) return;
+
+    try {
+      // Use macOS native file picker for save location
+      final result = await Process.run('osascript', [
+        '-e',
+        'POSIX path of (choose folder with prompt "Choose location for copy")'
+      ]);
+
+      if (result.exitCode == 0) {
+        final parentPath = result.stdout.toString().trim();
+        if (parentPath.isNotEmpty) {
+          final copyPath = '$parentPath/$copyName.solar';
+
+          // Save current project state to the new location
+          setState(() => _isLoading = true);
+
+          try {
+            final saveResult = _audioEngine!.saveProject(copyName, copyPath);
+
+            // Save UI layout data for the copy
+            _saveUILayout(copyPath);
+
+            setState(() => _isLoading = false);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Copy created: $copyName')),
+            );
+          } catch (e) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to create copy: $e')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Make Copy failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create copy: $e')),
+      );
+    }
+  }
+
+  void _projectSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Project Settings'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Project settings coming soon.'),
+            SizedBox(height: 16),
+            Text('Available settings will include:'),
+            Text('• Sample Rate'),
+            Text('• Bit Depth'),
+            Text('• Default Time Signature'),
+            Text('• Audio File Location'),
+            Text('• Auto-save Interval'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _closeProject() {
+    // Show confirmation dialog if current project has unsaved changes
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Close Project'),
+        content: const Text('Are you sure you want to close the current project?\n\nAny unsaved changes will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+
+              // Stop playback if active
+              if (_isPlaying) {
+                _stopPlayback();
+              }
+
+              // Clear project state
+              setState(() {
+                _currentProjectPath = null;
+                _currentProjectName = 'Untitled';
+                _statusMessage = 'No project loaded';
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Project closed')),
+              );
+            },
+            child: const Text('Close', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1171,7 +1345,11 @@ class _DAWScreenState extends State<DAWScreen> {
             onOpenProject: _openProject,
             onSaveProject: _saveProject,
             onSaveProjectAs: _saveProjectAs,
-            onExportProject: _exportProject,
+            onMakeCopy: _makeCopy,
+            onExportAudio: _exportAudio,
+            onExportMidi: _exportMidi,
+            onProjectSettings: _projectSettings,
+            onCloseProject: _closeProject,
             onToggleMixer: _toggleMixer,
             mixerVisible: _mixerVisible,
             isLoading: _isLoading,

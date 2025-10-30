@@ -23,7 +23,11 @@ class TransportBar extends StatelessWidget {
   final VoidCallback? onOpenProject;
   final VoidCallback? onSaveProject;
   final VoidCallback? onSaveProjectAs;
-  final VoidCallback? onExportProject;
+  final VoidCallback? onMakeCopy;
+  final VoidCallback? onExportAudio;
+  final VoidCallback? onExportMidi;
+  final VoidCallback? onProjectSettings;
+  final VoidCallback? onCloseProject;
   final VoidCallback? onToggleMixer;
   final bool mixerVisible;
   final bool isLoading;
@@ -49,7 +53,11 @@ class TransportBar extends StatelessWidget {
     this.onOpenProject,
     this.onSaveProject,
     this.onSaveProjectAs,
-    this.onExportProject,
+    this.onMakeCopy,
+    this.onExportAudio,
+    this.onExportMidi,
+    this.onProjectSettings,
+    this.onCloseProject,
     this.onToggleMixer,
     this.mixerVisible = true,
     this.isLoading = false,
@@ -76,6 +84,140 @@ class TransportBar extends StatelessWidget {
             fit: BoxFit.contain,
           ),
 
+          const SizedBox(width: 8),
+
+          // File menu button
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.folder, color: Color(0xFF404040), size: 20),
+            tooltip: 'File',
+            onSelected: (String value) {
+              switch (value) {
+                case 'new':
+                  onNewProject?.call();
+                  break;
+                case 'open':
+                  onOpenProject?.call();
+                  break;
+                case 'save':
+                  onSaveProject?.call();
+                  break;
+                case 'save_as':
+                  onSaveProjectAs?.call();
+                  break;
+                case 'make_copy':
+                  onMakeCopy?.call();
+                  break;
+                case 'export_audio':
+                  onExportAudio?.call();
+                  break;
+                case 'export_midi':
+                  onExportMidi?.call();
+                  break;
+                case 'settings':
+                  onProjectSettings?.call();
+                  break;
+                case 'close':
+                  onCloseProject?.call();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'new',
+                child: Row(
+                  children: [
+                    Icon(Icons.description, size: 18),
+                    SizedBox(width: 8),
+                    Text('New Project'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'open',
+                child: Row(
+                  children: [
+                    Icon(Icons.folder_open, size: 18),
+                    SizedBox(width: 8),
+                    Text('Open Project...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'save',
+                child: Row(
+                  children: [
+                    Icon(Icons.save, size: 18),
+                    SizedBox(width: 8),
+                    Text('Save'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'save_as',
+                child: Row(
+                  children: [
+                    Icon(Icons.save_as, size: 18),
+                    SizedBox(width: 8),
+                    Text('Save As...'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'make_copy',
+                child: Row(
+                  children: [
+                    Icon(Icons.content_copy, size: 18),
+                    SizedBox(width: 8),
+                    Text('Make a Copy...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'export_audio',
+                child: Row(
+                  children: [
+                    Icon(Icons.audio_file, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export Audio...'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'export_midi',
+                child: Row(
+                  children: [
+                    Icon(Icons.music_note, size: 18),
+                    SizedBox(width: 8),
+                    Text('Export MIDI...'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, size: 18),
+                    SizedBox(width: 8),
+                    Text('Project Settings...'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'close',
+                child: Row(
+                  children: [
+                    Icon(Icons.close, size: 18),
+                    SizedBox(width: 8),
+                    Text('Close Project'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
           const SizedBox(width: 24),
           const VerticalDivider(color: Color(0xFF909090), width: 1),
           const SizedBox(width: 16),
@@ -88,9 +230,9 @@ class TransportBar extends StatelessWidget {
             tooltip: isPlaying ? 'Pause' : 'Play',
             size: 48,
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Stop button
           _TransportButton(
             icon: Icons.stop,
@@ -99,26 +241,26 @@ class TransportBar extends StatelessWidget {
             tooltip: 'Stop',
             size: 40,
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           // Record button
           _TransportButton(
             icon: Icons.fiber_manual_record,
-            color: isRecording || isCountingIn 
+            color: isRecording || isCountingIn
                 ? const Color(0xFFFF0000)
                 : const Color(0xFFE91E63),
             onPressed: onRecord,
-            tooltip: isRecording 
-                ? 'Stop Recording' 
+            tooltip: isRecording
+                ? 'Stop Recording'
                 : (isCountingIn ? 'Counting In...' : 'Record'),
             size: 44,
           ),
-          
+
           const SizedBox(width: 24),
           const VerticalDivider(color: Color(0xFF909090), width: 1),
           const SizedBox(width: 16),
-          
+
           // Metronome toggle
           _MetronomeButton(
             enabled: metronomeEnabled,
@@ -140,11 +282,9 @@ class TransportBar extends StatelessWidget {
             tempo: tempo,
             onTempoChanged: onTempoChanged,
           ),
-          
-          const SizedBox(width: 24),
-          const VerticalDivider(color: Color(0xFF909090), width: 1),
-          const SizedBox(width: 24),
-          
+
+          const SizedBox(width: 8),
+
           // Time display
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -174,8 +314,8 @@ class TransportBar extends StatelessWidget {
               ],
             ),
           ),
-          
-          const Spacer(),
+
+          const SizedBox(width: 8),
 
           // Position display (bars.beats.subdivision)
           Container(
@@ -196,90 +336,9 @@ class TransportBar extends StatelessWidget {
             ),
           ),
 
-          const Spacer(),
-
-          const SizedBox(width: 8),
-
-          // File menu button
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.folder_open, color: Color(0xFF404040), size: 20),
-            tooltip: 'File',
-            onSelected: (String value) {
-              switch (value) {
-                case 'new':
-                  onNewProject?.call();
-                  break;
-                case 'open':
-                  onOpenProject?.call();
-                  break;
-                case 'save':
-                  onSaveProject?.call();
-                  break;
-                case 'save_as':
-                  onSaveProjectAs?.call();
-                  break;
-                case 'export':
-                  onExportProject?.call();
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'new',
-                child: Row(
-                  children: [
-                    Icon(Icons.description, size: 18),
-                    SizedBox(width: 8),
-                    Text('New Project'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'open',
-                child: Row(
-                  children: [
-                    Icon(Icons.folder_open, size: 18),
-                    SizedBox(width: 8),
-                    Text('Open...'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'save',
-                child: Row(
-                  children: [
-                    Icon(Icons.save, size: 18),
-                    SizedBox(width: 8),
-                    Text('Save'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'save_as',
-                child: Row(
-                  children: [
-                    Icon(Icons.save_as, size: 18),
-                    SizedBox(width: 8),
-                    Text('Save As...'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.upload, size: 18),
-                    SizedBox(width: 8),
-                    Text('Export...'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 4),
+          const SizedBox(width: 24),
+          const VerticalDivider(color: Color(0xFF909090), width: 1),
+          const SizedBox(width: 16),
 
           // Mixer toggle button
           IconButton(
@@ -291,20 +350,6 @@ class TransportBar extends StatelessWidget {
             onPressed: onToggleMixer,
             tooltip: 'Toggle Mixer',
           ),
-
-          // Loading indicator
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.0),
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF4CAF50),
-                ),
-              ),
-            ),
 
           const SizedBox(width: 16),
         ],
