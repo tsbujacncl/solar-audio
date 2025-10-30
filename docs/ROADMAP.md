@@ -1,7 +1,7 @@
 # Solar Audio - Development Roadmap
 
 **Last Updated:** October 30, 2025
-**Current Status:** M6.2 Complete (Toolbar Reorganization), M7 Ready to Start
+**Current Status:** M6.3 Complete (Native Menu Bar & Editor Panel), M7 Ready to Start
 
 ---
 
@@ -36,6 +36,7 @@ Week 0    Week 10   Week 15   Week 22
 - M6: MIDI & Instruments (piano roll, synthesizer, drag-and-drop)
 - M6.1: MIDI Playback Fixes (clip playback, track cleanup, stuck notes)
 - M6.2: Toolbar Reorganization (grouped controls, enhanced File menu)
+- M6.3: Native Menu Bar & Editor Panel (macOS menu integration, keyboard shortcuts)
 
 **📋 Ready to Start:**
 - M7: VST3 Plugin Support
@@ -87,6 +88,26 @@ Week 0    Week 10   Week 15   Week 22
 - ✅ Visual dividers between control groups
 - ✅ Material icons throughout menu (no emojis)
 - ✅ Placeholder dialogs for future features (MIDI export, settings)
+
+---
+
+### M6.3: Native Menu Bar & Editor Panel ✅
+
+**Completed:** October 30, 2025
+
+**Implemented:**
+- ✅ Native macOS menu bar integration using PlatformMenuBar
+- ✅ Complete menu structure with keyboard shortcuts:
+  - **Solar Audio menu**: About, Services, Hide (⌘H), Hide Others (⌥⌘H), Show All, Quit (⌘Q)
+  - **File menu**: New (⌘N), Open (⌘O), Save (⌘S), Save As (⇧⌘S), Make Copy, Export Audio/MIDI, Settings (⌘,), Close (⌘W)
+  - **Edit menu**: Undo (⌘Z), Redo (⇧⌘Z), Cut (⌘X), Copy (⌘C), Paste (⌘V), Delete (Del), Select All (⌘A) - all disabled for now
+  - **View menu**: Toggle Library (⌘L), Mixer (⌘M), Editor (⌘E), Piano (⌘P), Reset Layout, Zoom In/Out/Fit (disabled for now)
+- ✅ Renamed "Bottom Panel" to "Editor Panel" throughout codebase
+- ✅ Added View dropdown to toolbar with checkmarks for panel visibility
+- ✅ Panel toggle methods: Library, Mixer, Editor, Virtual Piano
+- ✅ Reset Panel Layout functionality (restores default sizes and visibility)
+- ✅ All keyboard shortcuts working natively through macOS system
+- ✅ Updated AppDelegate.swift for proper menu bar integration
 
 ---
 
