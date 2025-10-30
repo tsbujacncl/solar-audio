@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -8,7 +9,7 @@ import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
 import '../widgets/track_mixer_panel.dart';
 import '../widgets/library_panel.dart';
-import '../widgets/bottom_panel.dart';
+import '../widgets/editor_panel.dart';
 import '../widgets/resizable_divider.dart';
 import '../widgets/instrument_browser.dart';
 import '../models/midi_note_data.dart';
@@ -56,18 +57,18 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M6: UI panel state
   bool _libraryPanelCollapsed = false;
-  bool _bottomPanelVisible = true; // Show piano roll by default for M6 testing
+  bool _editorPanelVisible = true; // Show editor panel by default
 
   // M7: Resizable panels state
   double _libraryPanelWidth = 200.0;
   double _mixerPanelWidth = 380.0;
-  double _bottomPanelHeight = 250.0;
+  double _editorPanelHeight = 250.0;
   static const double _libraryMinWidth = 40.0;
   static const double _libraryMaxWidth = 400.0;
   static const double _mixerMinWidth = 200.0;
   static const double _mixerMaxWidth = 600.0;
-  static const double _bottomMinHeight = 100.0;
-  static const double _bottomMaxHeight = 500.0;
+  static const double _editorMinHeight = 100.0;
+  static const double _editorMaxHeight = 500.0;
 
   // M8: MIDI editing state
   int? _selectedTrackId; // Unified track selection for piano roll, FX, and instrument panels
@@ -502,7 +503,7 @@ class _DAWScreenState extends State<DAWScreen> {
         // Disable: Hide panel
         debugPrint('🎹 [DEBUG] Hiding piano panel...');
         _virtualPianoVisible = false;
-        _bottomPanelVisible = false; // Hide bottom panel when piano disabled
+        _editorPanelVisible = false; // Hide editor panel when piano disabled
         _statusMessage = 'Virtual piano disabled';
         debugPrint('🎹 Virtual piano disabled');
       }
@@ -523,14 +524,14 @@ class _DAWScreenState extends State<DAWScreen> {
     if (trackId == null) {
       setState(() {
         _selectedTrackId = null;
-        _bottomPanelVisible = false;
+        _editorPanelVisible = false;
       });
       return;
     }
 
     setState(() {
       _selectedTrackId = trackId;
-      _bottomPanelVisible = true;
+      _editorPanelVisible = true;
 
       // Clear clip selection when selecting just a track
       _selectedMidiClipId = null;
@@ -547,7 +548,7 @@ class _DAWScreenState extends State<DAWScreen> {
       final instrumentData = InstrumentData.defaultSynthesizer(trackId);
       _trackInstruments[trackId] = instrumentData;
       _selectedTrackId = trackId; // Select the track when instrument is assigned
-      _bottomPanelVisible = true; // Show bottom panel when instrument selected
+      _editorPanelVisible = true; // Show editor panel when instrument selected
 
       // Call audio engine to set instrument
       if (_audioEngine != null) {
@@ -637,6 +638,32 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
+  void _toggleEditor() {
+    setState(() {
+      _editorPanelVisible = !_editorPanelVisible;
+    });
+  }
+
+  void _resetPanelLayout() {
+    setState(() {
+      // Reset to default panel sizes
+      _libraryPanelWidth = 200.0;
+      _mixerPanelWidth = 380.0;
+      _editorPanelHeight = 250.0;
+
+      // Reset visibility states
+      _libraryPanelCollapsed = false;
+      _mixerVisible = true;
+      _editorPanelVisible = true;
+
+      _statusMessage = 'Panel layout reset';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Panel layout reset to defaults')),
+    );
+  }
+
   // M8: MIDI clip selection methods
   void _onMidiClipSelected(int? clipId, MidiClipData? clipData) {
     setState(() {
@@ -644,7 +671,7 @@ class _DAWScreenState extends State<DAWScreen> {
       _currentEditingClip = clipData;
       if (clipId != null && clipData != null) {
         // Open piano roll and set the selected track
-        _bottomPanelVisible = true;
+        _editorPanelVisible = true;
         _selectedTrackId = clipData.trackId;
       }
     });
@@ -1020,12 +1047,12 @@ class _DAWScreenState extends State<DAWScreen> {
         'panel_sizes': {
           'library_width': _libraryPanelWidth,
           'mixer_width': _mixerPanelWidth,
-          'bottom_height': _bottomPanelHeight,
+          'bottom_height': _editorPanelHeight,
         },
         'panel_collapsed': {
           'library': _libraryPanelCollapsed,
           'mixer': !_mixerVisible,
-          'bottom': !(_bottomPanelVisible || _virtualPianoVisible),
+          'bottom': !(_editorPanelVisible || _virtualPianoVisible),
         },
       };
 
@@ -1056,12 +1083,12 @@ class _DAWScreenState extends State<DAWScreen> {
         if (panelSizes != null) {
           _libraryPanelWidth = (panelSizes['library_width'] as num?)?.toDouble() ?? 200.0;
           _mixerPanelWidth = (panelSizes['mixer_width'] as num?)?.toDouble() ?? 380.0;
-          _bottomPanelHeight = (panelSizes['bottom_height'] as num?)?.toDouble() ?? 250.0;
+          _editorPanelHeight = (panelSizes['bottom_height'] as num?)?.toDouble() ?? 250.0;
 
           // Clamp to min/max values
           _libraryPanelWidth = _libraryPanelWidth.clamp(_libraryMinWidth, _libraryMaxWidth);
           _mixerPanelWidth = _mixerPanelWidth.clamp(_mixerMinWidth, _mixerMaxWidth);
-          _bottomPanelHeight = _bottomPanelHeight.clamp(_bottomMinHeight, _bottomMaxHeight);
+          _editorPanelHeight = _editorPanelHeight.clamp(_editorMinHeight, _editorMaxHeight);
         }
 
         // Load collapsed states
@@ -1319,9 +1346,189 @@ class _DAWScreenState extends State<DAWScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF909090), // Light grey background
-      body: Column(
+    return PlatformMenuBar(
+      menus: [
+        // Standard macOS app menu (Solar Audio)
+        PlatformMenu(
+          label: 'Solar Audio',
+          menus: [
+            PlatformMenuItem(
+              label: 'About Solar Audio',
+              onSelected: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('About Solar Audio'),
+                    content: const Text('Solar Audio\nVersion M6.2\n\nA modern, cross-platform DAW'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            if (Platform.isMacOS)
+              const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.servicesSubmenu),
+            if (Platform.isMacOS)
+              const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
+            if (Platform.isMacOS)
+              const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hideOtherApplications),
+            if (Platform.isMacOS)
+              const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.showAllApplications),
+            PlatformMenuItem(
+              label: 'Quit Solar Audio',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyQ, meta: true),
+              onSelected: () {
+                // Close the app
+                exit(0);
+              },
+            ),
+          ],
+        ),
+
+        // File Menu
+        PlatformMenu(
+          label: 'File',
+          menus: [
+            PlatformMenuItem(
+              label: 'New Project',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyN, meta: true),
+              onSelected: _newProject,
+            ),
+            PlatformMenuItem(
+              label: 'Open Project...',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyO, meta: true),
+              onSelected: _openProject,
+            ),
+            PlatformMenuItem(
+              label: 'Save',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyS, meta: true),
+              onSelected: _saveProject,
+            ),
+            PlatformMenuItem(
+              label: 'Save As...',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyS, meta: true, shift: true),
+              onSelected: _saveProjectAs,
+            ),
+            PlatformMenuItem(
+              label: 'Make a Copy...',
+              onSelected: _makeCopy,
+            ),
+            PlatformMenuItem(
+              label: 'Export Audio...',
+              onSelected: _exportAudio,
+            ),
+            PlatformMenuItem(
+              label: 'Export MIDI...',
+              onSelected: _exportMidi,
+            ),
+            PlatformMenuItem(
+              label: 'Project Settings...',
+              shortcut: const SingleActivator(LogicalKeyboardKey.comma, meta: true),
+              onSelected: _projectSettings,
+            ),
+            PlatformMenuItem(
+              label: 'Close Project',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyW, meta: true),
+              onSelected: _closeProject,
+            ),
+          ],
+        ),
+
+        // Edit Menu
+        PlatformMenu(
+          label: 'Edit',
+          menus: [
+            PlatformMenuItem(
+              label: 'Undo',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyZ, meta: true),
+              onSelected: null, // Disabled for now
+            ),
+            PlatformMenuItem(
+              label: 'Redo',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyZ, meta: true, shift: true),
+              onSelected: null, // Disabled for now
+            ),
+            PlatformMenuItem(
+              label: 'Cut',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyX, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+            PlatformMenuItem(
+              label: 'Copy',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyC, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+            PlatformMenuItem(
+              label: 'Paste',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyV, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+            PlatformMenuItem(
+              label: 'Delete',
+              shortcut: const SingleActivator(LogicalKeyboardKey.delete),
+              onSelected: null, // Disabled - future feature
+            ),
+            PlatformMenuItem(
+              label: 'Select All',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyA, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+          ],
+        ),
+
+        // View Menu
+        PlatformMenu(
+          label: 'View',
+          menus: [
+            PlatformMenuItem(
+              label: !_libraryPanelCollapsed ? '✓ Show Library Panel' : 'Show Library Panel',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyL, meta: true),
+              onSelected: _toggleLibraryPanel,
+            ),
+            PlatformMenuItem(
+              label: _mixerVisible ? '✓ Show Mixer Panel' : 'Show Mixer Panel',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyM, meta: true),
+              onSelected: _toggleMixer,
+            ),
+            PlatformMenuItem(
+              label: _editorPanelVisible ? '✓ Show Editor Panel' : 'Show Editor Panel',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true),
+              onSelected: _toggleEditor,
+            ),
+            PlatformMenuItem(
+              label: _virtualPianoEnabled ? '✓ Show Virtual Piano' : 'Show Virtual Piano',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyP, meta: true),
+              onSelected: _toggleVirtualPiano,
+            ),
+            PlatformMenuItem(
+              label: 'Reset Panel Layout',
+              onSelected: _resetPanelLayout,
+            ),
+            PlatformMenuItem(
+              label: 'Zoom In',
+              shortcut: const SingleActivator(LogicalKeyboardKey.equal, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+            PlatformMenuItem(
+              label: 'Zoom Out',
+              shortcut: const SingleActivator(LogicalKeyboardKey.minus, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+            PlatformMenuItem(
+              label: 'Zoom to Fit',
+              shortcut: const SingleActivator(LogicalKeyboardKey.digit0, meta: true),
+              onSelected: null, // Disabled - future feature
+            ),
+          ],
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: const Color(0xFF909090), // Light grey background
+        body: Column(
         children: [
           // Transport bar (with logo and file/mixer buttons)
           TransportBar(
@@ -1350,8 +1557,16 @@ class _DAWScreenState extends State<DAWScreen> {
             onExportMidi: _exportMidi,
             onProjectSettings: _projectSettings,
             onCloseProject: _closeProject,
+            // View menu parameters
+            onToggleLibrary: _toggleLibraryPanel,
             onToggleMixer: _toggleMixer,
+            onToggleEditor: _toggleEditor,
+            onTogglePiano: _toggleVirtualPiano,
+            onResetPanelLayout: _resetPanelLayout,
+            libraryVisible: !_libraryPanelCollapsed,
             mixerVisible: _mixerVisible,
+            editorVisible: _editorPanelVisible,
+            pianoVisible: _virtualPianoEnabled,
             isLoading: _isLoading,
           ),
 
@@ -1444,21 +1659,21 @@ class _DAWScreenState extends State<DAWScreen> {
                   ),
                 ),
 
-                // Bottom panel: Piano Roll / FX Chain / Virtual Piano
-                if (_bottomPanelVisible || _virtualPianoVisible) ...[
-                  // Divider: Timeline/Bottom Panel
+                // Editor panel: Piano Roll / FX Chain / Instrument / Virtual Piano
+                if (_editorPanelVisible || _virtualPianoVisible) ...[
+                  // Divider: Timeline/Editor Panel
                   ResizableDivider(
                     orientation: DividerOrientation.horizontal,
                     isCollapsed: false,
                     onDrag: (delta) {
                       setState(() {
-                        _bottomPanelHeight = (_bottomPanelHeight - delta)
-                            .clamp(_bottomMinHeight, _bottomMaxHeight);
+                        _editorPanelHeight = (_editorPanelHeight - delta)
+                            .clamp(_editorMinHeight, _editorMaxHeight);
                       });
                     },
                     onDoubleClick: () {
                       setState(() {
-                        _bottomPanelVisible = false;
+                        _editorPanelVisible = false;
                         _virtualPianoVisible = false;
                         _virtualPianoEnabled = false;
                       });
@@ -1466,8 +1681,8 @@ class _DAWScreenState extends State<DAWScreen> {
                   ),
 
                   SizedBox(
-                    height: _bottomPanelHeight,
-                    child: BottomPanel(
+                    height: _editorPanelHeight,
+                    child: EditorPanel(
                       audioEngine: _audioEngine,
                       virtualPianoEnabled: _virtualPianoEnabled,
                       selectedTrackId: _selectedTrackId,
@@ -1489,6 +1704,7 @@ class _DAWScreenState extends State<DAWScreen> {
           _buildStatusBar(),
         ],
       ),
+    ),
     );
   }
 

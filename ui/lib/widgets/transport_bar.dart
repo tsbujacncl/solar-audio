@@ -28,8 +28,20 @@ class TransportBar extends StatelessWidget {
   final VoidCallback? onExportMidi;
   final VoidCallback? onProjectSettings;
   final VoidCallback? onCloseProject;
+
+  // View menu callbacks
+  final VoidCallback? onToggleLibrary;
   final VoidCallback? onToggleMixer;
+  final VoidCallback? onToggleEditor;
+  final VoidCallback? onTogglePiano;
+  final VoidCallback? onResetPanelLayout;
+
+  // View menu state
+  final bool libraryVisible;
   final bool mixerVisible;
+  final bool editorVisible;
+  final bool pianoVisible;
+
   final bool isLoading;
 
   const TransportBar({
@@ -58,8 +70,15 @@ class TransportBar extends StatelessWidget {
     this.onExportMidi,
     this.onProjectSettings,
     this.onCloseProject,
+    this.onToggleLibrary,
     this.onToggleMixer,
+    this.onToggleEditor,
+    this.onTogglePiano,
+    this.onResetPanelLayout,
+    this.libraryVisible = true,
     this.mixerVisible = true,
+    this.editorVisible = true,
+    this.pianoVisible = false,
     this.isLoading = false,
   });
 
@@ -212,6 +231,106 @@ class TransportBar extends StatelessWidget {
                     Icon(Icons.close, size: 18),
                     SizedBox(width: 8),
                     Text('Close Project'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 4),
+
+          // View menu button
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.visibility, color: Color(0xFF404040), size: 20),
+            tooltip: 'View',
+            onSelected: (String value) {
+              switch (value) {
+                case 'library':
+                  onToggleLibrary?.call();
+                  break;
+                case 'mixer':
+                  onToggleMixer?.call();
+                  break;
+                case 'editor':
+                  onToggleEditor?.call();
+                  break;
+                case 'piano':
+                  onTogglePiano?.call();
+                  break;
+                case 'reset':
+                  onResetPanelLayout?.call();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'library',
+                child: Row(
+                  children: [
+                    Icon(
+                      libraryVisible ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Library Panel'),
+                    const Spacer(),
+                    const Text('L', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'mixer',
+                child: Row(
+                  children: [
+                    Icon(
+                      mixerVisible ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Mixer Panel'),
+                    const Spacer(),
+                    const Text('M', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'editor',
+                child: Row(
+                  children: [
+                    Icon(
+                      editorVisible ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Editor Panel'),
+                    const Spacer(),
+                    const Text('E', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'piano',
+                child: Row(
+                  children: [
+                    Icon(
+                      pianoVisible ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Virtual Piano'),
+                    const Spacer(),
+                    const Text('P', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'reset',
+                child: Row(
+                  children: [
+                    Icon(Icons.restart_alt, size: 18),
+                    SizedBox(width: 8),
+                    Text('Reset Panel Layout'),
                   ],
                 ),
               ),

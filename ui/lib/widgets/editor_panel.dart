@@ -7,38 +7,34 @@ import 'synthesizer_panel.dart';
 import '../models/midi_note_data.dart';
 import '../models/instrument_data.dart';
 
-/// Bottom panel widget - tabbed interface for Piano Roll, FX Chain, Instrument, and Virtual Piano
-class BottomPanel extends StatefulWidget {
+/// Editor panel widget - tabbed interface for Piano Roll, FX Chain, Instrument, and Virtual Piano
+class EditorPanel extends StatefulWidget {
   final AudioEngine? audioEngine;
   final bool virtualPianoEnabled;
-  final int? selectedTrackForFX;
-  final int? selectedTrackForInstrument;
+  final int? selectedTrackId; // Unified track selection
   final InstrumentData? currentInstrumentData;
   final VoidCallback? onVirtualPianoClose;
   final MidiClipData? currentEditingClip;
-  final int? selectedMidiTrackId;
   final Function(MidiClipData)? onMidiClipUpdated;
   final Function(InstrumentData)? onInstrumentParameterChanged;
 
-  const BottomPanel({
+  const EditorPanel({
     super.key,
     this.audioEngine,
     this.virtualPianoEnabled = false,
-    this.selectedTrackForFX,
-    this.selectedTrackForInstrument,
+    this.selectedTrackId,
     this.currentInstrumentData,
     this.onVirtualPianoClose,
     this.currentEditingClip,
-    this.selectedMidiTrackId,
     this.onMidiClipUpdated,
     this.onInstrumentParameterChanged,
   });
 
   @override
-  State<BottomPanel> createState() => _BottomPanelState();
+  State<EditorPanel> createState() => _EditorPanelState();
 }
 
-class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStateMixin {
+class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -48,24 +44,31 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
   }
 
   @override
-  void didUpdateWidget(BottomPanel oldWidget) {
+  void didUpdateWidget(EditorPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Auto-switch to Instrument tab when track with instrument selected
-    if (widget.selectedTrackForInstrument != null &&
-        oldWidget.selectedTrackForInstrument == null) {
-      _tabController.index = 2; // Instrument is 3rd tab
+    // Only auto-switch tabs if this is the first track selection (from null)
+    // Otherwise, preserve the current tab when switching between tracks
+    if (widget.selectedTrackId != oldWidget.selectedTrackId) {
+      if (oldWidget.selectedTrackId == null && widget.selectedTrackId != null) {
+        // First selection: auto-switch to appropriate tab
+        if (widget.currentInstrumentData != null) {
+          _tabController.index = 2; // Instrument tab
+        } else {
+          _tabController.index = 0; // Piano Roll tab
+        }
+      }
+      // If switching from one track to another, preserve current tab
     }
 
-    // Auto-switch to FX Chain tab when track selected
-    if (widget.selectedTrackForFX != null && oldWidget.selectedTrackForFX == null) {
-      _tabController.index = 1;
+    // Auto-switch to Piano Roll tab when clip selected
+    if (widget.currentEditingClip != null && oldWidget.currentEditingClip == null) {
+      _tabController.index = 0;
     }
 
-    // Auto-switch to Piano Roll tab when MIDI track or clip selected
-    if ((widget.selectedMidiTrackId != null && oldWidget.selectedMidiTrackId == null) ||
-        (widget.currentEditingClip != null && oldWidget.currentEditingClip == null)) {
-      _tabController.index = 0; // Piano Roll is first tab
+    // Auto-switch to Instrument tab when instrument data first appears
+    if (widget.currentInstrumentData != null && oldWidget.currentInstrumentData == null) {
+      _tabController.index = 2;
     }
   }
 
@@ -130,7 +133,7 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
               audioEngine: widget.audioEngine,
               isEnabled: widget.virtualPianoEnabled,
               onClose: widget.onVirtualPianoClose,
-              selectedTrackId: widget.selectedMidiTrackId,
+              selectedTrackId: widget.selectedTrackId,
             ),
         ],
       ),
@@ -139,10 +142,10 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
 
   Widget _buildPianoRollTab() {
     // Use real clip data if available, otherwise create an empty clip for the selected track
-    final clipData = widget.currentEditingClip ?? (widget.selectedMidiTrackId != null
+    final clipData = widget.currentEditingClip ?? (widget.selectedTrackId != null
       ? MidiClipData(
           clipId: -1, // -1 indicates a new, unsaved clip
-          trackId: widget.selectedMidiTrackId!,
+          trackId: widget.selectedTrackId!,
           startTime: 0.0,
           duration: 16.0,
           name: 'New MIDI Clip',
@@ -212,7 +215,7 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
   }
 
   Widget _buildFXChainTab() {
-    if (widget.selectedTrackForFX == null) {
+    if (widget.selectedTrackId == null) {
       return Container(
         color: const Color(0xFF707070),
         child: Center(
@@ -235,7 +238,7 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
               ),
               const SizedBox(height: 8),
               Text(
-                'Select a track and click FX to edit effects',
+                'Select a track to edit effects',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
@@ -250,16 +253,16 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
     // Show effect parameter panel when track selected
     return EffectParameterPanel(
       audioEngine: widget.audioEngine,
-      trackId: widget.selectedTrackForFX!,
+      trackId: widget.selectedTrackId!,
       onClose: () {
         // Don't close the panel, just show empty state
-        // Parent widget handles clearing selectedTrackForFX
+        // Parent widget handles clearing selectedTrackId
       },
     );
   }
 
   Widget _buildInstrumentTab() {
-    if (widget.selectedTrackForInstrument == null || widget.currentInstrumentData == null) {
+    if (widget.selectedTrackId == null || widget.currentInstrumentData == null) {
       return Container(
         color: const Color(0xFF707070),
         child: Center(
@@ -298,13 +301,13 @@ class _BottomPanelState extends State<BottomPanel> with SingleTickerProviderStat
     // Show synthesizer panel when track with instrument selected
     return SynthesizerPanel(
       audioEngine: widget.audioEngine,
-      trackId: widget.selectedTrackForInstrument!,
+      trackId: widget.selectedTrackId!,
       instrumentData: widget.currentInstrumentData,
       onParameterChanged: (instrumentData) {
         widget.onInstrumentParameterChanged?.call(instrumentData);
       },
       onClose: () {
-        // Parent widget handles clearing selectedTrackForInstrument
+        // Parent widget handles clearing selectedTrackId
       },
     );
   }
