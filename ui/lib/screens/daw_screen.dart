@@ -342,21 +342,27 @@ class _DAWScreenState extends State<DAWScreen> {
       final countInBars = _audioEngine!.getCountInBars();
       final tempo = _audioEngine!.getTempo();
       final metronomeEnabled = _audioEngine!.isMetronomeEnabled();
-      
+
       debugPrint('🎙️  Starting recording with:');
       debugPrint('   - Count-in: $countInBars bars');
       debugPrint('   - Tempo: $tempo BPM');
       debugPrint('   - Metronome: ${metronomeEnabled ? "ON" : "OFF"}');
-      
+
+      // Start audio recording
       final result = _audioEngine!.startRecording();
-      debugPrint('   - Result: $result');
-      
+      debugPrint('   - Audio recording: $result');
+
+      // Also start MIDI recording (for armed MIDI tracks)
+      final midiResult = _audioEngine!.startMidiRecording();
+      debugPrint('   - MIDI recording: $midiResult');
+
       setState(() {
         _isCountingIn = true;
+        _isMidiRecording = true;
         _statusMessage = 'Count-in... ($countInBars bars at $tempo BPM)';
         _tempo = tempo;
       });
-      
+
       // Start timer to poll recording state
       _startRecordingStateTimer();
     } catch (e) {
@@ -371,34 +377,52 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_audioEngine == null) return;
 
     try {
-      final clipId = _audioEngine!.stopRecording();
-      
+      // Stop audio recording
+      final audioClipId = _audioEngine!.stopRecording();
+
+      // Stop MIDI recording
+      final midiClipId = _audioEngine!.stopMidiRecording();
+      debugPrint('🎹 MIDI recording stopped, clip ID: $midiClipId');
+
       setState(() {
         _isRecording = false;
         _isCountingIn = false;
+        _isMidiRecording = false;
       });
-      
-      if (clipId >= 0) {
-        // Recording successful - get clip info
-        final duration = _audioEngine!.getClipDuration(clipId);
-        final peaks = _audioEngine!.getWaveformPeaks(clipId, 2000);
-        
+
+      // Build status message based on what was recorded
+      final List<String> recordedItems = [];
+
+      if (audioClipId >= 0) {
+        // Audio recording successful - get clip info
+        final duration = _audioEngine!.getClipDuration(audioClipId);
+        final peaks = _audioEngine!.getWaveformPeaks(audioClipId, 2000);
+
         setState(() {
-          _loadedClipId = clipId;
+          _loadedClipId = audioClipId;
           _clipDuration = duration;
           _waveformPeaks = peaks;
-          _statusMessage = 'Recorded ${duration.toStringAsFixed(2)}s';
         });
-      } else {
-        setState(() {
-          _statusMessage = 'No recording captured';
-        });
+        recordedItems.add('Audio ${duration.toStringAsFixed(2)}s');
       }
+
+      if (midiClipId > 0) {
+        recordedItems.add('MIDI clip');
+      }
+
+      setState(() {
+        if (recordedItems.isNotEmpty) {
+          _statusMessage = 'Recorded: ${recordedItems.join(', ')}';
+        } else {
+          _statusMessage = 'No recording captured';
+        }
+      });
     } catch (e) {
       setState(() {
         _statusMessage = 'Stop recording error: $e';
         _isRecording = false;
         _isCountingIn = false;
+        _isMidiRecording = false;
       });
     }
   }

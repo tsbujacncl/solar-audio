@@ -857,38 +857,62 @@ pub fn get_midi_clip_count() -> Result<usize, String> {
 }
 
 /// Send MIDI note on event directly to synthesizer (for virtual piano)
+/// Also records the event if MIDI recording is active
 pub fn send_midi_note_on(note: u8, velocity: u8) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
+    // Get current playhead position for timestamping
+    let timestamp_samples = graph.get_playhead_samples();
 
     use crate::midi::{MidiEvent, MidiEventType};
     let event = MidiEvent {
         event_type: MidiEventType::NoteOn { note, velocity },
-        timestamp_samples: 0, // Immediate playback
+        timestamp_samples,
     };
 
+    // Record to MIDI recorder if recording is active
+    if let Ok(mut recorder) = graph.midi_recorder.lock() {
+        if recorder.is_recording() {
+            recorder.record_event(event);
+        }
+    }
+
+    // Send to synthesizer for live playback
+    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
     synth.process_event(&event);
+
     Ok(format!("Note On: {} (velocity: {})", note, velocity))
 }
 
 /// Send MIDI note off event directly to synthesizer (for virtual piano)
+/// Also records the event if MIDI recording is active
 pub fn send_midi_note_off(note: u8, velocity: u8) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
+    // Get current playhead position for timestamping
+    let timestamp_samples = graph.get_playhead_samples();
 
     use crate::midi::{MidiEvent, MidiEventType};
     let event = MidiEvent {
         event_type: MidiEventType::NoteOff { note, velocity },
-        timestamp_samples: 0, // Immediate playback
+        timestamp_samples,
     };
 
+    // Record to MIDI recorder if recording is active
+    if let Ok(mut recorder) = graph.midi_recorder.lock() {
+        if recorder.is_recording() {
+            recorder.record_event(event);
+        }
+    }
+
+    // Send to synthesizer for live playback
+    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
     synth.process_event(&event);
+
     Ok(format!("Note Off: {} (velocity: {})", note, velocity))
 }
 
@@ -2240,23 +2264,57 @@ pub fn get_synth_parameters(_track_id: u64) -> Result<String, String> {
 }
 
 /// Send MIDI note on to track synthesizer
+/// Also records the event if MIDI recording is active
 pub fn send_track_midi_note_on(track_id: u64, note: u8, velocity: u8) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
 
+    // Get current playhead position for timestamping
+    let timestamp_samples = graph.get_playhead_samples();
+
+    // Record to MIDI recorder if recording is active
+    if let Ok(mut recorder) = graph.midi_recorder.lock() {
+        if recorder.is_recording() {
+            use crate::midi::{MidiEvent, MidiEventType};
+            let event = MidiEvent {
+                event_type: MidiEventType::NoteOn { note, velocity },
+                timestamp_samples,
+            };
+            recorder.record_event(event);
+        }
+    }
+
+    // Send to track synthesizer for live playback
+    let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
     synth_manager.note_on(track_id, note, velocity);
     Ok(format!("Track {} note on: {}", track_id, note))
 }
 
 /// Send MIDI note off to track synthesizer
+/// Also records the event if MIDI recording is active
 pub fn send_track_midi_note_off(track_id: u64, note: u8, velocity: u8) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
 
+    // Get current playhead position for timestamping
+    let timestamp_samples = graph.get_playhead_samples();
+
+    // Record to MIDI recorder if recording is active
+    if let Ok(mut recorder) = graph.midi_recorder.lock() {
+        if recorder.is_recording() {
+            use crate::midi::{MidiEvent, MidiEventType};
+            let event = MidiEvent {
+                event_type: MidiEventType::NoteOff { note, velocity },
+                timestamp_samples,
+            };
+            recorder.record_event(event);
+        }
+    }
+
+    // Send to track synthesizer for live playback
+    let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
     synth_manager.note_off(track_id, note, velocity);
     Ok(format!("Track {} note off: {}", track_id, note))
 }

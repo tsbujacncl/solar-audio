@@ -239,6 +239,11 @@ impl AudioGraph {
         samples as f64 / TARGET_SAMPLE_RATE as f64
     }
 
+    /// Get the current playhead position in samples
+    pub fn get_playhead_samples(&self) -> u64 {
+        self.playhead_samples.load(Ordering::SeqCst)
+    }
+
     /// Seek to a specific position in seconds
     pub fn seek(&self, position_seconds: f64) {
         let samples = (position_seconds * TARGET_SAMPLE_RATE as f64) as u64;
