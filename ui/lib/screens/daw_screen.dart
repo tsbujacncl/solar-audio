@@ -417,7 +417,43 @@ class _DAWScreenState extends State<DAWScreen> {
       }
 
       if (midiClipId > 0) {
-        recordedItems.add('MIDI clip');
+        // Get clip info from engine: "clip_id,track_id,start_time,duration,note_count"
+        final clipInfo = _audioEngine!.getMidiClipInfo(midiClipId);
+        debugPrint('🎹 MIDI clip info: $clipInfo');
+
+        if (!clipInfo.startsWith('Error')) {
+          try {
+            final parts = clipInfo.split(',');
+            if (parts.length >= 5) {
+              final trackId = int.parse(parts[1]);
+              final startTime = double.parse(parts[2]);
+              final duration = double.parse(parts[3]);
+              final noteCount = int.parse(parts[4]);
+
+              // Create MidiClipData and add to timeline
+              final clipData = MidiClipData(
+                clipId: midiClipId,
+                trackId: trackId >= 0 ? trackId : (_selectedTrackId ?? 0),
+                startTime: startTime,
+                duration: duration > 0 ? duration : 4.0, // Default 4 seconds if no duration
+                name: 'Recorded MIDI',
+                notes: [], // Notes are managed by the engine
+              );
+
+              setState(() {
+                _midiClips.add(clipData);
+              });
+
+              debugPrint('✅ MIDI clip added to timeline: track=$trackId, start=$startTime, duration=$duration, notes=$noteCount');
+              recordedItems.add('MIDI ($noteCount notes)');
+            }
+          } catch (e) {
+            debugPrint('❌ Failed to parse MIDI clip info: $e');
+            recordedItems.add('MIDI clip');
+          }
+        } else {
+          recordedItems.add('MIDI clip');
+        }
       }
 
       setState(() {

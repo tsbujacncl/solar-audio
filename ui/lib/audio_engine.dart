@@ -104,6 +104,8 @@ class AudioEngine {
   late final _StartMidiRecordingFfi _startMidiRecording;
   late final _StopMidiRecordingFfi _stopMidiRecording;
   late final _GetMidiRecordingStateFfi _getMidiRecordingState;
+  late final _QuantizeMidiClipFfi _quantizeMidiClip;
+  late final _GetMidiClipInfoFfi _getMidiClipInfo;
 
   // Audio Device functions
   late final _GetAudioInputDevicesFfi _getAudioInputDevices;
@@ -614,6 +616,18 @@ class AudioEngine {
               'get_midi_recording_state_ffi')
           .asFunction();
       print('  ✅ get_midi_recording_state_ffi bound');
+
+      _quantizeMidiClip = _lib
+          .lookup<ffi.NativeFunction<_QuantizeMidiClipFfiNative>>(
+              'quantize_midi_clip_ffi')
+          .asFunction();
+      print('  ✅ quantize_midi_clip_ffi bound');
+
+      _getMidiClipInfo = _lib
+          .lookup<ffi.NativeFunction<_GetMidiClipInfoFfiNative>>(
+              'get_midi_clip_info_ffi')
+          .asFunction();
+      print('  ✅ get_midi_clip_info_ffi bound');
 
       // Bind Audio Device functions
       _getAudioInputDevices = _lib
@@ -1334,6 +1348,37 @@ class AudioEngine {
     } catch (e) {
       print('❌ [AudioEngine] Get MIDI recording state failed: $e');
       return 0;
+    }
+  }
+
+  /// Quantize a MIDI clip to grid
+  /// gridDivision: 4=1/4 note, 8=1/8, 16=1/16, 32=1/32
+  String quantizeMidiClip(int clipId, int gridDivision) {
+    print('🎵 [AudioEngine] Quantizing clip $clipId to 1/$gridDivision grid...');
+    try {
+      final resultPtr = _quantizeMidiClip(clipId, gridDivision);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Quantize MIDI clip failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Get MIDI clip info
+  /// Returns: "clip_id,track_id,start_time,duration,note_count"
+  /// track_id is -1 if not assigned to a track
+  String getMidiClipInfo(int clipId) {
+    try {
+      final resultPtr = _getMidiClipInfo(clipId);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Get MIDI clip info failed: $e');
+      return 'Error: $e';
     }
   }
 
@@ -2226,6 +2271,12 @@ typedef _StopMidiRecordingFfi = int Function();
 
 typedef _GetMidiRecordingStateFfiNative = ffi.Int32 Function();
 typedef _GetMidiRecordingStateFfi = int Function();
+
+typedef _QuantizeMidiClipFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint32);
+typedef _QuantizeMidiClipFfi = ffi.Pointer<Utf8> Function(int, int);
+
+typedef _GetMidiClipInfoFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
+typedef _GetMidiClipInfoFfi = ffi.Pointer<Utf8> Function(int);
 
 // Audio Device types
 typedef _GetAudioInputDevicesFfiNative = ffi.Pointer<Utf8> Function();

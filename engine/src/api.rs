@@ -856,6 +856,45 @@ pub fn get_midi_clip_count() -> Result<usize, String> {
     Ok(graph.midi_clip_count())
 }
 
+/// Get info about a MIDI clip
+/// Returns: "clip_id,track_id,start_time,duration,note_count"
+/// track_id is -1 if not assigned to a track
+pub fn get_midi_clip_info(clip_id: u64) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // First check global MIDI clips
+    let midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+    if let Some(timeline_clip) = midi_clips.iter().find(|c| c.id == clip_id) {
+        let track_id = timeline_clip.track_id.unwrap_or(u64::MAX) as i64;
+        let track_id_str = if track_id == u64::MAX as i64 { -1 } else { track_id };
+        let duration = timeline_clip.clip.duration_seconds();
+        let note_count = timeline_clip.clip.events.len() / 2; // NoteOn/NoteOff pairs
+        return Ok(format!("{},{},{},{},{}",
+            clip_id, track_id_str, timeline_clip.start_time, duration, note_count));
+    }
+    drop(midi_clips);
+
+    // Also check track-specific MIDI clips
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+    for track in track_manager.get_all_tracks() {
+        if let Ok(track_lock) = track.lock() {
+            for timeline_clip in &track_lock.midi_clips {
+                if timeline_clip.id == clip_id {
+                    let track_id = timeline_clip.track_id.unwrap_or(track_lock.id) as i64;
+                    let duration = timeline_clip.clip.duration_seconds();
+                    let note_count = timeline_clip.clip.events.len() / 2;
+                    return Ok(format!("{},{},{},{},{}",
+                        clip_id, track_id, timeline_clip.start_time, duration, note_count));
+                }
+            }
+        }
+    }
+
+    Err(format!("MIDI clip {} not found", clip_id))
+}
+
 /// Send MIDI note on event directly to synthesizer (for virtual piano)
 /// Also records the event if MIDI recording is active
 pub fn send_midi_note_on(note: u8, velocity: u8) -> Result<String, String> {

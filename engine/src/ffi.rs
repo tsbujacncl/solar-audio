@@ -503,6 +503,21 @@ pub extern "C" fn get_midi_clip_count_ffi() -> usize {
     api::get_midi_clip_count().unwrap_or(0)
 }
 
+/// Get MIDI clip info as CSV: "clip_id,track_id,start_time,duration,note_count"
+/// track_id is -1 if not assigned to a track
+#[no_mangle]
+pub extern "C" fn get_midi_clip_info_ffi(clip_id: u64) -> *mut c_char {
+    match api::get_midi_clip_info(clip_id) {
+        Ok(info) => {
+            CString::new(info).unwrap_or_default().into_raw()
+        }
+        Err(e) => {
+            let error_msg = format!("Error: {}", e);
+            CString::new(error_msg).unwrap_or_default().into_raw()
+        }
+    }
+}
+
 // ============================================================================
 // M4: TRACK & MIXING FFI
 // ============================================================================

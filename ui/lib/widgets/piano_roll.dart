@@ -269,7 +269,7 @@ class _PianoRollState extends State<PianoRoll> {
           return KeyEventResult.handled;
         },
         child: Container(
-          color: const Color(0xFFE0E0E0), // Light grey background
+          color: const Color(0xFF242424), // Dark background
           child: Column(
             children: [
               _buildHeader(),
@@ -301,10 +301,10 @@ class _PianoRollState extends State<PianoRoll> {
                 width: 60,
                 height: 30,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE8E8E8),
+                  color: Color(0xFF363636),
                   border: Border(
-                    right: BorderSide(color: Color(0xFF909090), width: 1),
-                    bottom: BorderSide(color: Color(0xFF909090), width: 1),
+                    right: BorderSide(color: Color(0xFF363636), width: 1),
+                    bottom: BorderSide(color: Color(0xFF363636), width: 1),
                   ),
                 ),
               ),
@@ -336,9 +336,9 @@ class _PianoRollState extends State<PianoRoll> {
                       Container(
                         width: 60,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFF8F8F8),
+                          color: Color(0xFF363636),
                           border: Border(
-                            right: BorderSide(color: Color(0xFF909090), width: 1),
+                            right: BorderSide(color: Color(0xFF363636), width: 1),
                           ),
                         ),
                         child: Column(
@@ -419,23 +419,23 @@ class _PianoRollState extends State<PianoRoll> {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: const BoxDecoration(
-        color: Color(0xFFD0D0D0), // Light grey header
+        color: Color(0xFF363636), // Dark header
         border: Border(
-          bottom: BorderSide(color: Color(0xFF909090), width: 1),
+          bottom: BorderSide(color: Color(0xFF363636), width: 1),
         ),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.piano_outlined,
-            color: Colors.black, // Black icon on light background
+            color: Color(0xFFE0E0E0), // Light icon on dark background
             size: 20,
           ),
           const SizedBox(width: 8),
           Text(
             'Piano Roll - ${widget.clipData?.name ?? "Unnamed Clip"}',
             style: const TextStyle(
-              color: Colors.black, // Black text on light background
+              color: Color(0xFFE0E0E0), // Light text on dark background
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -453,6 +453,11 @@ class _PianoRollState extends State<PianoRoll> {
 
           const SizedBox(width: 8),
 
+          // Quantize dropdown
+          _buildQuantizeButton(),
+
+          const SizedBox(width: 8),
+
           // Zoom controls
           _buildHeaderButton(
             icon: Icons.remove,
@@ -463,7 +468,7 @@ class _PianoRollState extends State<PianoRoll> {
           Text(
             '${_pixelsPerBeat.toInt()}px',
             style: const TextStyle(
-              color: Colors.black, // Black text
+              color: Color(0xFFE0E0E0), // Light text
               fontSize: 11,
             ),
           ),
@@ -479,7 +484,7 @@ class _PianoRollState extends State<PianoRoll> {
           // Close button
           IconButton(
             icon: const Icon(Icons.close),
-            color: Colors.black, // Black icon
+            color: const Color(0xFFE0E0E0), // Light icon
             iconSize: 20,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -504,7 +509,7 @@ class _PianoRollState extends State<PianoRoll> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF4CAF50) : const Color(0xFFB8B8B8), // Light grey when inactive
+          color: isActive ? const Color(0xFF00BCD4) : const Color(0xFF333333), // Dark grey when inactive, cyan when active
           borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
@@ -513,14 +518,14 @@ class _PianoRollState extends State<PianoRoll> {
             Icon(
               icon,
               size: 14,
-              color: isActive ? Colors.white : Colors.black, // Black when inactive
+              color: isActive ? Colors.white : const Color(0xFFE0E0E0), // Light when inactive
             ),
             if (label.isNotEmpty) ...[
               const SizedBox(width: 4),
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive ? Colors.white : Colors.black, // Black when inactive
+                  color: isActive ? Colors.white : const Color(0xFFE0E0E0), // Light when inactive
                   fontSize: 11,
                 ),
               ),
@@ -531,6 +536,95 @@ class _PianoRollState extends State<PianoRoll> {
     );
   }
 
+  /// Build quantize dropdown button
+  Widget _buildQuantizeButton() {
+    return PopupMenuButton<int>(
+      tooltip: 'Quantize notes to grid',
+      offset: const Offset(0, 40),
+      color: const Color(0xFF2A2A2A),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFF333333),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(
+              Icons.align_horizontal_left,
+              size: 14,
+              color: Color(0xFFE0E0E0),
+            ),
+            SizedBox(width: 4),
+            Text(
+              'Quantize',
+              style: TextStyle(
+                color: Color(0xFFE0E0E0),
+                fontSize: 11,
+              ),
+            ),
+            SizedBox(width: 2),
+            Icon(
+              Icons.arrow_drop_down,
+              size: 14,
+              color: Color(0xFFE0E0E0),
+            ),
+          ],
+        ),
+      ),
+      onSelected: (division) {
+        _quantizeClip(division);
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<int>(
+          value: 4,
+          child: Text('1/4 Note (Quarter)', style: TextStyle(color: Colors.white)),
+        ),
+        const PopupMenuItem<int>(
+          value: 8,
+          child: Text('1/8 Note (Eighth)', style: TextStyle(color: Colors.white)),
+        ),
+        const PopupMenuItem<int>(
+          value: 16,
+          child: Text('1/16 Note (Sixteenth)', style: TextStyle(color: Colors.white)),
+        ),
+        const PopupMenuItem<int>(
+          value: 32,
+          child: Text('1/32 Note (Thirty-second)', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+
+  /// Quantize all notes in the clip to the specified grid division
+  void _quantizeClip(int gridDivision) {
+    if (_currentClip == null || widget.audioEngine == null) {
+      debugPrint('⚠️ Cannot quantize: no clip or audio engine');
+      return;
+    }
+
+    final clipId = _currentClip!.clipId;
+    debugPrint('🎵 Quantizing clip $clipId to 1/$gridDivision grid...');
+
+    // Call the Rust engine to quantize
+    final result = widget.audioEngine!.quantizeMidiClip(clipId, gridDivision);
+    debugPrint('Quantize result: $result');
+
+    // Reload notes from clip to show updated positions
+    _loadClipFromEngine();
+  }
+
+  /// Reload clip notes from engine after quantization
+  void _loadClipFromEngine() {
+    if (_currentClip == null) return;
+
+    // Notify parent to refresh clip data from engine
+    widget.onClipUpdated?.call(_currentClip!);
+    setState(() {});
+    debugPrint('✅ Clip UI refreshed after quantize');
+  }
+
   Widget _buildPianoKey(int midiNote) {
     final isBlackKey = _isBlackKey(midiNote);
     final noteName = _getNoteNameForKey(midiNote);
@@ -539,11 +633,11 @@ class _PianoRollState extends State<PianoRoll> {
     return Container(
       height: _pixelsPerNote,
       decoration: BoxDecoration(
-        // Pure white for white keys, dark grey/black for black keys
-        color: isBlackKey ? const Color(0xFF303030) : const Color(0xFFFFFFFF),
+        // Dark theme piano keys - dark grey for black keys, medium grey for white keys
+        color: isBlackKey ? const Color(0xFF242424) : const Color(0xFF303030),
         border: Border(
           bottom: BorderSide(
-            color: const Color(0xFFCCCCCC), // Light grey border
+            color: const Color(0xFF404040), // Subtle border
             width: 0.5,
           ),
         ),
@@ -553,7 +647,7 @@ class _PianoRollState extends State<PianoRoll> {
             ? Text(
                 noteName,
                 style: TextStyle(
-                  color: isBlackKey ? const Color(0xFFA0A0A0) : Colors.black, // Black text on white, grey on black
+                  color: isBlackKey ? const Color(0xFF808080) : const Color(0xFFE0E0E0), // Light text on dark keys
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
@@ -581,9 +675,9 @@ class _PianoRollState extends State<PianoRoll> {
       height: 30,
       width: canvasWidth,
       decoration: const BoxDecoration(
-        color: Color(0xFFE8E8E8), // Light grey
+        color: Color(0xFF363636), // Dark background
         border: Border(
-          bottom: BorderSide(color: Color(0xFF909090), width: 1),
+          bottom: BorderSide(color: Color(0xFF363636), width: 1),
         ),
       ),
       child: CustomPaint(
@@ -1026,9 +1120,9 @@ class _GridPainter extends CustomPainter {
       final y = (maxMidiNote - note) * pixelsPerNote;
       final isBlackKey = _isBlackKey(note);
 
-      // Draw background color (medium grey theme to match DAW UI)
+      // Draw background color (dark theme to match DAW UI)
       final bgPaint = Paint()
-        ..color = isBlackKey ? const Color(0xFFB8B8B8) : const Color(0xFFC8C8C8);
+        ..color = isBlackKey ? const Color(0xFF242424) : const Color(0xFF363636);
 
       canvas.drawRect(
         Rect.fromLTWH(0, y, size.width, pixelsPerNote),
@@ -1037,24 +1131,24 @@ class _GridPainter extends CustomPainter {
 
       // Draw horizontal separator line
       final linePaint = Paint()
-        ..color = const Color(0xFFE0E0E0) // Subtle light grey line
+        ..color = const Color(0xFF333333) // Subtle dark line
         ..strokeWidth = 0.5;
 
       canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
     }
 
     // STEP 2: Draw vertical grid lines ON TOP (so they're visible)
-    // Light theme grid colors - MEDIUM GREY for subtle but clear visibility
+    // Dark theme grid colors
     final subdivisionPaint = Paint()
-      ..color = const Color(0xFFB0B0B0) // Light grey for 16th note lines
+      ..color = const Color(0xFF404040) // Dark grey for 16th note lines
       ..strokeWidth = 1.0;
 
     final beatPaint = Paint()
-      ..color = const Color(0xFF989898) // Medium grey for beats
+      ..color = const Color(0xFF505050) // Medium grey for beats
       ..strokeWidth = 1.5;
 
     final barPaint = Paint()
-      ..color = const Color(0xFF808080) // Medium grey for bars
+      ..color = const Color(0xFF606060) // Lighter grey for bars
       ..strokeWidth = 2.5;
 
     // Vertical lines (beats and bars)
@@ -1148,13 +1242,13 @@ class _NotePainter extends CustomPainter {
 
       // Fill
       final fillPaint = Paint()
-        ..color = const Color(0xFF2196F3).withOpacity(0.2) // Blue fill
+        ..color = const Color(0xFF00BCD4).withValues(alpha: 0.2) // Cyan fill
         ..style = PaintingStyle.fill;
       canvas.drawRect(rect, fillPaint);
 
       // Border
       final borderPaint = Paint()
-        ..color = const Color(0xFF2196F3) // Blue border
+        ..color = const Color(0xFF00BCD4) // Cyan border
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2;
       canvas.drawRect(rect, borderPaint);
@@ -1172,19 +1266,19 @@ class _NotePainter extends CustomPainter {
       const Radius.circular(4), // Slightly rounded corners
     );
 
-    // Note fill - keep mint green for now (will update to track colors in next phase)
+    // Note fill - cyan theme
     final fillPaint = Paint()
       ..color = isPreview
-          ? const Color(0xFF7FD4A0).withOpacity(0.5) // Mint green preview
-          : note.velocityColor;
+          ? const Color(0xFF00BCD4).withValues(alpha: 0.5) // Cyan preview
+          : const Color(0xFF00BCD4); // Solid cyan for notes
 
     canvas.drawRRect(rect, fillPaint);
 
     // Note border
     final borderPaint = Paint()
       ..color = isSelected
-          ? Colors.black // Black border when selected
-          : const Color(0xFF5FB085) // Darker mint border normally
+          ? Colors.white // White border when selected (visible on dark bg)
+          : const Color(0xFF00838F) // Darker cyan border normally
       ..style = PaintingStyle.stroke
       ..strokeWidth = isSelected ? 2.5 : 1.5;
 
@@ -1200,7 +1294,7 @@ class _NotePainter extends CustomPainter {
       textPainter.text = TextSpan(
         text: note.noteName, // e.g., "G5", "D#4", "C3"
         style: TextStyle(
-          color: Colors.black.withOpacity(0.7), // Dark text on colored background
+          color: Colors.white.withValues(alpha: 0.9), // White text on cyan background
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),
@@ -1258,7 +1352,7 @@ class _BarRulerPainter extends CustomPainter {
       textPainter.text = TextSpan(
         text: "$barNumber",
         style: const TextStyle(
-          color: Colors.black, // Black text on light background
+          color: Color(0xFFE0E0E0), // Light text on dark background
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
@@ -1275,7 +1369,7 @@ class _BarRulerPainter extends CustomPainter {
       for (int beat = 0; beat < 4; beat++) {
         final beatX = (barStartBeat + beat) * pixelsPerBeat;
         final tickPaint = Paint()
-          ..color = const Color(0xFF909090).withOpacity(0.5) // Grey ticks
+          ..color = const Color(0xFF606060) // Dark grey ticks
           ..strokeWidth = 1;
 
         canvas.drawLine(
