@@ -386,15 +386,27 @@ pub fn set_audio_input_device(device_index: i32) -> Result<String, String> {
     if device_index < 0 {
         return Err("Invalid device index".to_string());
     }
-    
+
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
+
     let mut input_manager = graph.input_manager.lock().map_err(|e| e.to_string())?;
     input_manager.select_device(device_index as usize).map_err(|e| e.to_string())?;
-    
+
     Ok(format!("Selected input device {}", device_index))
+}
+
+/// Get list of available audio output devices
+pub fn get_audio_output_devices() -> Result<Vec<(String, String, bool)>, String> {
+    use crate::audio_graph::AudioGraph;
+    Ok(AudioGraph::get_output_devices())
+}
+
+/// Get current sample rate
+pub fn get_sample_rate() -> u32 {
+    use crate::audio_graph::AudioGraph;
+    AudioGraph::get_sample_rate()
 }
 
 /// Start capturing audio from the selected input device
@@ -2106,7 +2118,6 @@ pub fn load_project(project_path_str: String) -> Result<String, String> {
 /// Export project to WAV file
 ///
 /// # Arguments
-/// * `project_path_str` - Path to the .audio folder (for reading project data)
 /// * `output_path_str` - Path to output WAV file
 /// * `normalize` - Whether to normalize the output to -0.1 dBFS
 ///
@@ -2114,8 +2125,10 @@ pub fn load_project(project_path_str: String) -> Result<String, String> {
 /// Success message with file path
 pub fn export_to_wav(
     output_path_str: String,
-    _normalize: bool,
+    normalize: bool,
 ) -> Result<String, String> {
+    use std::path::Path;
+
     let output_path = Path::new(&output_path_str);
 
     eprintln!("🎵 [API] Exporting to WAV: {:?}", output_path);
@@ -2123,11 +2136,69 @@ pub fn export_to_wav(
     // Get audio graph
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
-    let _graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    // TODO: Implement offline rendering
-    // For now, return error saying it's not implemented yet
-    Err("WAV export not yet implemented - deferred to later in M5".to_string())
+    // Calculate project duration
+    let duration = graph.calculate_project_duration();
+    if duration <= 1.0 {
+        return Err("No audio content to export".to_string());
+    }
+
+    eprintln!("🎵 [API] Project duration: {:.2}s", duration);
+
+    // Render offline
+    let samples = graph.render_offline(duration);
+
+    if samples.is_empty() {
+        return Err("Render produced no audio".to_string());
+    }
+
+    // Optionally normalize to -0.1 dBFS (about 0.989 amplitude)
+    let final_samples = if normalize {
+        let max_amplitude = samples.iter()
+            .map(|s| s.abs())
+            .fold(0.0f32, |a, b| a.max(b));
+
+        if max_amplitude > 0.0 {
+            let target_amplitude = 0.989f32; // -0.1 dBFS
+            let gain = target_amplitude / max_amplitude;
+            eprintln!("🎵 [API] Normalizing: max={:.4}, gain={:.4}", max_amplitude, gain);
+            samples.iter().map(|s| s * gain).collect()
+        } else {
+            samples
+        }
+    } else {
+        samples
+    };
+
+    // Write WAV using hound
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: 48000,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
+
+    let mut writer = hound::WavWriter::create(output_path, spec)
+        .map_err(|e| format!("Failed to create WAV file: {}", e))?;
+
+    for sample in &final_samples {
+        writer.write_sample(*sample)
+            .map_err(|e| format!("Failed to write sample: {}", e))?;
+    }
+
+    writer.finalize()
+        .map_err(|e| format!("Failed to finalize WAV file: {}", e))?;
+
+    let file_size = std::fs::metadata(output_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    eprintln!("✅ [API] WAV export complete: {} samples, {:.2} MB",
+        final_samples.len(),
+        file_size as f64 / 1024.0 / 1024.0);
+
+    Ok(format!("Exported to {}", output_path_str))
 }
 
 // ============================================================================

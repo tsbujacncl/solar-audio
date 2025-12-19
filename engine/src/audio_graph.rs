@@ -396,8 +396,8 @@ impl AudioGraph {
                 let frames = data.len() / 2;
                 let current_playhead = playhead_samples.load(Ordering::SeqCst);
 
-                // Get clips (lock briefly)
-                let clips_snapshot = {
+                // Get clips (lock briefly) - keeping for potential future use
+                let _clips_snapshot = {
                     let clips_lock = clips.lock().unwrap();
                     clips_lock.clone()
                 };
@@ -803,7 +803,7 @@ impl AudioGraph {
                             effect_type_str = "limiter".to_string();
                             // Limiter has no user-adjustable parameters
                         }
-                        ET::VST3(vst3) => {
+                        ET::VST3(_vst3) => {
                             effect_type_str = "vst3".to_string();
                             // TODO M7: Save VST3 plugin path and state
                             // For now, just mark the type - full state persistence coming later
@@ -851,7 +851,7 @@ impl AudioGraph {
 
         // Collect audio files (simplified - get from global timeline for now)
         let clips_lock = self.clips.lock().unwrap();
-        let audio_files: Vec<AudioFileData> = clips_lock.iter().enumerate().map(|(idx, timeline_clip)| {
+        let audio_files: Vec<AudioFileData> = clips_lock.iter().map(|timeline_clip| {
             AudioFileData {
                 id: timeline_clip.id,
                 original_name: timeline_clip.clip.file_path.clone(),
@@ -879,7 +879,6 @@ impl AudioGraph {
 
     /// Restore state from ProjectData (for loading)
     pub fn restore_from_project_data(&mut self, project_data: crate::project::ProjectData) -> anyhow::Result<()> {
-        use crate::project::*;
         use crate::effects::*;
         use crate::track::TrackType;
 
@@ -889,7 +888,7 @@ impl AudioGraph {
         // Clear existing tracks (except master will be kept and updated)
         {
             let mut track_manager = self.track_manager.lock().unwrap();
-            let mut effect_manager = self.effect_manager.lock().unwrap();
+            let _effect_manager = self.effect_manager.lock().unwrap();
 
             // Get all track IDs except master (ID 0)
             let all_tracks = track_manager.get_all_tracks();
@@ -1039,6 +1038,278 @@ impl AudioGraph {
         // which are handled in the API layer
 
         Ok(())
+    }
+
+    // --- Offline Rendering (Export) ---
+
+    /// Render the entire project offline to a buffer of stereo f32 samples
+    /// Returns interleaved stereo audio (L, R, L, R, ...)
+    pub fn render_offline(&self, duration_seconds: f64) -> Vec<f32> {
+        let sample_rate = TARGET_SAMPLE_RATE;
+        let total_frames = (duration_seconds * sample_rate as f64) as usize;
+        let mut output = Vec::with_capacity(total_frames * 2); // stereo interleaved
+
+        eprintln!("🎵 [AudioGraph] Starting offline render: {:.2}s ({} frames)", duration_seconds, total_frames);
+
+        // Create track snapshots (same as real-time rendering)
+        struct TrackSnapshot {
+            id: u64,
+            audio_clips: Vec<TimelineClip>,
+            midi_clips: Vec<TimelineMidiClip>,
+            volume_gain: f32,
+            pan_left: f32,
+            pan_right: f32,
+            muted: bool,
+            soloed: bool,
+            fx_chain: Vec<u64>,
+        }
+
+        let (track_snapshots, has_solo, master_snapshot) = {
+            let tm = self.track_manager.lock().unwrap();
+            let has_solo_flag = tm.has_solo();
+            let all_tracks = tm.get_all_tracks();
+            let mut snapshots = Vec::new();
+            let mut master_snap = None;
+
+            for track_arc in all_tracks {
+                if let Ok(track) = track_arc.lock() {
+                    let snap = TrackSnapshot {
+                        id: track.id,
+                        audio_clips: track.audio_clips.clone(),
+                        midi_clips: track.midi_clips.clone(),
+                        volume_gain: track.get_gain(),
+                        pan_left: track.get_pan_gains().0,
+                        pan_right: track.get_pan_gains().1,
+                        muted: track.mute,
+                        soloed: track.solo,
+                        fx_chain: track.fx_chain.clone(),
+                    };
+
+                    if track.track_type == crate::track::TrackType::Master {
+                        master_snap = Some(snap);
+                    } else {
+                        snapshots.push(snap);
+                    }
+                }
+            }
+
+            (snapshots, has_solo_flag, master_snap)
+        };
+
+        eprintln!("🎵 [AudioGraph] Rendering {} tracks", track_snapshots.len());
+
+        // Process each frame
+        for frame_idx in 0..total_frames {
+            let playhead_seconds = frame_idx as f64 / sample_rate as f64;
+
+            let mut mix_left = 0.0f32;
+            let mut mix_right = 0.0f32;
+
+            // Mix all tracks
+            for track_snap in &track_snapshots {
+                // Handle mute/solo logic
+                if track_snap.muted {
+                    continue;
+                }
+                if has_solo && !track_snap.soloed {
+                    continue;
+                }
+
+                let mut track_left = 0.0f32;
+                let mut track_right = 0.0f32;
+
+                // Mix all audio clips on this track
+                for timeline_clip in &track_snap.audio_clips {
+                    let clip_duration = timeline_clip.duration
+                        .unwrap_or(timeline_clip.clip.duration_seconds);
+                    let clip_end = timeline_clip.start_time + clip_duration;
+
+                    if playhead_seconds >= timeline_clip.start_time
+                        && playhead_seconds < clip_end
+                    {
+                        let time_in_clip = playhead_seconds - timeline_clip.start_time + timeline_clip.offset;
+                        let frame_in_clip = (time_in_clip * sample_rate as f64) as usize;
+
+                        if let Some(l) = timeline_clip.clip.get_sample(frame_in_clip, 0) {
+                            track_left += l;
+                        }
+                        if timeline_clip.clip.channels > 1 {
+                            if let Some(r) = timeline_clip.clip.get_sample(frame_in_clip, 1) {
+                                track_right += r;
+                            }
+                        } else {
+                            // Mono clip - duplicate to right
+                            if let Some(l) = timeline_clip.clip.get_sample(frame_in_clip, 0) {
+                                track_right += l;
+                            }
+                        }
+                    }
+                }
+
+                // Note: Synthesizer processing skipped for offline render (MIDI playback TBD)
+                // For now, only audio clips are rendered
+
+                // Apply track volume
+                track_left *= track_snap.volume_gain;
+                track_right *= track_snap.volume_gain;
+
+                // Apply track pan
+                track_left *= track_snap.pan_left;
+                track_right *= track_snap.pan_right;
+
+                // Process FX chain on this track
+                let mut fx_left = track_left;
+                let mut fx_right = track_right;
+
+                if let Ok(effect_mgr) = self.effect_manager.lock() {
+                    for effect_id in &track_snap.fx_chain {
+                        if let Some(effect_arc) = effect_mgr.get_effect(*effect_id) {
+                            if let Ok(mut effect) = effect_arc.lock() {
+                                let (out_l, out_r) = effect.process_frame(fx_left, fx_right);
+                                fx_left = out_l;
+                                fx_right = out_r;
+                            }
+                        }
+                    }
+                }
+
+                // Accumulate to mix bus
+                mix_left += fx_left;
+                mix_right += fx_right;
+            }
+
+            // Apply master track processing
+            let mut master_left = mix_left;
+            let mut master_right = mix_right;
+
+            if let Some(ref master_snap) = master_snapshot {
+                // Apply master volume
+                master_left *= master_snap.volume_gain;
+                master_right *= master_snap.volume_gain;
+
+                // Apply master pan
+                let temp_l = master_left * master_snap.pan_left + master_right * master_snap.pan_left;
+                let temp_r = master_left * master_snap.pan_right + master_right * master_snap.pan_right;
+                master_left = temp_l;
+                master_right = temp_r;
+
+                // Process master FX chain
+                if let Ok(effect_mgr) = self.effect_manager.lock() {
+                    for effect_id in &master_snap.fx_chain {
+                        if let Some(effect_arc) = effect_mgr.get_effect(*effect_id) {
+                            if let Ok(mut effect) = effect_arc.lock() {
+                                let (out_l, out_r) = effect.process_frame(master_left, master_right);
+                                master_left = out_l;
+                                master_right = out_r;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Apply master limiter
+            let (limited_left, limited_right) = if let Ok(mut limiter) = self.master_limiter.lock() {
+                limiter.process_frame(master_left, master_right)
+            } else {
+                (master_left.clamp(-1.0, 1.0), master_right.clamp(-1.0, 1.0))
+            };
+
+            // Write to output buffer (interleaved stereo)
+            output.push(limited_left);
+            output.push(limited_right);
+
+            // Progress logging every 10%
+            if frame_idx % (total_frames / 10).max(1) == 0 {
+                let progress = (frame_idx as f64 / total_frames as f64 * 100.0) as i32;
+                eprintln!("   {}% complete...", progress);
+            }
+        }
+
+        eprintln!("✅ [AudioGraph] Offline render complete: {} samples", output.len());
+        output
+    }
+
+    /// Calculate the total duration of the project based on clips
+    pub fn calculate_project_duration(&self) -> f64 {
+        let mut max_end_time = 0.0f64;
+
+        // Check all tracks for clips
+        if let Ok(tm) = self.track_manager.lock() {
+            for track_arc in tm.get_all_tracks() {
+                if let Ok(track) = track_arc.lock() {
+                    // Audio clips
+                    for clip in &track.audio_clips {
+                        let clip_end = clip.start_time + clip.duration.unwrap_or(clip.clip.duration_seconds);
+                        if clip_end > max_end_time {
+                            max_end_time = clip_end;
+                        }
+                    }
+                    // MIDI clips
+                    for clip in &track.midi_clips {
+                        let clip_end = clip.start_time + clip.clip.duration_seconds();
+                        if clip_end > max_end_time {
+                            max_end_time = clip_end;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add a small tail for reverb/delay to decay (1 second)
+        max_end_time + 1.0
+    }
+
+    // --- Audio Device Management ---
+
+    /// Get list of available audio output devices
+    /// Returns: Vec of (id, name, is_default)
+    pub fn get_output_devices() -> Vec<(String, String, bool)> {
+        let host = cpal::default_host();
+        let default_name = host.default_output_device()
+            .and_then(|d| d.name().ok());
+
+        match host.output_devices() {
+            Ok(devices) => {
+                devices.filter_map(|d| {
+                    d.name().ok().map(|name| {
+                        let is_default = default_name.as_ref() == Some(&name);
+                        (name.clone(), name, is_default)
+                    })
+                }).collect()
+            }
+            Err(e) => {
+                eprintln!("❌ [AudioGraph] Failed to enumerate output devices: {}", e);
+                Vec::new()
+            }
+        }
+    }
+
+    /// Get list of available audio input devices
+    /// Returns: Vec of (id, name, is_default)
+    pub fn get_input_devices() -> Vec<(String, String, bool)> {
+        let host = cpal::default_host();
+        let default_name = host.default_input_device()
+            .and_then(|d| d.name().ok());
+
+        match host.input_devices() {
+            Ok(devices) => {
+                devices.filter_map(|d| {
+                    d.name().ok().map(|name| {
+                        let is_default = default_name.as_ref() == Some(&name);
+                        (name.clone(), name, is_default)
+                    })
+                }).collect()
+            }
+            Err(e) => {
+                eprintln!("❌ [AudioGraph] Failed to enumerate input devices: {}", e);
+                Vec::new()
+            }
+        }
+    }
+
+    /// Get current sample rate
+    pub fn get_sample_rate() -> u32 {
+        TARGET_SAMPLE_RATE
     }
 }
 

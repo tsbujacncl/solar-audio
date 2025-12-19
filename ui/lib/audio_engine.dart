@@ -105,6 +105,12 @@ class AudioEngine {
   late final _StopMidiRecordingFfi _stopMidiRecording;
   late final _GetMidiRecordingStateFfi _getMidiRecordingState;
 
+  // Audio Device functions
+  late final _GetAudioInputDevicesFfi _getAudioInputDevices;
+  late final _GetAudioOutputDevicesFfi _getAudioOutputDevices;
+  late final _SetAudioInputDeviceFfi _setAudioInputDevice;
+  late final _GetSampleRateFfi _getSampleRate;
+
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
@@ -608,6 +614,31 @@ class AudioEngine {
               'get_midi_recording_state_ffi')
           .asFunction();
       print('  ✅ get_midi_recording_state_ffi bound');
+
+      // Bind Audio Device functions
+      _getAudioInputDevices = _lib
+          .lookup<ffi.NativeFunction<_GetAudioInputDevicesFfiNative>>(
+              'get_audio_input_devices_ffi')
+          .asFunction();
+      print('  ✅ get_audio_input_devices_ffi bound');
+
+      _getAudioOutputDevices = _lib
+          .lookup<ffi.NativeFunction<_GetAudioOutputDevicesFfiNative>>(
+              'get_audio_output_devices_ffi')
+          .asFunction();
+      print('  ✅ get_audio_output_devices_ffi bound');
+
+      _setAudioInputDevice = _lib
+          .lookup<ffi.NativeFunction<_SetAudioInputDeviceFfiNative>>(
+              'set_audio_input_device_ffi')
+          .asFunction();
+      print('  ✅ set_audio_input_device_ffi bound');
+
+      _getSampleRate = _lib
+          .lookup<ffi.NativeFunction<_GetSampleRateFfiNative>>(
+              'get_sample_rate_ffi')
+          .asFunction();
+      print('  ✅ get_sample_rate_ffi bound');
 
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
@@ -1161,6 +1192,108 @@ class AudioEngine {
     } catch (e) {
       print('❌ [AudioEngine] Refresh MIDI devices failed: $e');
       return 'Error: $e';
+    }
+  }
+
+  // ========================================================================
+  // Audio Device API
+  // ========================================================================
+
+  /// Get available audio input devices
+  /// Returns list of devices with id, name, and isDefault
+  List<Map<String, dynamic>> getAudioInputDevices() {
+    print('🔊 [AudioEngine] Getting audio input devices...');
+    try {
+      final resultPtr = _getAudioInputDevices();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty || result.startsWith('Error:')) {
+        print('ℹ️ [AudioEngine] No audio input devices found or error: $result');
+        return [];
+      }
+
+      // Parse result: "id|name|is_default" per line
+      final devices = <Map<String, dynamic>>[];
+      for (final line in result.split('\n')) {
+        if (line.isEmpty) continue;
+        final parts = line.split('|');
+        if (parts.length >= 3) {
+          devices.add({
+            'id': parts[0],
+            'name': parts[1],
+            'isDefault': parts[2] == '1',
+          });
+        }
+      }
+
+      print('✅ [AudioEngine] Found ${devices.length} audio input devices');
+      return devices;
+    } catch (e) {
+      print('❌ [AudioEngine] Get audio input devices failed: $e');
+      return [];
+    }
+  }
+
+  /// Get available audio output devices
+  /// Returns list of devices with id, name, and isDefault
+  List<Map<String, dynamic>> getAudioOutputDevices() {
+    print('🔊 [AudioEngine] Getting audio output devices...');
+    try {
+      final resultPtr = _getAudioOutputDevices();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty || result.startsWith('Error:')) {
+        print('ℹ️ [AudioEngine] No audio output devices found or error: $result');
+        return [];
+      }
+
+      // Parse result: "id|name|is_default" per line
+      final devices = <Map<String, dynamic>>[];
+      for (final line in result.split('\n')) {
+        if (line.isEmpty) continue;
+        final parts = line.split('|');
+        if (parts.length >= 3) {
+          devices.add({
+            'id': parts[0],
+            'name': parts[1],
+            'isDefault': parts[2] == '1',
+          });
+        }
+      }
+
+      print('✅ [AudioEngine] Found ${devices.length} audio output devices');
+      return devices;
+    } catch (e) {
+      print('❌ [AudioEngine] Get audio output devices failed: $e');
+      return [];
+    }
+  }
+
+  /// Set audio input device by index
+  /// Returns success message or error
+  String setAudioInputDevice(int deviceIndex) {
+    print('🔊 [AudioEngine] Setting audio input device to index $deviceIndex...');
+    try {
+      final resultPtr = _setAudioInputDevice(deviceIndex);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set audio input device failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Get current sample rate
+  int getSampleRate() {
+    try {
+      return _getSampleRate();
+    } catch (e) {
+      print('❌ [AudioEngine] Get sample rate failed: $e');
+      return 48000; // Default fallback
     }
   }
 
@@ -2093,3 +2226,16 @@ typedef _StopMidiRecordingFfi = int Function();
 
 typedef _GetMidiRecordingStateFfiNative = ffi.Int32 Function();
 typedef _GetMidiRecordingStateFfi = int Function();
+
+// Audio Device types
+typedef _GetAudioInputDevicesFfiNative = ffi.Pointer<Utf8> Function();
+typedef _GetAudioInputDevicesFfi = ffi.Pointer<Utf8> Function();
+
+typedef _GetAudioOutputDevicesFfiNative = ffi.Pointer<Utf8> Function();
+typedef _GetAudioOutputDevicesFfi = ffi.Pointer<Utf8> Function();
+
+typedef _SetAudioInputDeviceFfiNative = ffi.Pointer<Utf8> Function(ffi.Int32);
+typedef _SetAudioInputDeviceFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _GetSampleRateFfiNative = ffi.Uint32 Function();
+typedef _GetSampleRateFfi = int Function();

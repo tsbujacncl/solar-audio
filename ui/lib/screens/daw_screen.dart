@@ -1936,30 +1936,149 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _projectSettings() {
+    // Get current audio devices
+    final inputDevices = _audioEngine?.getAudioInputDevices() ?? [];
+    final outputDevices = _audioEngine?.getAudioOutputDevices() ?? [];
+    final sampleRate = _audioEngine?.getSampleRate() ?? 48000;
+
+    // Find default devices
+    String? selectedInputDevice;
+    String? selectedOutputDevice;
+    for (final device in inputDevices) {
+      if (device['isDefault'] == true) {
+        selectedInputDevice = device['name'] as String?;
+        break;
+      }
+    }
+    for (final device in outputDevices) {
+      if (device['isDefault'] == true) {
+        selectedOutputDevice = device['name'] as String?;
+        break;
+      }
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Project Settings'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Project settings coming soon.'),
-            SizedBox(height: 16),
-            Text('Available settings will include:'),
-            Text('• Sample Rate'),
-            Text('• Bit Depth'),
-            Text('• Default Time Signature'),
-            Text('• Audio File Location'),
-            Text('• Auto-save Interval'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Audio Settings'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Audio Output Device
+                const Text(
+                  'Audio Output Device',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: DropdownButton<String>(
+                    value: selectedOutputDevice,
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    hint: const Text('Select output device'),
+                    items: outputDevices.map((device) {
+                      final name = device['name'] as String;
+                      final isDefault = device['isDefault'] as bool;
+                      return DropdownMenuItem<String>(
+                        value: name,
+                        child: Text(isDefault ? '$name (Default)' : name),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedOutputDevice = value;
+                      });
+                      // Note: Output device switching requires stream recreation
+                      // which is not yet implemented
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Audio Input Device
+                const Text(
+                  'Audio Input Device',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: DropdownButton<String>(
+                    value: selectedInputDevice,
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    hint: const Text('Select input device'),
+                    items: inputDevices.map((device) {
+                      final name = device['name'] as String;
+                      final isDefault = device['isDefault'] as bool;
+                      return DropdownMenuItem<String>(
+                        value: name,
+                        child: Text(isDefault ? '$name (Default)' : name),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedInputDevice = value;
+                      });
+                      // Find index and set device
+                      final index = inputDevices.indexWhere((d) => d['name'] == value);
+                      if (index >= 0) {
+                        _audioEngine?.setAudioInputDevice(index);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Sample Rate (read-only)
+                const Text(
+                  'Sample Rate',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      Text('$sampleRate Hz'),
+                      const Spacer(),
+                      Icon(Icons.lock_outline, size: 16, color: Colors.grey.shade500),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sample rate is fixed at 48kHz for optimal compatibility.',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }

@@ -391,6 +391,57 @@ pub extern "C" fn refresh_midi_devices_ffi() -> *mut c_char {
     }
 }
 
+// ============================================================================
+// Audio Device Management FFI
+// ============================================================================
+
+/// Get available audio input devices
+/// Returns a newline-separated list of "id|name|is_default"
+#[no_mangle]
+pub extern "C" fn get_audio_input_devices_ffi() -> *mut c_char {
+    match api::get_audio_input_devices() {
+        Ok(devices) => {
+            let formatted: Vec<String> = devices
+                .into_iter()
+                .map(|(id, name, is_default)| format!("{}|{}|{}", id, name, if is_default { "1" } else { "0" }))
+                .collect();
+            CString::new(formatted.join("\n")).unwrap().into_raw()
+        }
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get available audio output devices
+/// Returns a newline-separated list of "id|name|is_default"
+#[no_mangle]
+pub extern "C" fn get_audio_output_devices_ffi() -> *mut c_char {
+    match api::get_audio_output_devices() {
+        Ok(devices) => {
+            let formatted: Vec<String> = devices
+                .into_iter()
+                .map(|(id, name, is_default)| format!("{}|{}|{}", id, name, if is_default { "1" } else { "0" }))
+                .collect();
+            CString::new(formatted.join("\n")).unwrap().into_raw()
+        }
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Set audio input device by index
+#[no_mangle]
+pub extern "C" fn set_audio_input_device_ffi(device_index: i32) -> *mut c_char {
+    match api::set_audio_input_device(device_index) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Get current sample rate
+#[no_mangle]
+pub extern "C" fn get_sample_rate_ffi() -> u32 {
+    api::get_sample_rate()
+}
+
 /// Create a new empty MIDI clip
 #[no_mangle]
 pub extern "C" fn create_midi_clip_ffi() -> i64 {
