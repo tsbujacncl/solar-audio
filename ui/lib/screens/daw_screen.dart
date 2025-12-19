@@ -90,6 +90,11 @@ class _DAWScreenState extends State<DAWScreen> {
   bool _pluginsScanned = false;
   bool _isScanningVst3Plugins = false;
 
+  // MIDI Recording state
+  List<Map<String, dynamic>> _midiDevices = [];
+  int _selectedMidiDeviceIndex = -1;
+  bool _isMidiRecording = false;
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +164,9 @@ class _DAWScreenState extends State<DAWScreen> {
         debugPrint('📦 Starting deferred VST3 plugin scan...');
         _scanVst3Plugins();
       }
+
+      // Load MIDI devices
+      _loadMidiDevices();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -539,6 +547,75 @@ class _DAWScreenState extends State<DAWScreen> {
     });
 
     debugPrint('🎹 [DEBUG] After setState - _virtualPianoVisible: $_virtualPianoVisible');
+  }
+
+  // MIDI Device methods
+  void _loadMidiDevices() {
+    if (_audioEngine == null) return;
+
+    try {
+      final devices = _audioEngine!.getMidiInputDevices();
+      debugPrint('🎹 Loaded ${devices.length} MIDI devices');
+
+      setState(() {
+        _midiDevices = devices;
+
+        // Auto-select default device if available
+        if (_selectedMidiDeviceIndex < 0 && devices.isNotEmpty) {
+          final defaultIndex = devices.indexWhere((d) => d['isDefault'] == true);
+          if (defaultIndex >= 0) {
+            _selectedMidiDeviceIndex = defaultIndex;
+            _onMidiDeviceSelected(defaultIndex);
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('❌ Failed to load MIDI devices: $e');
+    }
+  }
+
+  void _onMidiDeviceSelected(int deviceIndex) {
+    if (_audioEngine == null) return;
+
+    try {
+      final result = _audioEngine!.selectMidiInputDevice(deviceIndex);
+      debugPrint('🎹 Selected MIDI device: $result');
+
+      setState(() {
+        _selectedMidiDeviceIndex = deviceIndex;
+      });
+
+      // Show feedback
+      if (_midiDevices.isNotEmpty && deviceIndex >= 0 && deviceIndex < _midiDevices.length) {
+        final deviceName = _midiDevices[deviceIndex]['name'] as String? ?? 'Unknown';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎹 Selected: $deviceName'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to select MIDI device: $e');
+    }
+  }
+
+  void _refreshMidiDevices() {
+    if (_audioEngine == null) return;
+
+    try {
+      _audioEngine!.refreshMidiDevices();
+      _loadMidiDevices();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎹 MIDI devices refreshed'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Failed to refresh MIDI devices: $e');
+    }
   }
 
   // M4: Mixer methods
@@ -1473,7 +1550,7 @@ class _DAWScreenState extends State<DAWScreen> {
       // Use macOS native file picker
       final result = await Process.run('osascript', [
         '-e',
-        'POSIX path of (choose folder with prompt "Select Solar Audio Project (.solar folder)")'
+        'POSIX path of (choose folder with prompt "Select Boojy Audio Project (.audio folder)")'
       ]);
 
       if (result.exitCode == 0) {
@@ -1490,9 +1567,9 @@ class _DAWScreenState extends State<DAWScreen> {
           return;
         }
 
-        if (!path.endsWith('.solar')) {
+        if (!path.endsWith('.audio')) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Please select a .solar folder')),
+            SnackBar(content: Text('Please select a .audio folder')),
           );
           return;
         }
@@ -1511,7 +1588,7 @@ class _DAWScreenState extends State<DAWScreen> {
 
           setState(() {
             _currentProjectPath = path;
-            _currentProjectName = path.split('/').last.replaceAll('.solar', '');
+            _currentProjectName = path.split('/').last.replaceAll('.audio', '');
             _statusMessage = 'Project loaded: $_currentProjectName';
             _isLoading = false;
           });
@@ -1582,7 +1659,7 @@ class _DAWScreenState extends State<DAWScreen> {
       if (result.exitCode == 0) {
         final parentPath = result.stdout.toString().trim();
         if (parentPath.isNotEmpty) {
-          final projectPath = '$parentPath/$projectName.solar';
+          final projectPath = '$parentPath/$projectName.audio';
           _saveProjectToPath(projectPath);
         }
       }
@@ -1826,7 +1903,7 @@ class _DAWScreenState extends State<DAWScreen> {
       if (result.exitCode == 0) {
         final parentPath = result.stdout.toString().trim();
         if (parentPath.isNotEmpty) {
-          final copyPath = '$parentPath/$copyName.solar';
+          final copyPath = '$parentPath/$copyName.audio';
 
           // Save current project state to the new location
           setState(() => _isLoading = true);
@@ -1930,18 +2007,18 @@ class _DAWScreenState extends State<DAWScreen> {
   Widget build(BuildContext context) {
     return PlatformMenuBar(
       menus: [
-        // Standard macOS app menu (Solar Audio)
+        // Standard macOS app menu (Audio)
         PlatformMenu(
-          label: 'Solar Audio',
+          label: 'Audio',
           menus: [
             PlatformMenuItem(
-              label: 'About Solar Audio',
+              label: 'About Audio',
               onSelected: () {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('About Solar Audio'),
-                    content: const Text('Solar Audio\nVersion M6.2\n\nA modern, cross-platform DAW'),
+                    title: const Text('About Audio'),
+                    content: const Text('Audio\nVersion M6.2\n\nA modern, cross-platform DAW'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -1961,7 +2038,7 @@ class _DAWScreenState extends State<DAWScreen> {
             if (Platform.isMacOS)
               const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.showAllApplications),
             PlatformMenuItem(
-              label: 'Quit Solar Audio',
+              label: 'Quit Audio',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyQ, meta: true),
               onSelected: () {
                 // Close the app
@@ -2109,7 +2186,7 @@ class _DAWScreenState extends State<DAWScreen> {
         ),
       ],
       child: Scaffold(
-        backgroundColor: const Color(0xFF909090), // Light grey background
+        backgroundColor: const Color(0xFF242424), // Dark grey background
         body: Column(
         children: [
           // Transport bar (with logo and file/mixer buttons)
@@ -2129,6 +2206,11 @@ class _DAWScreenState extends State<DAWScreen> {
             virtualPianoEnabled: _virtualPianoEnabled,
             tempo: _tempo,
             onTempoChanged: _onTempoChanged,
+            // MIDI device selection
+            midiDevices: _midiDevices,
+            selectedMidiDeviceIndex: _selectedMidiDeviceIndex,
+            onMidiDeviceSelected: _onMidiDeviceSelected,
+            onRefreshMidiDevices: _refreshMidiDevices,
             // New parameters for file menu and mixer toggle
             onNewProject: _newProject,
             onOpenProject: _openProject,
@@ -2231,6 +2313,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           width: _mixerPanelWidth,
                           child: TrackMixerPanel(
                             audioEngine: _audioEngine,
+                            isEngineReady: _audioGraphInitialized,
                             selectedTrackId: _selectedTrackId,
                             onTrackSelected: _onTrackSelected,
                             onInstrumentSelected: _onInstrumentSelected,
@@ -2309,9 +2392,9 @@ class _DAWScreenState extends State<DAWScreen> {
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
-        color: Color(0xFF606060),
+        color: Color(0xFF181818),
         border: Border(
-          top: BorderSide(color: Color(0xFF808080)),
+          top: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Row(
@@ -2319,17 +2402,17 @@ class _DAWScreenState extends State<DAWScreen> {
           Icon(
             _audioGraphInitialized ? Icons.check_circle : Icons.error,
             size: 12,
-            color: _audioGraphInitialized 
-                ? const Color(0xFF4CAF50)
-                : const Color(0xFF808080),
+            color: _audioGraphInitialized
+                ? const Color(0xFF00BCD4)
+                : const Color(0xFF616161),
           ),
           const SizedBox(width: 6),
           Text(
             _audioGraphInitialized ? 'Audio Engine Ready' : 'Initializing...',
             style: TextStyle(
-              color: _audioGraphInitialized 
-                  ? const Color(0xFF808080)
-                  : const Color(0xFF606060),
+              color: _audioGraphInitialized
+                  ? const Color(0xFF9E9E9E)
+                  : const Color(0xFF616161),
               fontSize: 11,
             ),
           ),
@@ -2338,7 +2421,7 @@ class _DAWScreenState extends State<DAWScreen> {
             Text(
               'Duration: ${_clipDuration!.toStringAsFixed(3)}s',
               style: const TextStyle(
-                color: Color(0xFF808080),
+                color: Color(0xFF9E9E9E),
                 fontSize: 11,
               ),
             ),
@@ -2346,7 +2429,7 @@ class _DAWScreenState extends State<DAWScreen> {
           Text(
             'Sample Rate: 48kHz',
             style: const TextStyle(
-              color: Color(0xFF808080),
+              color: Color(0xFF9E9E9E),
               fontSize: 11,
             ),
           ),
@@ -2354,7 +2437,7 @@ class _DAWScreenState extends State<DAWScreen> {
           Text(
             'CPU: 0%', // TODO: Get real CPU usage from audio engine
             style: const TextStyle(
-              color: Color(0xFF808080),
+              color: Color(0xFF9E9E9E),
               fontSize: 11,
             ),
           ),

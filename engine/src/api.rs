@@ -615,6 +615,14 @@ pub fn get_midi_input_devices() -> Result<Vec<(String, String, bool)>, String> {
     Ok(device_list)
 }
 
+/// Refresh MIDI devices (rescan)
+/// Returns success message - devices are fetched fresh each time get_midi_input_devices is called
+pub fn refresh_midi_devices() -> Result<String, String> {
+    // The device list is fetched fresh each time get_midi_input_devices is called,
+    // so this just returns success to satisfy the API contract
+    Ok("MIDI devices refreshed".to_string())
+}
+
 /// Select a MIDI input device by index
 pub fn select_midi_input_device(device_index: i32) -> Result<String, String> {
     if device_index < 0 {
@@ -687,6 +695,7 @@ pub fn start_midi_recording() -> Result<String, String> {
 }
 
 /// Stop recording MIDI and return the clip ID
+/// Adds the clip to all armed MIDI tracks at the current playhead position
 pub fn stop_midi_recording() -> Result<Option<u64>, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
@@ -697,10 +706,48 @@ pub fn stop_midi_recording() -> Result<Option<u64>, String> {
 
     if let Some(clip) = clip_option {
         let clip_arc = Arc::new(clip);
-        let clip_id = graph.add_midi_clip(clip_arc, 0.0);
 
-        eprintln!("✅ [API] MIDI clip recorded with ID: {}", clip_id);
-        Ok(Some(clip_id))
+        // Get playhead position for clip placement
+        let playhead_seconds = graph.get_playhead_position();
+
+        // Find all armed MIDI tracks
+        let armed_midi_track_ids: Vec<TrackId> = {
+            let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+            track_manager.get_all_tracks()
+                .iter()
+                .filter_map(|track_arc| {
+                    if let Ok(track) = track_arc.lock() {
+                        if track.track_type == TrackType::Midi && track.armed {
+                            Some(track.id)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        };
+
+        // If no MIDI tracks are armed, add clip to global storage
+        if armed_midi_track_ids.is_empty() {
+            let clip_id = graph.add_midi_clip(clip_arc, playhead_seconds);
+            eprintln!("✅ [API] MIDI clip recorded with ID: {} (no armed tracks, added globally)", clip_id);
+            return Ok(Some(clip_id));
+        }
+
+        // Add clip to each armed MIDI track
+        let mut first_clip_id: Option<u64> = None;
+        for track_id in armed_midi_track_ids {
+            if let Some(clip_id) = graph.add_midi_clip_to_track(track_id, clip_arc.clone(), playhead_seconds) {
+                eprintln!("✅ [API] MIDI clip {} added to armed track {}", clip_id, track_id);
+                if first_clip_id.is_none() {
+                    first_clip_id = Some(clip_id);
+                }
+            }
+        }
+
+        Ok(first_clip_id)
     } else {
         Ok(None)
     }
@@ -1908,11 +1955,11 @@ pub fn duplicate_track(track_id: TrackId) -> Result<TrackId, String> {
 
 use std::path::Path;
 
-/// Save project to .solar folder
+/// Save project to .audio folder
 ///
 /// # Arguments
 /// * `project_name` - Name of the project
-/// * `project_path_str` - Path to the .solar folder (e.g., "/path/to/MyProject.solar")
+/// * `project_path_str` - Path to the .audio folder (e.g., "/path/to/MyProject.audio")
 ///
 /// # Returns
 /// Success message on completion
@@ -1961,10 +2008,10 @@ pub fn save_project(project_name: String, project_path_str: String) -> Result<St
     Ok(format!("Project saved to {:?}", project_path))
 }
 
-/// Load project from .solar folder
+/// Load project from .audio folder
 ///
 /// # Arguments
-/// * `project_path_str` - Path to the .solar folder
+/// * `project_path_str` - Path to the .audio folder
 ///
 /// # Returns
 /// Success message with project name
@@ -2026,7 +2073,7 @@ pub fn load_project(project_path_str: String) -> Result<String, String> {
 /// Export project to WAV file
 ///
 /// # Arguments
-/// * `project_path_str` - Path to the .solar folder (for reading project data)
+/// * `project_path_str` - Path to the .audio folder (for reading project data)
 /// * `output_path_str` - Path to output WAV file
 /// * `normalize` - Whether to normalize the output to -0.1 dBFS
 ///

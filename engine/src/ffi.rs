@@ -343,6 +343,44 @@ pub extern "C" fn get_midi_recording_state_ffi() -> i32 {
     }
 }
 
+// ============================================================================
+// MIDI Device Management FFI
+// ============================================================================
+
+/// Get available MIDI input devices
+/// Returns a newline-separated list of "id|name|is_default"
+#[no_mangle]
+pub extern "C" fn get_midi_input_devices_ffi() -> *mut c_char {
+    match api::get_midi_input_devices() {
+        Ok(devices) => {
+            let formatted: Vec<String> = devices
+                .into_iter()
+                .map(|(id, name, is_default)| format!("{}|{}|{}", id, name, if is_default { "1" } else { "0" }))
+                .collect();
+            CString::new(formatted.join("\n")).unwrap().into_raw()
+        }
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Select a MIDI input device by index
+#[no_mangle]
+pub extern "C" fn select_midi_input_device_ffi(device_index: i32) -> *mut c_char {
+    match api::select_midi_input_device(device_index) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
+/// Refresh MIDI devices (rescan)
+#[no_mangle]
+pub extern "C" fn refresh_midi_devices_ffi() -> *mut c_char {
+    match api::refresh_midi_devices() {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
 /// Create a new empty MIDI clip
 #[no_mangle]
 pub extern "C" fn create_midi_clip_ffi() -> i64 {
@@ -637,7 +675,7 @@ pub extern "C" fn duplicate_track_ffi(track_id: u64) -> i64 {
 // M5: SAVE/LOAD PROJECT FFI
 // ============================================================================
 
-/// Save project to .solar folder
+/// Save project to .audio folder
 #[no_mangle]
 pub extern "C" fn save_project_ffi(
     project_name: *const c_char,
@@ -663,7 +701,7 @@ pub extern "C" fn save_project_ffi(
     }
 }
 
-/// Load project from .solar folder
+/// Load project from .audio folder
 #[no_mangle]
 pub extern "C" fn load_project_ffi(project_path: *const c_char) -> *mut c_char {
     let project_path_str = unsafe {

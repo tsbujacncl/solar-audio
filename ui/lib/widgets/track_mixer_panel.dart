@@ -65,9 +65,13 @@ class TrackMixerPanel extends StatefulWidget {
   final Function(int, Vst3Plugin)? onVst3PluginDropped; // (trackId, plugin)
   final Function(int)? onEditPluginsPressed; // (trackId) - M10
 
+  // Engine ready state
+  final bool isEngineReady;
+
   const TrackMixerPanel({
     super.key,
     required this.audioEngine,
+    this.isEngineReady = false,
     this.scrollController,
     this.selectedTrackId,
     this.onTrackSelected,
@@ -139,13 +143,29 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
   }
 
   void _createTrack(String type) {
-    if (widget.audioEngine == null) return;
+    if (widget.audioEngine == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Audio engine not ready'),
+          backgroundColor: Color(0xFFFF5722),
+        ),
+      );
+      return;
+    }
 
     final name = '${type.toUpperCase()} ${_tracks.length + 1}';
     final trackId = widget.audioEngine!.createTrack(type, name);
 
     if (trackId >= 0) {
       _loadTracksAsync();
+    } else {
+      // Show error to user when track creation fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to create track - please try again'),
+          backgroundColor: Color(0xFFFF5722),
+        ),
+      );
     }
   }
 
@@ -240,9 +260,9 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
     return Container(
       width: 380,
       decoration: const BoxDecoration(
-        color: Color(0xFF707070),
+        color: Color(0xFF242424),
         border: Border(
-          left: BorderSide(color: Color(0xFF909090)),
+          left: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Column(
@@ -266,38 +286,42 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
       height: 30, // Match timeline ruler height
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
-        color: Color(0xFF656565),
+        color: Color(0xFF363636),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF909090)),
+          bottom: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.tune,
-            color: Color(0xFF202020),
+            color: Color(0xFFE0E0E0),
             size: 16,
           ),
           const SizedBox(width: 8),
           const Text(
             'TRACK MIXER',
             style: TextStyle(
-              color: Color(0xFF202020),
+              color: Color(0xFFE0E0E0),
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
             ),
           ),
           const Spacer(),
-          // Add track button
+          // Add track button (disabled until engine ready)
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
-            color: const Color(0xFF202020),
+            color: widget.isEngineReady
+                ? const Color(0xFFE0E0E0)
+                : const Color(0xFF505050),
             iconSize: 18,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-            onPressed: _showAddTrackMenu,
-            tooltip: 'Add track',
+            onPressed: widget.isEngineReady ? _showAddTrackMenu : null,
+            tooltip: widget.isEngineReady
+                ? 'Add track'
+                : 'Waiting for audio engine...',
           ),
         ],
       ),
