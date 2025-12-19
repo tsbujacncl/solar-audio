@@ -120,6 +120,16 @@ pub extern "C" fn get_clip_duration_ffi(clip_id: u64) -> f64 {
     api::get_clip_duration(clip_id).unwrap_or(0.0)
 }
 
+/// Set clip start time (position) on timeline
+/// Used for dragging clips to reposition them
+#[no_mangle]
+pub extern "C" fn set_clip_start_time_ffi(track_id: u64, clip_id: u64, start_time: f64) -> *mut c_char {
+    match api::set_clip_start_time(track_id, clip_id, start_time) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
 /// Get waveform peaks
 /// Returns pointer to float array, and writes the length to out_length
 /// Caller must free the returned array with free_waveform_peaks_ffi

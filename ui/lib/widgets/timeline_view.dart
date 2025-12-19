@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:desktop_drop/desktop_drop.dart';
@@ -96,6 +97,18 @@ class _TimelineViewState extends State<TimelineView> {
   List<ClipData> _clips = [];
   PreviewClip? _previewClip;
   int? _dragHoveredTrackId;
+
+  // Drag-to-move state for audio clips
+  int? _draggingClipId;
+  double _dragStartTime = 0.0;
+  double _dragStartX = 0.0;
+  double _dragCurrentX = 0.0;
+
+  // Drag-to-move state for MIDI clips
+  int? _draggingMidiClipId;
+  double _midiDragStartTime = 0.0;
+  double _midiDragStartX = 0.0;
+  double _midiDragCurrentX = 0.0;
 
   @override
   void initState() {
@@ -217,8 +230,8 @@ class _TimelineViewState extends State<TimelineView> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF909090),
-        border: Border.all(color: const Color(0xFFAAAAAA)),
+        color: const Color(0xFF242424),
+        border: Border.all(color: const Color(0xFF363636)),
       ),
       child: Column(
         children: [
@@ -259,11 +272,11 @@ class _TimelineViewState extends State<TimelineView> {
       // Show empty state only if no audio engine
       return Container(
         height: 200,
-        color: const Color(0xFF9A9A9A),
+        color: const Color(0xFF242424),
         child: Center(
           child: Text(
             'Audio engine not initialized',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            style: TextStyle(color: Colors.grey[700], fontSize: 14),
           ),
         ),
       );
@@ -393,9 +406,9 @@ class _TimelineViewState extends State<TimelineView> {
     return Container(
       height: 30,
       decoration: const BoxDecoration(
-        color: Color(0xFF9A9A9A),
+        color: Color(0xFF363636),
         border: Border(
-          bottom: BorderSide(color: Color(0xFFAAAAAA)),
+          bottom: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Stack(
@@ -419,7 +432,7 @@ class _TimelineViewState extends State<TimelineView> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF9A9A9A).withOpacity(0.95),
+                color: const Color(0xFF363636).withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -435,13 +448,13 @@ class _TimelineViewState extends State<TimelineView> {
                     iconSize: 14,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                    color: const Color(0xFF202020),
+                    color: const Color(0xFF9E9E9E),
                     tooltip: 'Zoom out (Cmd -)',
                   ),
                   Text(
                     '${_pixelsPerSecond.toInt()}',
                     style: const TextStyle(
-                      color: Color(0xFF353535),
+                      color: Color(0xFF9E9E9E),
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -456,7 +469,7 @@ class _TimelineViewState extends State<TimelineView> {
                     iconSize: 14,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                    color: const Color(0xFF202020),
+                    color: const Color(0xFF9E9E9E),
                     tooltip: 'Zoom in (Cmd +)',
                   ),
                 ],
@@ -570,18 +583,18 @@ class _TimelineViewState extends State<TimelineView> {
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: isHovered
-              ? const Color(0xFF505050) // Lighter when hovered
+              ? const Color(0xFF363636) // Lighter when hovered
               : (isSelected
-                  ? const Color(0xFF454545) // Slightly lighter when selected
-                  : const Color(0xFF404040)),
+                  ? const Color(0xFF363636) // Slightly lighter when selected
+                  : const Color(0xFF1e1e1e)),
           border: Border.all(
             color: isInstrumentHovering
-                ? const Color(0xFF4CAF50) // Green when valid instrument drag
+                ? const Color(0xFF00BCD4) // Cyan when valid instrument drag
                 : (isInstrumentRejected
-                    ? Colors.red.withOpacity(0.8) // Red when invalid drop
+                    ? Colors.red.withValues(alpha: 0.8) // Red when invalid drop
                     : (isSelected
-                        ? trackColor.withOpacity(1.0)
-                        : (isHovered ? trackColor.withOpacity(0.8) : trackColor))),
+                        ? trackColor.withValues(alpha: 1.0)
+                        : (isHovered ? trackColor.withValues(alpha: 0.8) : trackColor))),
             width: (isInstrumentHovering || isInstrumentRejected)
                 ? 3
                 : (isSelected ? 3 : (isHovered ? 3 : 2)),
@@ -619,12 +632,7 @@ class _TimelineViewState extends State<TimelineView> {
                   ),
 
                   // Render audio clips for this track
-                  ...trackClips.map((clip) => _buildClip(
-                        clip.duration,
-                        clip.waveformPeaks,
-                        clip.startTime,
-                        clip.fileName,
-                      )),
+                  ...trackClips.map((clip) => _buildClip(clip)),
 
                   // Render MIDI clips for this track
                   ...trackMidiClips.map((midiClip) => _buildMidiClip(
@@ -654,7 +662,7 @@ class _TimelineViewState extends State<TimelineView> {
       height: 100,
       margin: const EdgeInsets.only(bottom: 4), // Match other tracks
       decoration: BoxDecoration(
-        color: const Color(0xFF404040),
+        color: const Color(0xFF1e1e1e),
         border: Border.all(color: TrackColors.masterColor, width: 2),
       ),
       child: Column(
@@ -690,49 +698,92 @@ class _TimelineViewState extends State<TimelineView> {
     );
   }
 
-  Widget _buildClip(double duration, List<double> peaks, double startPosition, String fileName) {
-    final clipWidth = duration * _pixelsPerSecond;
-    final clipX = startPosition * _pixelsPerSecond;
+  Widget _buildClip(ClipData clip) {
+    final clipWidth = clip.duration * _pixelsPerSecond;
+    // Use dragged position if this clip is being dragged
+    final displayStartTime = _draggingClipId == clip.clipId
+        ? _dragStartTime + (_dragCurrentX - _dragStartX) / _pixelsPerSecond
+        : clip.startTime;
+    final clipX = displayStartTime.clamp(0.0, double.infinity) * _pixelsPerSecond;
 
     return Positioned(
       left: clipX,
       top: 4,
-      child: Container(
-        width: clipWidth,
-        height: 72,
-        decoration: BoxDecoration(
-          color: const Color(0xFF505050),
-          border: Border.all(color: const Color(0xFF4CAF50), width: 2),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Stack(
-          children: [
-            // Waveform
-            ClipRRect(
+      child: GestureDetector(
+        onHorizontalDragStart: (details) {
+          setState(() {
+            _draggingClipId = clip.clipId;
+            _dragStartTime = clip.startTime;
+            _dragStartX = details.globalPosition.dx;
+            _dragCurrentX = details.globalPosition.dx;
+          });
+        },
+        onHorizontalDragUpdate: (details) {
+          setState(() {
+            _dragCurrentX = details.globalPosition.dx;
+          });
+        },
+        onHorizontalDragEnd: (details) {
+          // Calculate final position and persist to engine
+          final newStartTime = (_dragStartTime + (_dragCurrentX - _dragStartX) / _pixelsPerSecond)
+              .clamp(0.0, double.infinity);
+          widget.audioEngine?.setClipStartTime(clip.trackId, clip.clipId, newStartTime);
+          // Update local state
+          setState(() {
+            final index = _clips.indexWhere((c) => c.clipId == clip.clipId);
+            if (index >= 0) {
+              _clips[index] = _clips[index].copyWith(startTime: newStartTime);
+            }
+            _draggingClipId = null;
+          });
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: Container(
+            width: clipWidth,
+            height: 72,
+            decoration: BoxDecoration(
+              color: const Color(0xFF363636),
+              border: Border.all(
+                color: _draggingClipId == clip.clipId
+                    ? const Color(0xFF81C784)
+                    : const Color(0xFF4CAF50),
+                width: _draggingClipId == clip.clipId ? 3 : 2,
+              ),
               borderRadius: BorderRadius.circular(4),
-              child: CustomPaint(
-                painter: _WaveformPainter(
-                  peaks: peaks,
-                  color: const Color(0xFF4CAF50),
-                ),
-              ),
             ),
-            // File name label
-            Positioned(
-              top: 2,
-              left: 4,
-              child: Text(
-                fileName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+            child: Stack(
+              children: [
+                // Waveform - must use Positioned.fill so CustomPaint gets proper size
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: CustomPaint(
+                      painter: _WaveformPainter(
+                        peaks: clip.waveformPeaks,
+                        color: const Color(0xFF4CAF50),
+                      ),
+                    ),
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+                // File name label
+                Positioned(
+                  top: 2,
+                  left: 4,
+                  child: Text(
+                    clip.fileName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -740,8 +791,13 @@ class _TimelineViewState extends State<TimelineView> {
 
   Widget _buildMidiClip(MidiClipData midiClip, Color trackColor) {
     final clipWidth = midiClip.duration * _pixelsPerSecond;
-    final clipX = midiClip.startTime * _pixelsPerSecond;
+    // Use dragged position if this clip is being dragged
+    final displayStartTime = _draggingMidiClipId == midiClip.clipId
+        ? _midiDragStartTime + (_midiDragCurrentX - _midiDragStartX) / _pixelsPerSecond
+        : midiClip.startTime;
+    final clipX = displayStartTime.clamp(0.0, double.infinity) * _pixelsPerSecond;
     final isSelected = widget.selectedMidiClipId == midiClip.clipId;
+    final isDragging = _draggingMidiClipId == midiClip.clipId;
 
     return Positioned(
       left: clipX,
@@ -751,17 +807,48 @@ class _TimelineViewState extends State<TimelineView> {
           // Double-click to open in piano roll
           widget.onMidiClipSelected?.call(midiClip.clipId, midiClip);
         },
-        child: Container(
-          width: clipWidth,
-          height: 72,
-          decoration: BoxDecoration(
-            color: const Color(0xFF505050),
-            border: Border.all(
-              color: isSelected ? trackColor.withOpacity(1.0) : trackColor.withOpacity(0.7),
-              width: isSelected ? 3 : 2,
+        onHorizontalDragStart: (details) {
+          setState(() {
+            _draggingMidiClipId = midiClip.clipId;
+            _midiDragStartTime = midiClip.startTime;
+            _midiDragStartX = details.globalPosition.dx;
+            _midiDragCurrentX = details.globalPosition.dx;
+          });
+        },
+        onHorizontalDragUpdate: (details) {
+          setState(() {
+            _midiDragCurrentX = details.globalPosition.dx;
+          });
+        },
+        onHorizontalDragEnd: (details) {
+          // Calculate final position and persist to engine
+          final newStartTime = (_midiDragStartTime + (_midiDragCurrentX - _midiDragStartX) / _pixelsPerSecond)
+              .clamp(0.0, double.infinity);
+          widget.audioEngine?.setClipStartTime(midiClip.trackId, midiClip.clipId, newStartTime);
+          // Update via callback so parent can update midiClips list
+          final updatedClip = midiClip.copyWith(startTime: newStartTime);
+          widget.onMidiClipUpdated?.call(updatedClip);
+          setState(() {
+            _draggingMidiClipId = null;
+          });
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: Container(
+            width: clipWidth,
+            height: 72,
+            decoration: BoxDecoration(
+              color: const Color(0xFF363636),
+              border: Border.all(
+                color: isDragging
+                    ? trackColor
+                    : isSelected
+                        ? trackColor.withValues(alpha: 1.0)
+                        : trackColor.withValues(alpha: 0.7),
+                width: isDragging || isSelected ? 3 : 2,
+              ),
+              borderRadius: BorderRadius.circular(4),
             ),
-            borderRadius: BorderRadius.circular(4),
-          ),
           child: Stack(
             children: [
               // Mini piano roll preview
@@ -835,6 +922,7 @@ class _TimelineViewState extends State<TimelineView> {
                 ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -922,7 +1010,7 @@ class _TimeRulerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF353535)
+      ..color = const Color(0xFF3a3a3a)
       ..strokeWidth = 1;
 
     final textPainter = TextPainter(
@@ -933,13 +1021,13 @@ class _TimeRulerPainter extends CustomPainter {
     // Draw markers every second
     for (double sec = 0; sec <= duration; sec += 1.0) {
       final x = sec * pixelsPerSecond;
-      
+
       if (x > size.width) break;
 
       // Major tick every 5 seconds
       final isMajor = sec % 5 == 0;
       final tickHeight = isMajor ? 15.0 : 8.0;
-      
+
       canvas.drawLine(
         Offset(x, size.height - tickHeight),
         Offset(x, size.height),
@@ -951,16 +1039,16 @@ class _TimeRulerPainter extends CustomPainter {
         final minutes = (sec / 60).floor();
         final seconds = (sec % 60).floor();
         final timeText = '$minutes:${seconds.toString().padLeft(2, '0')}';
-        
+
         textPainter.text = TextSpan(
           text: timeText,
           style: const TextStyle(
-            color: Color(0xFF202020),
+            color: Color(0xFF9E9E9E),
             fontSize: 11,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
         );
-        
+
         textPainter.layout();
         textPainter.paint(
           canvas,
@@ -990,22 +1078,22 @@ class _GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF202020)
+      ..color = const Color(0xFF363636)
       ..strokeWidth = 0.5;
 
     // Vertical grid lines every second
     for (double sec = 0; sec <= duration; sec += 1.0) {
       final x = sec * pixelsPerSecond;
-      
+
       if (x > size.width) break;
 
       // Major line every 5 seconds
       if (sec % 5 == 0) {
-        paint.color = const Color(0xFFAAAAAA);
+        paint.color = const Color(0xFF3a3a3a);
       } else {
-        paint.color = const Color(0xFF202020);
+        paint.color = const Color(0xFF363636);
       }
-      
+
       canvas.drawLine(
         Offset(x, 0),
         Offset(x, size.height),
@@ -1094,7 +1182,7 @@ class _GridPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF303030)
+      ..color = const Color(0xFF363636)
       ..strokeWidth = 0.5;
 
     // Draw subtle horizontal line in middle
@@ -1166,7 +1254,8 @@ class _MidiClipPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MidiClipPainter oldDelegate) {
-    return notes != oldDelegate.notes ||
+    // Use listEquals for proper list content comparison instead of reference equality
+    return !listEquals(notes, oldDelegate.notes) ||
            clipDuration != oldDelegate.clipDuration ||
            color != oldDelegate.color;
   }

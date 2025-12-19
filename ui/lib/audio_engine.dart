@@ -21,6 +21,7 @@ class AudioEngine {
   late final _GetPlayheadPositionFfi _getPlayheadPosition;
   late final _GetTransportStateFfi _getTransportState;
   late final _GetClipDurationFfi _getClipDuration;
+  late final _SetClipStartTimeFfi _setClipStartTime;
   late final _GetWaveformPeaksFfi _getWaveformPeaks;
   late final _FreeWaveformPeaksFfi _freeWaveformPeaks;
   
@@ -96,10 +97,18 @@ class AudioEngine {
   late final _Vst3GetEditorSizeFfi _vst3GetEditorSize;
   late final _Vst3AttachEditorFfi _vst3AttachEditor;
 
+  // MIDI Recording functions
+  late final _GetMidiInputDevicesFfi _getMidiInputDevices;
+  late final _SelectMidiInputDeviceFfi _selectMidiInputDevice;
+  late final _RefreshMidiDevicesFfi _refreshMidiDevices;
+  late final _StartMidiRecordingFfi _startMidiRecording;
+  late final _StopMidiRecordingFfi _stopMidiRecording;
+  late final _GetMidiRecordingStateFfi _getMidiRecordingState;
+
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
-      final libPath = '/Users/tyrbujac/Documents/Developments/2025/Flutter/Solar Audio/engine/target/release/libengine.dylib';
+      final libPath = '/Users/tyrbujac/Documents/Developments/2025/Flutter/Boojy Audio/engine/target/release/libengine.dylib';
       print('🔍 [AudioEngine] Attempting to load library from: $libPath');
       
       // Check if file exists
@@ -201,7 +210,13 @@ class AudioEngine {
               'get_clip_duration_ffi')
           .asFunction();
       print('  ✅ get_clip_duration_ffi bound');
-      
+
+      _setClipStartTime = _lib
+          .lookup<ffi.NativeFunction<_SetClipStartTimeFfiNative>>(
+              'set_clip_start_time_ffi')
+          .asFunction();
+      print('  ✅ set_clip_start_time_ffi bound');
+
       _getWaveformPeaks = _lib
           .lookup<ffi.NativeFunction<_GetWaveformPeaksFfiNative>>(
               'get_waveform_peaks_ffi')
@@ -557,6 +572,43 @@ class AudioEngine {
           .asFunction();
       print('  ✅ vst3_attach_editor_ffi bound');
 
+      // Bind MIDI Recording functions
+      _getMidiInputDevices = _lib
+          .lookup<ffi.NativeFunction<_GetMidiInputDevicesFfiNative>>(
+              'get_midi_input_devices_ffi')
+          .asFunction();
+      print('  ✅ get_midi_input_devices_ffi bound');
+
+      _selectMidiInputDevice = _lib
+          .lookup<ffi.NativeFunction<_SelectMidiInputDeviceFfiNative>>(
+              'select_midi_input_device_ffi')
+          .asFunction();
+      print('  ✅ select_midi_input_device_ffi bound');
+
+      _refreshMidiDevices = _lib
+          .lookup<ffi.NativeFunction<_RefreshMidiDevicesFfiNative>>(
+              'refresh_midi_devices_ffi')
+          .asFunction();
+      print('  ✅ refresh_midi_devices_ffi bound');
+
+      _startMidiRecording = _lib
+          .lookup<ffi.NativeFunction<_StartMidiRecordingFfiNative>>(
+              'start_midi_recording_ffi')
+          .asFunction();
+      print('  ✅ start_midi_recording_ffi bound');
+
+      _stopMidiRecording = _lib
+          .lookup<ffi.NativeFunction<_StopMidiRecordingFfiNative>>(
+              'stop_midi_recording_ffi')
+          .asFunction();
+      print('  ✅ stop_midi_recording_ffi bound');
+
+      _getMidiRecordingState = _lib
+          .lookup<ffi.NativeFunction<_GetMidiRecordingStateFfiNative>>(
+              'get_midi_recording_state_ffi')
+          .asFunction();
+      print('  ✅ get_midi_recording_state_ffi bound');
+
       print('✅ [AudioEngine] All functions bound successfully');
     } catch (e) {
       print('❌ [AudioEngine] Failed to bind functions: $e');
@@ -725,6 +777,20 @@ class AudioEngine {
     } catch (e) {
       print('❌ [AudioEngine] Get clip duration failed: $e');
       return 0.0;
+    }
+  }
+
+  /// Set clip start time (position) on timeline
+  /// Used for dragging clips to reposition them
+  String setClipStartTime(int trackId, int clipId, double startTime) {
+    try {
+      final result = _setClipStartTime(trackId, clipId, startTime);
+      final str = result.toDartString();
+      _freeRustString(result);
+      return str;
+    } catch (e) {
+      print('❌ [AudioEngine] Set clip start time failed: $e');
+      return 'Error: $e';
     }
   }
 
@@ -1027,6 +1093,118 @@ class AudioEngine {
   }
 
   // ========================================================================
+  // MIDI Recording API
+  // ========================================================================
+
+  /// Get available MIDI input devices
+  /// Returns list of devices with id, name, and isDefault
+  List<Map<String, dynamic>> getMidiInputDevices() {
+    print('🎹 [AudioEngine] Getting MIDI input devices...');
+    try {
+      final resultPtr = _getMidiInputDevices();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (result.isEmpty || result.startsWith('Error:')) {
+        print('ℹ️ [AudioEngine] No MIDI devices found or error: $result');
+        return [];
+      }
+
+      // Parse result: "id|name|is_default" per line
+      final devices = <Map<String, dynamic>>[];
+      for (final line in result.split('\n')) {
+        if (line.isEmpty) continue;
+        final parts = line.split('|');
+        if (parts.length >= 3) {
+          devices.add({
+            'id': parts[0],
+            'name': parts[1],
+            'isDefault': parts[2] == '1',
+          });
+        }
+      }
+
+      print('✅ [AudioEngine] Found ${devices.length} MIDI devices');
+      return devices;
+    } catch (e) {
+      print('❌ [AudioEngine] Get MIDI input devices failed: $e');
+      return [];
+    }
+  }
+
+  /// Select a MIDI input device by index
+  /// Returns success message or error
+  String selectMidiInputDevice(int deviceIndex) {
+    print('🎹 [AudioEngine] Selecting MIDI device at index $deviceIndex...');
+    try {
+      final resultPtr = _selectMidiInputDevice(deviceIndex);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Select MIDI device failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Refresh MIDI devices (rescan)
+  /// Returns success message or error
+  String refreshMidiDevices() {
+    print('🎹 [AudioEngine] Refreshing MIDI devices...');
+    try {
+      final resultPtr = _refreshMidiDevices();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Refresh MIDI devices failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Start MIDI recording
+  /// Returns success message or error
+  String startMidiRecording() {
+    print('⏺️ [AudioEngine] Starting MIDI recording...');
+    try {
+      final resultPtr = _startMidiRecording();
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      print('✅ [AudioEngine] $result');
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Start MIDI recording failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Stop MIDI recording and return clip ID
+  /// Returns clip ID or -1 if no recording
+  int stopMidiRecording() {
+    print('⏹️ [AudioEngine] Stopping MIDI recording...');
+    try {
+      final clipId = _stopMidiRecording();
+      print('✅ [AudioEngine] MIDI recording stopped, clip ID: $clipId');
+      return clipId;
+    } catch (e) {
+      print('❌ [AudioEngine] Stop MIDI recording failed: $e');
+      return -1;
+    }
+  }
+
+  /// Get MIDI recording state (0=Idle, 1=Recording)
+  int getMidiRecordingState() {
+    try {
+      return _getMidiRecordingState();
+    } catch (e) {
+      print('❌ [AudioEngine] Get MIDI recording state failed: $e');
+      return 0;
+    }
+  }
+
+  // ========================================================================
   // M4 API - Tracks & Mixer
   // ========================================================================
 
@@ -1296,7 +1474,7 @@ class AudioEngine {
   // M5 API - Save/Load Project
   // ========================================================================
 
-  /// Save project to .solar folder
+  /// Save project to .audio folder
   String saveProject(String projectName, String projectPath) {
     print('💾 [AudioEngine] Saving project: $projectName to $projectPath');
     try {
@@ -1315,7 +1493,7 @@ class AudioEngine {
     }
   }
 
-  /// Load project from .solar folder
+  /// Load project from .audio folder
   String loadProject(String projectPath) {
     print('📂 [AudioEngine] Loading project from: $projectPath');
     try {
@@ -1708,6 +1886,9 @@ typedef _GetTransportStateFfi = int Function();
 typedef _GetClipDurationFfiNative = ffi.Double Function(ffi.Uint64);
 typedef _GetClipDurationFfi = double Function(int);
 
+typedef _SetClipStartTimeFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Uint64, ffi.Double);
+typedef _SetClipStartTimeFfi = ffi.Pointer<Utf8> Function(int, int, double);
+
 typedef _GetWaveformPeaksFfiNative = ffi.Pointer<ffi.Float> Function(
     ffi.Uint64, ffi.Size, ffi.Pointer<ffi.Size>);
 typedef _GetWaveformPeaksFfi = ffi.Pointer<ffi.Float> Function(
@@ -1893,3 +2074,22 @@ typedef _Vst3GetEditorSizeFfi = ffi.Pointer<Utf8> Function(int);
 
 typedef _Vst3AttachEditorFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Pointer<ffi.Void>);
 typedef _Vst3AttachEditorFfi = ffi.Pointer<Utf8> Function(int, ffi.Pointer<ffi.Void>);
+
+// MIDI Recording types
+typedef _GetMidiInputDevicesFfiNative = ffi.Pointer<Utf8> Function();
+typedef _GetMidiInputDevicesFfi = ffi.Pointer<Utf8> Function();
+
+typedef _SelectMidiInputDeviceFfiNative = ffi.Pointer<Utf8> Function(ffi.Int32);
+typedef _SelectMidiInputDeviceFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _RefreshMidiDevicesFfiNative = ffi.Pointer<Utf8> Function();
+typedef _RefreshMidiDevicesFfi = ffi.Pointer<Utf8> Function();
+
+typedef _StartMidiRecordingFfiNative = ffi.Pointer<Utf8> Function();
+typedef _StartMidiRecordingFfi = ffi.Pointer<Utf8> Function();
+
+typedef _StopMidiRecordingFfiNative = ffi.Int64 Function();
+typedef _StopMidiRecordingFfi = int Function();
+
+typedef _GetMidiRecordingStateFfiNative = ffi.Int32 Function();
+typedef _GetMidiRecordingStateFfi = int Function();

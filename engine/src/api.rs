@@ -318,12 +318,45 @@ pub fn get_clip_duration(clip_id: u64) -> Result<f64, String> {
     let clips_mutex = AUDIO_CLIPS.get()
         .ok_or("Audio graph not initialized")?;
     let clips_map = clips_mutex.lock().map_err(|e| e.to_string())?;
-    
+
     let clip = clips_map
         .get(&clip_id)
         .ok_or_else(|| format!("Clip {} not found", clip_id))?;
-    
+
     Ok(clip.duration_seconds)
+}
+
+/// Set the start time (position) of a clip on a track
+/// Used for dragging clips to reposition them on the timeline
+pub fn set_clip_start_time(track_id: u64, clip_id: u64, start_time: f64) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+
+        // Try audio clips first
+        for clip in &mut track.audio_clips {
+            if clip.id == clip_id {
+                clip.start_time = start_time.max(0.0); // Clamp to >= 0
+                return Ok(format!("Clip {} moved to {:.3}s", clip_id, start_time));
+            }
+        }
+
+        // Try MIDI clips
+        for clip in &mut track.midi_clips {
+            if clip.id == clip_id {
+                clip.start_time = start_time.max(0.0); // Clamp to >= 0
+                return Ok(format!("MIDI clip {} moved to {:.3}s", clip_id, start_time));
+            }
+        }
+
+        Err(format!("Clip {} not found on track {}", clip_id, track_id))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
 }
 
 // ============================================================================
@@ -2081,10 +2114,8 @@ pub fn load_project(project_path_str: String) -> Result<String, String> {
 /// Success message with file path
 pub fn export_to_wav(
     output_path_str: String,
-    normalize: bool,
+    _normalize: bool,
 ) -> Result<String, String> {
-    use hound;
-
     let output_path = Path::new(&output_path_str);
 
     eprintln!("🎵 [API] Exporting to WAV: {:?}", output_path);
@@ -2092,7 +2123,7 @@ pub fn export_to_wav(
     // Get audio graph
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
-    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let _graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
     // TODO: Implement offline rendering
     // For now, return error saying it's not implemented yet
@@ -2105,7 +2136,7 @@ pub fn export_to_wav(
 
 /// Set instrument for a track
 /// Returns instrument ID or -1 on error
-pub fn set_track_instrument(track_id: u64, instrument_type: String) -> Result<i64, String> {
+pub fn set_track_instrument(track_id: u64, _instrument_type: String) -> Result<i64, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
@@ -2128,11 +2159,10 @@ pub fn set_synth_parameter(track_id: u64, param_name: String, value: String) -> 
 }
 
 /// Get synthesizer parameters for a track
-pub fn get_synth_parameters(track_id: u64) -> Result<String, String> {
+pub fn get_synth_parameters(_track_id: u64) -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
-    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    let synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
+    let _graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
     // TODO: Return actual parameters once implemented
     Ok(String::new())
