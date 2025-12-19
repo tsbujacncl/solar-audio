@@ -90,31 +90,147 @@ class DeleteMidiClipCommand extends Command {
   String get description => 'Delete MIDI clip: ${clipData.name}';
 }
 
-/// Command to add/edit/delete MIDI notes
-class EditMidiNotesCommand extends Command {
-  final int clipId;
-  final List<MidiNoteData> oldNotes;
-  final List<MidiNoteData> newNotes;
-  final String actionDescription;
+/// Snapshot-based command for MIDI clip note changes
+/// Stores before/after state of the entire clip for undo/redo
+class MidiClipSnapshotCommand extends Command {
+  final MidiClipData beforeState;
+  final MidiClipData afterState;
+  final String _description;
 
-  EditMidiNotesCommand({
-    required this.clipId,
-    required this.oldNotes,
-    required this.newNotes,
-    required this.actionDescription,
-  });
+  // Callback to apply state changes back to the UI
+  final void Function(MidiClipData)? onApplyState;
+
+  MidiClipSnapshotCommand({
+    required this.beforeState,
+    required this.afterState,
+    required String actionDescription,
+    this.onApplyState,
+  }) : _description = actionDescription;
 
   @override
   Future<void> execute(AudioEngine engine) async {
-    // Notes are managed in Flutter state primarily
-    // Engine sync happens via piano roll
+    // Apply the "after" state
+    onApplyState?.call(afterState);
   }
 
   @override
   Future<void> undo(AudioEngine engine) async {
-    // Restore old notes
+    // Apply the "before" state
+    onApplyState?.call(beforeState);
   }
 
   @override
-  String get description => actionDescription;
+  String get description => _description;
+}
+
+/// Command to add a single MIDI note
+class AddMidiNoteCommand extends Command {
+  final MidiClipData clipBefore;
+  final MidiClipData clipAfter;
+  final MidiNoteData addedNote;
+  final void Function(MidiClipData)? onApplyState;
+
+  AddMidiNoteCommand({
+    required this.clipBefore,
+    required this.clipAfter,
+    required this.addedNote,
+    this.onApplyState,
+  });
+
+  @override
+  Future<void> execute(AudioEngine engine) async {
+    onApplyState?.call(clipAfter);
+  }
+
+  @override
+  Future<void> undo(AudioEngine engine) async {
+    onApplyState?.call(clipBefore);
+  }
+
+  @override
+  String get description => 'Add note: ${addedNote.noteName}';
+}
+
+/// Command to delete MIDI note(s)
+class DeleteMidiNotesCommand extends Command {
+  final MidiClipData clipBefore;
+  final MidiClipData clipAfter;
+  final int noteCount;
+  final void Function(MidiClipData)? onApplyState;
+
+  DeleteMidiNotesCommand({
+    required this.clipBefore,
+    required this.clipAfter,
+    required this.noteCount,
+    this.onApplyState,
+  });
+
+  @override
+  Future<void> execute(AudioEngine engine) async {
+    onApplyState?.call(clipAfter);
+  }
+
+  @override
+  Future<void> undo(AudioEngine engine) async {
+    onApplyState?.call(clipBefore);
+  }
+
+  @override
+  String get description => noteCount == 1 ? 'Delete note' : 'Delete $noteCount notes';
+}
+
+/// Command to move MIDI note(s)
+class MoveMidiNotesCommand extends Command {
+  final MidiClipData clipBefore;
+  final MidiClipData clipAfter;
+  final int noteCount;
+  final void Function(MidiClipData)? onApplyState;
+
+  MoveMidiNotesCommand({
+    required this.clipBefore,
+    required this.clipAfter,
+    required this.noteCount,
+    this.onApplyState,
+  });
+
+  @override
+  Future<void> execute(AudioEngine engine) async {
+    onApplyState?.call(clipAfter);
+  }
+
+  @override
+  Future<void> undo(AudioEngine engine) async {
+    onApplyState?.call(clipBefore);
+  }
+
+  @override
+  String get description => noteCount == 1 ? 'Move note' : 'Move $noteCount notes';
+}
+
+/// Command to resize MIDI note(s)
+class ResizeMidiNotesCommand extends Command {
+  final MidiClipData clipBefore;
+  final MidiClipData clipAfter;
+  final int noteCount;
+  final void Function(MidiClipData)? onApplyState;
+
+  ResizeMidiNotesCommand({
+    required this.clipBefore,
+    required this.clipAfter,
+    required this.noteCount,
+    this.onApplyState,
+  });
+
+  @override
+  Future<void> execute(AudioEngine engine) async {
+    onApplyState?.call(clipAfter);
+  }
+
+  @override
+  Future<void> undo(AudioEngine engine) async {
+    onApplyState?.call(clipBefore);
+  }
+
+  @override
+  String get description => noteCount == 1 ? 'Resize note' : 'Resize $noteCount notes';
 }

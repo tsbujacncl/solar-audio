@@ -18,7 +18,6 @@ class UndoRedoManager extends ChangeNotifier {
   /// Initialize with audio engine reference
   void initialize(AudioEngine engine) {
     _engine = engine;
-    debugPrint('🔄 [UndoRedoManager] Initialized');
   }
 
   /// Check if undo is available
@@ -46,7 +45,6 @@ class UndoRedoManager extends ChangeNotifier {
   /// Execute a command and add it to the undo stack
   Future<void> execute(Command command) async {
     if (_engine == null) {
-      debugPrint('❌ [UndoRedoManager] Engine not initialized');
       return;
     }
 
@@ -64,7 +62,6 @@ class UndoRedoManager extends ChangeNotifier {
         _undoStack.removeAt(0);
       }
 
-      debugPrint('✅ [UndoRedoManager] Executed: ${command.description}');
       notifyListeners();
     } catch (e) {
       debugPrint('❌ [UndoRedoManager] Execute failed: $e');
@@ -81,7 +78,6 @@ class UndoRedoManager extends ChangeNotifier {
   /// Undo the last action
   Future<bool> undo() async {
     if (!canUndo || _engine == null) {
-      debugPrint('⚠️ [UndoRedoManager] Nothing to undo');
       return false;
     }
 
@@ -92,7 +88,6 @@ class UndoRedoManager extends ChangeNotifier {
       // Move to redo stack
       _redoStack.add(command);
 
-      debugPrint('↩️ [UndoRedoManager] Undone: ${command.description}');
       notifyListeners();
       return true;
     } catch (e) {
@@ -104,7 +99,6 @@ class UndoRedoManager extends ChangeNotifier {
   /// Redo the last undone action
   Future<bool> redo() async {
     if (!canRedo || _engine == null) {
-      debugPrint('⚠️ [UndoRedoManager] Nothing to redo');
       return false;
     }
 
@@ -115,7 +109,6 @@ class UndoRedoManager extends ChangeNotifier {
       // Move back to undo stack
       _undoStack.add(command);
 
-      debugPrint('↪️ [UndoRedoManager] Redone: ${command.description}');
       notifyListeners();
       return true;
     } catch (e) {
@@ -128,7 +121,6 @@ class UndoRedoManager extends ChangeNotifier {
   void clear() {
     _undoStack.clear();
     _redoStack.clear();
-    debugPrint('🗑️ [UndoRedoManager] History cleared');
     notifyListeners();
   }
 

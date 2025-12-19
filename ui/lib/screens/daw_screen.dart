@@ -114,6 +114,10 @@ class _DAWScreenState extends State<DAWScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Listen for undo/redo state changes to update menu
+    _undoRedoManager.addListener(_onUndoRedoChanged);
+
     // CRITICAL: Schedule audio engine initialization with a delay to prevent UI freeze
     // Even with postFrameCallback, FFI calls to Rust/C++ can block the main thread
     // Use Future.delayed to ensure UI renders multiple frames before any FFI initialization
@@ -125,8 +129,19 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
+  void _onUndoRedoChanged() {
+    if (mounted) {
+      setState(() {
+        // Trigger rebuild to update Edit menu state
+      });
+    }
+  }
+
   @override
   void dispose() {
+    // Remove undo/redo listener
+    _undoRedoManager.removeListener(_onUndoRedoChanged);
+
     // Clean up timers
     _playheadTimer?.cancel();
     _recordingStateTimer?.cancel();
@@ -790,16 +805,23 @@ class _DAWScreenState extends State<DAWScreen> {
     debugPrint('🎹 Instrument "${instrument.name}" dropped on track $trackId');
   }
 
-  void _onInstrumentDroppedOnEmpty(Instrument instrument) {
+  void _onInstrumentDroppedOnEmpty(Instrument instrument) async {
     debugPrint('🎹 _onInstrumentDroppedOnEmpty CALLED: instrument=${instrument.name}');
     if (_audioEngine == null) {
       debugPrint('❌ Audio engine is null');
       return;
     }
 
-    // Create a new MIDI track
-    final trackId = _audioEngine!.createTrack('midi', 'MIDI');
-    if (trackId < 0) {
+    // Create a new MIDI track using UndoRedoManager
+    final command = CreateTrackCommand(
+      trackType: 'midi',
+      trackName: 'MIDI',
+    );
+
+    await _undoRedoManager.execute(command);
+
+    final trackId = command.createdTrackId;
+    if (trackId == null || trackId < 0) {
       debugPrint('❌ Failed to create new MIDI track');
       return;
     }
@@ -852,9 +874,16 @@ class _DAWScreenState extends State<DAWScreen> {
     }
 
     try {
-      // Create a new MIDI track
-      final trackId = _audioEngine!.createTrack('midi', 'MIDI');
-      if (trackId < 0) {
+      // Create a new MIDI track using UndoRedoManager
+      final command = CreateTrackCommand(
+        trackType: 'midi',
+        trackName: 'MIDI',
+      );
+
+      await _undoRedoManager.execute(command);
+
+      final trackId = command.createdTrackId;
+      if (trackId == null || trackId < 0) {
         debugPrint('❌ Failed to create new MIDI track');
         return;
       }

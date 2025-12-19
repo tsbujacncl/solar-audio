@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import '../models/midi_note_data.dart';
 import '../audio_engine.dart';
+import '../services/undo_redo_manager.dart';
+import '../services/commands/clip_commands.dart';
 
 /// Interaction modes for piano roll
 enum InteractionMode { draw, select, move, resize }
@@ -71,10 +73,8 @@ class _PianoRollState extends State<PianoRoll> {
   Offset? _selectionStart;
   Offset? _selectionEnd;
 
-  // Undo/redo history
-  List<MidiClipData> _undoHistory = [];
-  List<MidiClipData> _redoHistory = [];
-  static const int _maxHistorySize = 50;
+  // Snapshot for undo - stores state before an operation
+  MidiClipData? _snapshotBeforeAction;
 
   // Clipboard for copy/paste
   List<MidiNoteData> _clipboard = [];
@@ -82,10 +82,16 @@ class _PianoRollState extends State<PianoRoll> {
   // Remember last note duration (default = 1 beat = quarter note)
   double _lastNoteDuration = 1.0;
 
+  // Global undo/redo manager
+  final UndoRedoManager _undoRedoManager = UndoRedoManager();
+
   @override
   void initState() {
     super.initState();
     _currentClip = widget.clipData;
+
+    // Listen for undo/redo changes to update our state
+    _undoRedoManager.addListener(_onUndoRedoChanged);
 
     // Scroll to default view (middle of piano)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -95,9 +101,18 @@ class _PianoRollState extends State<PianoRoll> {
 
   @override
   void dispose() {
+    _undoRedoManager.removeListener(_onUndoRedoChanged);
     _horizontalScroll.dispose();
     _verticalScroll.dispose();
     super.dispose();
+  }
+
+  /// Called when global undo/redo state changes
+  void _onUndoRedoChanged() {
+    // Force rebuild to reflect any state changes
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _scrollToDefaultView() {
@@ -116,62 +131,51 @@ class _PianoRollState extends State<PianoRoll> {
     setState(() {});
   }
 
-  /// Save current state to history before making changes
+  /// Save current state snapshot before making changes
+  /// Call this BEFORE modifying _currentClip
   void _saveToHistory() {
     if (_currentClip == null) return;
-
-    // Save current state to undo stack
-    _undoHistory.add(_currentClip!);
-
-    // Limit history size
-    if (_undoHistory.length > _maxHistorySize) {
-      _undoHistory.removeAt(0);
-    }
-
-    // Clear redo history when new action is performed
-    _redoHistory.clear();
+    _snapshotBeforeAction = _currentClip!.copyWith(
+      notes: List.from(_currentClip!.notes),
+    );
   }
 
-  /// Undo last action
-  void _undo() {
-    if (_undoHistory.isEmpty) {
-      debugPrint('⚠️ Nothing to undo');
-      return;
-    }
+  /// Commit the change to global undo history with a description
+  /// Call this AFTER modifying _currentClip
+  void _commitToHistory(String actionDescription) {
+    if (_snapshotBeforeAction == null || _currentClip == null) return;
 
-    // Save current state to redo stack
-    if (_currentClip != null) {
-      _redoHistory.add(_currentClip!);
-    }
+    final command = MidiClipSnapshotCommand(
+      beforeState: _snapshotBeforeAction!,
+      afterState: _currentClip!.copyWith(
+        notes: List.from(_currentClip!.notes),
+      ),
+      actionDescription: actionDescription,
+      onApplyState: _applyClipState,
+    );
 
-    // Restore previous state
-    setState(() {
-      _currentClip = _undoHistory.removeLast();
-    });
-
-    _notifyClipUpdated();
-    debugPrint('↩️ Undo performed (${_undoHistory.length} actions remaining)');
+    // Execute without re-applying (we already applied the change)
+    _undoRedoManager.execute(command);
+    _snapshotBeforeAction = null;
   }
 
-  /// Redo last undone action
-  void _redo() {
-    if (_redoHistory.isEmpty) {
-      debugPrint('⚠️ Nothing to redo');
-      return;
-    }
-
-    // Save current state to undo stack
-    if (_currentClip != null) {
-      _undoHistory.add(_currentClip!);
-    }
-
-    // Restore next state
+  /// Callback for undo/redo to apply clip state
+  void _applyClipState(MidiClipData clipData) {
+    if (!mounted) return;
     setState(() {
-      _currentClip = _redoHistory.removeLast();
+      _currentClip = clipData;
     });
-
     _notifyClipUpdated();
-    debugPrint('↪️ Redo performed');
+  }
+
+  /// Undo last action - delegates to global manager
+  void _undo() async {
+    await _undoRedoManager.undo();
+  }
+
+  /// Redo last undone action - delegates to global manager
+  void _redo() async {
+    await _undoRedoManager.redo();
   }
 
   double _calculateNoteY(int midiNote) {
@@ -801,6 +805,7 @@ class _PianoRollState extends State<PianoRoll> {
         _currentClip = _currentClip?.addNote(newNote);
       });
       _notifyClipUpdated();
+      _commitToHistory('Add note: ${newNote.noteName}');
 
       debugPrint('🎵 Created note: ${newNote.noteName} (duration: $_lastNoteDuration beats)');
     }
@@ -947,12 +952,21 @@ class _PianoRollState extends State<PianoRoll> {
       });
     }
 
+    // Commit move operation to history
+    if (_currentMode == InteractionMode.move) {
+      final selectedCount = _currentClip?.selectedNotes.length ?? 0;
+      if (selectedCount > 0) {
+        _commitToHistory(selectedCount == 1 ? 'Move note' : 'Move $selectedCount notes');
+      }
+    }
+
     // Remember duration of resized note for next creation
     if (_currentMode == InteractionMode.resize && _resizingNoteId != null) {
       final resizedNote = _currentClip?.notes.firstWhere((n) => n.id == _resizingNoteId);
       if (resizedNote != null) {
         _lastNoteDuration = resizedNote.duration;
         debugPrint('📝 Remembered note duration: $_lastNoteDuration beats');
+        _commitToHistory('Resize note');
       }
     }
 
@@ -1064,10 +1078,12 @@ class _PianoRollState extends State<PianoRoll> {
     });
 
     _notifyClipUpdated();
+    _commitToHistory(newNotes.length == 1 ? 'Paste note' : 'Paste ${newNotes.length} notes');
     debugPrint('📌 Pasted ${newNotes.length} notes');
   }
 
   void _deleteSelectedNotes() {
+    final selectedCount = _currentClip?.selectedNotes.length ?? 0;
     setState(() {
       final selectedIds = _currentClip?.selectedNotes.map((n) => n.id).toSet() ?? {};
       _currentClip = _currentClip?.copyWith(
@@ -1075,6 +1091,7 @@ class _PianoRollState extends State<PianoRoll> {
       );
     });
     _notifyClipUpdated();
+    _commitToHistory(selectedCount == 1 ? 'Delete note' : 'Delete $selectedCount notes');
   }
 
   /// Handle right-click on canvas
@@ -1090,6 +1107,7 @@ class _PianoRollState extends State<PianoRoll> {
         );
       });
       _notifyClipUpdated();
+      _commitToHistory('Delete note: ${clickedNote.noteName}');
       debugPrint('🗑️ Deleted note: ${clickedNote.noteName}');
     }
   }
