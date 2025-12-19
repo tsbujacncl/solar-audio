@@ -13,7 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Solar</string>
+	<string>Audio</string>
+	<key>CFBundleDisplayName</key>
+	<string>Boojy Audio</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,6 +31,6 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Solar Audio needs access to your microphone to record audio.</string>
+	<string>Boojy Audio needs access to your microphone to record audio.</string>
 </dict>
 </plist>
