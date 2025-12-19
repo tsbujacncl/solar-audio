@@ -17,6 +17,9 @@ import '../widgets/vst3_plugin_browser.dart';
 import '../models/midi_note_data.dart';
 import '../models/instrument_data.dart';
 import '../models/vst3_plugin_data.dart';
+import '../services/undo_redo_manager.dart';
+import '../services/commands/track_commands.dart';
+import '../services/commands/mixer_commands.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -30,6 +33,9 @@ class _DAWScreenState extends State<DAWScreen> {
   AudioEngine? _audioEngine;
   Timer? _playheadTimer;
   Timer? _recordingStateTimer;
+
+  // Undo/Redo manager
+  final UndoRedoManager _undoRedoManager = UndoRedoManager();
 
   // State
   double _playheadPosition = 0.0;
@@ -168,6 +174,9 @@ class _DAWScreenState extends State<DAWScreen> {
       }
 
       debugPrint('✅ Audio graph initialized: $result');
+
+      // Initialize undo/redo manager with engine
+      _undoRedoManager.initialize(_audioEngine!);
 
       // Scan VST3 plugins after audio graph is ready
       if (!_pluginsScanned && mounted) {
@@ -1583,6 +1592,30 @@ class _DAWScreenState extends State<DAWScreen> {
     }
   }
 
+  // ========================================================================
+  // Undo/Redo methods
+  // ========================================================================
+
+  void _performUndo() async {
+    final success = await _undoRedoManager.undo();
+    if (success && mounted) {
+      setState(() {
+        _statusMessage = 'Undone: ${_undoRedoManager.redoDescription ?? "action"}';
+      });
+      _refreshTrackWidgets();
+    }
+  }
+
+  void _performRedo() async {
+    final success = await _undoRedoManager.redo();
+    if (success && mounted) {
+      setState(() {
+        _statusMessage = 'Redone: ${_undoRedoManager.undoDescription ?? "action"}';
+      });
+      _refreshTrackWidgets();
+    }
+  }
+
   // M5: Project file methods
   void _newProject() {
     // Show confirmation dialog if current project has unsaved changes
@@ -2297,14 +2330,18 @@ class _DAWScreenState extends State<DAWScreen> {
           label: 'Edit',
           menus: [
             PlatformMenuItem(
-              label: 'Undo',
+              label: _undoRedoManager.canUndo
+                  ? 'Undo ${_undoRedoManager.undoDescription ?? ""}'
+                  : 'Undo',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyZ, meta: true),
-              onSelected: null, // Disabled for now
+              onSelected: _undoRedoManager.canUndo ? _performUndo : null,
             ),
             PlatformMenuItem(
-              label: 'Redo',
+              label: _undoRedoManager.canRedo
+                  ? 'Redo ${_undoRedoManager.redoDescription ?? ""}'
+                  : 'Redo',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyZ, meta: true, shift: true),
-              onSelected: null, // Disabled for now
+              onSelected: _undoRedoManager.canRedo ? _performRedo : null,
             ),
             PlatformMenuItem(
               label: 'Cut',

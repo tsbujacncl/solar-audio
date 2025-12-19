@@ -5,6 +5,8 @@ import 'track_mixer_strip.dart';
 import '../utils/track_colors.dart';
 import '../models/instrument_data.dart';
 import '../models/vst3_plugin_data.dart';
+import '../services/undo_redo_manager.dart';
+import '../services/commands/track_commands.dart';
 
 /// Track data model
 class TrackData {
@@ -147,7 +149,7 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
     }
   }
 
-  void _createTrack(String type) {
+  void _createTrack(String type) async {
     if (widget.audioEngine == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -159,18 +161,27 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
     }
 
     final name = '${type.toUpperCase()} ${_tracks.length + 1}';
-    final trackId = widget.audioEngine!.createTrack(type, name);
 
-    if (trackId >= 0) {
+    // Use UndoRedoManager for undoable track creation
+    final command = CreateTrackCommand(
+      trackType: type,
+      trackName: name,
+    );
+
+    await UndoRedoManager().execute(command);
+
+    if (command.createdTrackId != null && command.createdTrackId! >= 0) {
       _loadTracksAsync();
     } else {
       // Show error to user when track creation fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to create track - please try again'),
-          backgroundColor: Color(0xFFFF5722),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create track - please try again'),
+            backgroundColor: Color(0xFFFF5722),
+          ),
+        );
+      }
     }
   }
 
@@ -218,16 +229,22 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
     });
   }
 
-  void _duplicateTrack(TrackData track) {
+  void _duplicateTrack(TrackData track) async {
     if (widget.audioEngine == null) return;
 
-    final newTrackId = widget.audioEngine!.duplicateTrack(track.id);
+    // Use UndoRedoManager for undoable track duplication
+    final command = DuplicateTrackCommand(
+      sourceTrackId: track.id,
+      sourceTrackName: track.name,
+    );
 
-    if (newTrackId >= 0) {
-      debugPrint('✅ Track ${track.id} duplicated → new track $newTrackId');
+    await UndoRedoManager().execute(command);
+
+    if (command.duplicatedTrackId != null && command.duplicatedTrackId! >= 0) {
+      debugPrint('✅ Track ${track.id} duplicated → new track ${command.duplicatedTrackId}');
 
       // Notify parent about duplication so it can copy instrument mapping
-      widget.onTrackDuplicated?.call(track.id, newTrackId);
+      widget.onTrackDuplicated?.call(track.id, command.duplicatedTrackId!);
 
       _loadTracksAsync();
     } else {
@@ -247,10 +264,22 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              widget.audioEngine?.deleteTrack(track.id);
-              widget.onTrackDeleted?.call(track.id);
+            onPressed: () async {
               Navigator.of(context).pop();
+
+              // Use UndoRedoManager for undoable track deletion
+              final command = DeleteTrackCommand(
+                trackId: track.id,
+                trackName: track.name,
+                trackType: track.type,
+                volumeDb: track.volumeDb,
+                pan: track.pan,
+                mute: track.mute,
+                solo: track.solo,
+              );
+
+              await UndoRedoManager().execute(command);
+              widget.onTrackDeleted?.call(track.id);
               _loadTracksAsync();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
