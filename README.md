@@ -1,10 +1,10 @@
-# Solar Audio 🌑☀️
+# Boojy Audio
 
 A modern, cross-platform DAW (Digital Audio Workstation) designed for **speed, simplicity, and collaboration**.
 
 ## Overview
 
-Solar Audio combines professional workflows with beginner-friendly UX. Built with Flutter (UI) and Rust (audio engine), it's designed to work seamlessly across macOS, iPad, and eventually web, Windows, Linux, iOS, and Android.
+Boojy Audio combines professional workflows with beginner-friendly UX. Built with Flutter (UI) and Rust (audio engine), it's designed to work seamlessly across macOS, iPad, and eventually web, Windows, Linux, iOS, and Android.
 
 **Current Status:** 🚧 M7 In Progress - VST3 Plugin Support (Native GUI Integration)
 
@@ -37,7 +37,7 @@ Solar Audio combines professional workflows with beginner-friendly UX. Built wit
 
 ✅ **Native macOS Menu Bar & Editor Panel:**
 - Native macOS menu bar integration with PlatformMenuBar:
-  * **Solar Audio menu**: About, Services, Hide, Quit (⌘Q)
+  * **Audio menu**: About, Services, Hide, Quit (⌘Q)
   * **File menu**: New (⌘N), Open (⌘O), Save (⌘S), Save As (⇧⌘S), Make Copy, Export Audio/MIDI, Settings (⌘,), Close (⌘W)
   * **Edit menu**: Undo/Redo (disabled), Cut/Copy/Paste (disabled - future)
   * **View menu**: Toggle Library (⌘L), Mixer (⌘M), Editor (⌘E), Piano (⌘P), Reset Layout, Zoom (disabled - future)
@@ -156,8 +156,8 @@ Solar Audio combines professional workflows with beginner-friendly UX. Built wit
 
 ```bash
 # Clone the repository
-git clone https://github.com/tsbujacncl/solar-audio.git
-cd solar-audio
+git clone https://github.com/tsbujacncl/boojy-audio.git
+cd boojy-audio
 
 # Build Rust engine
 cd engine
@@ -223,7 +223,7 @@ TBD (To be decided before v1 launch)
 ## Contact
 
 - **GitHub:** [@tsbujacncl](https://github.com/tsbujacncl)
-- **Repository:** [solar-audio](https://github.com/tsbujacncl/solar-audio)
+- **Repository:** [boojy-audio](https://github.com/tsbujacncl/boojy-audio)
 
 ---
 
