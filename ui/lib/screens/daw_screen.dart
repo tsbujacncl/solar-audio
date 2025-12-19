@@ -95,6 +95,16 @@ class _DAWScreenState extends State<DAWScreen> {
   int _selectedMidiDeviceIndex = -1;
   bool _isMidiRecording = false;
 
+  // GlobalKeys for child widgets that need immediate refresh
+  final GlobalKey<TimelineViewState> _timelineKey = GlobalKey<TimelineViewState>();
+  final GlobalKey<TrackMixerPanelState> _mixerKey = GlobalKey<TrackMixerPanelState>();
+
+  /// Trigger immediate refresh of track lists in both timeline and mixer panels
+  void _refreshTrackWidgets() {
+    _timelineKey.currentState?.refreshTracks();
+    _mixerKey.currentState?.refreshTracks();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -752,6 +762,9 @@ class _DAWScreenState extends State<DAWScreen> {
     // Assign the instrument to the new track
     _onInstrumentSelected(trackId, instrument.id);
     debugPrint('✅ Created new MIDI track $trackId with instrument "${instrument.name}"');
+
+    // Immediately refresh track widgets so the new track appears instantly
+    _refreshTrackWidgets();
   }
 
   // VST3 Instrument drop handlers
@@ -819,6 +832,9 @@ class _DAWScreenState extends State<DAWScreen> {
       });
 
       debugPrint('✅ Created new MIDI track $trackId with VST3 instrument "${plugin.name}" (effectId: $effectId)');
+
+      // Immediately refresh track widgets so the new track appears instantly
+      _refreshTrackWidgets();
     } catch (e) {
       debugPrint('❌ Error creating MIDI track with VST3 instrument: $e');
     }
@@ -2415,6 +2431,7 @@ class _DAWScreenState extends State<DAWScreen> {
                       // Center: Timeline area
                       Expanded(
                         child: TimelineView(
+                          key: _timelineKey,
                           playheadPosition: _playheadPosition,
                           clipDuration: _clipDuration,
                           waveformPeaks: _waveformPeaks,
@@ -2455,6 +2472,7 @@ class _DAWScreenState extends State<DAWScreen> {
                         SizedBox(
                           width: _mixerPanelWidth,
                           child: TrackMixerPanel(
+                            key: _mixerKey,
                             audioEngine: _audioEngine,
                             isEngineReady: _audioGraphInitialized,
                             selectedTrackId: _selectedTrackId,

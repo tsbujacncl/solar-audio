@@ -84,10 +84,10 @@ class TimelineView extends StatefulWidget {
   });
 
   @override
-  State<TimelineView> createState() => _TimelineViewState();
+  State<TimelineView> createState() => TimelineViewState();
 }
 
-class _TimelineViewState extends State<TimelineView> {
+class TimelineViewState extends State<TimelineView> {
   final ScrollController _scrollController = ScrollController();
   double _pixelsPerSecond = 100.0; // Zoom level
   List<TimelineTrackData> _tracks = [];
@@ -188,6 +188,11 @@ class _TimelineViewState extends State<TimelineView> {
     } catch (e) {
       debugPrint('❌ Error loading dropped file: $e');
     }
+  }
+
+  /// Public method to trigger immediate track refresh
+  void refreshTracks() {
+    _loadTracksAsync();
   }
 
   /// Load tracks from audio engine

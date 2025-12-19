@@ -86,10 +86,10 @@ class TrackMixerPanel extends StatefulWidget {
   });
 
   @override
-  State<TrackMixerPanel> createState() => _TrackMixerPanelState();
+  State<TrackMixerPanel> createState() => TrackMixerPanelState();
 }
 
-class _TrackMixerPanelState extends State<TrackMixerPanel> {
+class TrackMixerPanelState extends State<TrackMixerPanel> {
   List<TrackData> _tracks = [];
   Timer? _refreshTimer;
 
@@ -108,6 +108,11 @@ class _TrackMixerPanelState extends State<TrackMixerPanel> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  /// Public method to trigger immediate track refresh
+  void refreshTracks() {
+    _loadTracksAsync();
   }
 
   /// Load tracks asynchronously to avoid blocking UI thread
