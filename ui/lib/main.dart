@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
 import 'screens/daw_screen.dart';
+import 'utils/app_colors.dart';
 
 void main() {
-  runApp(const SolarAudioApp());
+  runApp(const BoojyAudioApp());
 }
 
-class SolarAudioApp extends StatelessWidget {
-  const SolarAudioApp({super.key});
+class BoojyAudioApp extends StatelessWidget {
+  const BoojyAudioApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Solar Audio',
+      title: 'Boojy Audio',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2B2B2B),
+          seedColor: AppColors.background,
           brightness: Brightness.dark,
+        ).copyWith(
+          primary: AppColors.primary,
+          surface: AppColors.background,
         ),
         useMaterial3: true,
+        scaffoldBackgroundColor: AppColors.background,
+        popupMenuTheme: const PopupMenuThemeData(
+          color: AppColors.divider,
+        ),
       ),
       home: const DAWScreen(),
       debugShowCheckedModeBanner: false,
