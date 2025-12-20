@@ -35,7 +35,7 @@ Cargo.lock
 *.wav~
 *.mp3~
 cache/
-.solar/
+.audio/
 
 # OS
 .DS_Store
@@ -45,3 +45,8 @@ Thumbs.db
 docs/COMPETITIVE_ANALYSIS.md
 
 engine/vst3_host/build/
+engine/build_vst3/
+engine/vst3_host/build_vst3/
+engine/vst3_host/*.o
+ui/macos/*.py
+ui/macos/libengine.dylib

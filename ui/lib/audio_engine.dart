@@ -30,6 +30,7 @@ class AudioEngine {
   late final _StopRecordingFfi _stopRecording;
   late final _GetRecordingStateFfi _getRecordingState;
   late final _GetRecordedDurationFfi _getRecordedDuration;
+  late final _GetRecordingWaveformFfi _getRecordingWaveform;
   late final _SetCountInBarsFfi _setCountInBars;
   late final _GetCountInBarsFfi _getCountInBars;
   late final _SetTempoFfi _setTempo;
@@ -261,7 +262,13 @@ class AudioEngine {
               'get_recorded_duration_ffi')
           .asFunction();
       print('  ✅ get_recorded_duration_ffi bound');
-      
+
+      _getRecordingWaveform = _lib
+          .lookup<ffi.NativeFunction<_GetRecordingWaveformFfiNative>>(
+              'get_recording_waveform_ffi')
+          .asFunction();
+      print('  ✅ get_recording_waveform_ffi bound');
+
       _setCountInBars = _lib
           .lookup<ffi.NativeFunction<_SetCountInBarsFfiNative>>(
               'set_count_in_bars_ffi')
@@ -919,6 +926,26 @@ class AudioEngine {
     } catch (e) {
       print('❌ [AudioEngine] Get recorded duration failed: $e');
       return 0.0;
+    }
+  }
+
+  /// Get recording waveform preview as list of peak values (0.0-1.0)
+  /// numPeaks: number of downsampled peaks to return
+  List<double> getRecordingWaveform(int numPeaks) {
+    try {
+      final resultPtr = _getRecordingWaveform(numPeaks);
+      final csv = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+
+      if (csv.isEmpty) {
+        return [];
+      }
+
+      return csv.split(',')
+          .map((s) => double.tryParse(s) ?? 0.0)
+          .toList();
+    } catch (e) {
+      return [];
     }
   }
 
@@ -2088,6 +2115,9 @@ typedef _GetRecordingStateFfi = int Function();
 
 typedef _GetRecordedDurationFfiNative = ffi.Double Function();
 typedef _GetRecordedDurationFfi = double Function();
+
+typedef _GetRecordingWaveformFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint32);
+typedef _GetRecordingWaveformFfi = ffi.Pointer<Utf8> Function(int);
 
 typedef _SetCountInBarsFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint32);
 typedef _SetCountInBarsFfi = ffi.Pointer<Utf8> Function(int);

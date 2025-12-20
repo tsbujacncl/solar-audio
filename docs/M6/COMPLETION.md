@@ -85,8 +85,8 @@ M6 implemented MIDI support, piano roll editor, polyphonic synthesizer, and Able
 - `ui/lib/screens/daw_screen.dart` (+196 lines)
 
 ### ✅ App Branding
-- Updated app icon (Solar Audio logo)
-- App name: "Solar Audio"
+- Updated app icon (Boojy Audio logo)
+- App name: "Boojy Audio"
 - Version: 0.6.0
 
 **Files:**

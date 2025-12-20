@@ -369,7 +369,7 @@ Black keys (top row):     3 4   6 7 8   0 -
 ### Step 1: Idle CPU
 
 1. Open **Activity Monitor** (macOS)
-2. Find the Solar Audio / Flutter process
+2. Find the Boojy Audio / Flutter process
 3. **Expected CPU usage:**
    - **<5%** when idle (piano visible but not playing)
 

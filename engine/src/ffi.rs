@@ -218,6 +218,17 @@ pub extern "C" fn get_recorded_duration_ffi() -> f64 {
     })
 }
 
+/// Get recording waveform preview as CSV of peak values
+/// num_peaks: number of downsampled peaks to return
+/// Returns CSV string of 0.0-1.0 peak values, or empty string on error
+#[no_mangle]
+pub extern "C" fn get_recording_waveform_ffi(num_peaks: u32) -> *mut c_char {
+    match api::get_recording_waveform(num_peaks as usize) {
+        Ok(csv) => CString::new(csv).unwrap().into_raw(),
+        Err(_) => CString::new("").unwrap().into_raw(),
+    }
+}
+
 /// Set count-in duration in bars
 #[no_mangle]
 pub extern "C" fn set_count_in_bars_ffi(bars: u32) -> *mut c_char {

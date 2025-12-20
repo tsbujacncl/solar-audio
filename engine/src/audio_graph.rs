@@ -244,10 +244,13 @@ impl AudioGraph {
         removed_count
     }
 
-    /// Get the current playhead position in seconds
+    /// Get the current playhead position in seconds (tempo-scaled for visual sync)
     pub fn get_playhead_position(&self) -> f64 {
         let samples = self.playhead_samples.load(Ordering::SeqCst);
-        samples as f64 / TARGET_SAMPLE_RATE as f64
+        let tempo = self.recorder.get_tempo();
+        let tempo_ratio = tempo / 120.0;
+        // Scale position to match MIDI playback timing
+        (samples as f64 * tempo_ratio) / TARGET_SAMPLE_RATE as f64
     }
 
     /// Get the current playhead position in samples
@@ -255,9 +258,17 @@ impl AudioGraph {
         self.playhead_samples.load(Ordering::SeqCst)
     }
 
-    /// Seek to a specific position in seconds
+    /// Set the playhead position in samples (used for tempo change adjustment)
+    pub fn set_playhead_samples(&self, samples: u64) {
+        self.playhead_samples.store(samples, Ordering::SeqCst);
+    }
+
+    /// Seek to a specific position in seconds (reverse tempo-scaling for correct audio position)
     pub fn seek(&self, position_seconds: f64) {
-        let samples = (position_seconds * TARGET_SAMPLE_RATE as f64) as u64;
+        let tempo = self.recorder.get_tempo();
+        let tempo_ratio = tempo / 120.0;
+        // Reverse the scaling: visual position -> actual sample position
+        let samples = (position_seconds / tempo_ratio * TARGET_SAMPLE_RATE as f64) as u64;
         self.playhead_samples.store(samples, Ordering::SeqCst);
     }
 
@@ -424,18 +435,25 @@ impl AudioGraph {
                     midi_clips_lock.clone()
                 };
 
-                // Process MIDI events for this buffer
-                // We need to check all MIDI clips for events in this time range
-                for timeline_midi_clip in &midi_clips_snapshot {
-                    let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
+                // Get current tempo for MIDI playback scaling
+                // MIDI events are stored at 120 BPM base tempo
+                // Higher tempo = events trigger faster, lower tempo = events trigger slower
+                let current_tempo = *recorder_refs.tempo.lock().unwrap();
+                let tempo_ratio = current_tempo / 120.0; // Scale factor for playback speed
 
-                    // Get events for this buffer range
-                    let buffer_start = current_playhead;
-                    let buffer_end = current_playhead + frames as u64;
+                // Process MIDI events for this buffer
+                // We scale the playhead position to "speed up" or "slow down" MIDI playback
+                // At 240 BPM (ratio=2), playhead*2 means we progress through MIDI events twice as fast
+                let scaled_playhead = (current_playhead as f64 * tempo_ratio) as u64;
+                let scaled_buffer_end = ((current_playhead + frames as u64) as f64 * tempo_ratio) as u64;
+
+                for timeline_midi_clip in &midi_clips_snapshot {
+                    // Clip start time is in seconds, convert to samples at base tempo (120 BPM)
+                    let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
 
                     // Check if clip is active in this buffer
                     let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
-                    if clip_end_samples <= buffer_start || clip_start_samples >= buffer_end {
+                    if clip_end_samples <= scaled_playhead || clip_start_samples >= scaled_buffer_end {
                         continue; // Clip not active in this buffer
                     }
 
@@ -444,8 +462,8 @@ impl AudioGraph {
                         // Convert event timestamp from clip-relative to absolute timeline
                         let event_absolute_samples = clip_start_samples + event.timestamp_samples;
 
-                        // Check if event is in this buffer
-                        if event_absolute_samples >= buffer_start && event_absolute_samples < buffer_end {
+                        // Check if event is in this buffer (using scaled playhead)
+                        if event_absolute_samples >= scaled_playhead && event_absolute_samples < scaled_buffer_end {
                             // Send event to synthesizer
                             if let Ok(mut synth) = synthesizer.lock() {
                                 synth.process_event(event);

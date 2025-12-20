@@ -1,4 +1,4 @@
-# Solar Audio — Implementation Plan
+# Boojy Audio — Implementation Plan
 
 **Version:** 1.0  
 **Target:** v1 MVP (macOS + iPad)  
@@ -539,7 +539,7 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 #### Rust: Project Serialization ✅ COMPLETE
 - [x] Design project file format (see `MVP_SPEC.md` for structure):
   ```
-  MySong.solar/
+  MySong.audio/
     project.json
     audio/
     cache/
@@ -556,7 +556,7 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 - [x] Unit tests for serialization
 
 #### Rust: Audio File Management ✅ COMPLETE
-- [x] Copy imported audio files to `project.solar/audio/` folder
+- [x] Copy imported audio files to `project.audio/audio/` folder
 - [x] Use relative paths in project.json
 - [x] On load: resolve paths relative to project folder
 - [x] Numbered filenames: `001-drums.wav`, `002-bass.wav`
@@ -576,7 +576,7 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 - [x] Add File menu: New, Open, Save, Save As, Export
 - [x] Use macOS native file picker (osascript)
 - [x] Implement New Project (with confirmation)
-- [x] Implement Open Project (.solar folder picker)
+- [x] Implement Open Project (.audio folder picker)
 - [x] Implement Save Project (to current path)
 - [x] Implement Save As (name + location picker)
 - [x] Export dialog (shows format options, WAV stub)
@@ -587,7 +587,7 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 #### Rust: Autosave ⏸️ DEFERRED
 - [ ] Implement autosave timer (every 2-3 minutes)
-- [ ] Save to temp location: `~/.solar/autosave/`
+- [ ] Save to temp location: `~/.audio/autosave/`
 - [ ] Don't interrupt audio thread
 
 #### Flutter: Autosave Recovery ⏸️ DEFERRED
@@ -612,7 +612,7 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 - ⏳ **Stems export** - Deferred
 
 ### Success Criteria
-✅ Save project to `.solar` folder - **COMPLETE & TESTED**
+✅ Save project to `.audio` folder - **COMPLETE & TESTED**
 ✅ Load project and restore all state - **COMPLETE & TESTED**
 ⏸️ Autosave runs every 2-3 minutes - **DEFERRED**
 ⏸️ Recover project after crash - **DEFERRED**
@@ -622,7 +622,7 @@ Keyboard shortcuts, command palette, crash recovery, UI refinement, first beta r
 
 ### Test Results ✅
 - **Save/Load:** All tracks, effects, and parameters persist correctly
-- **File structure:** `.solar` folder with `project.json` and `audio/` subfolder working
+- **File structure:** `.audio` folder with `project.json` and `audio/` subfolder working
 - **Mixer integration:** Tracks appear correctly after load (bug fixed)
 - **Effects:** All 6 effect types save/load with parameters intact
 - **Tested by:** User on October 26, 2025
@@ -996,7 +996,7 @@ Ready to start M6 (MIDI & Piano Roll) with complete track management features.
 - [ ] Test: Sign up → log in → stay logged in on app relaunch
 
 #### Rust: Project Compression
-- [ ] Compress `.solar` folder to `.zip` or `.tar.gz`
+- [ ] Compress `.audio` folder to `.zip` or `.tar.gz`
 - [ ] Expose FFI: `compress_project(project_path) -> Vec<u8>` (returns bytes)
 - [ ] Test: Compress 10 MB project → verify size is reduced
 
@@ -1308,7 +1308,7 @@ Ready to start M6 (MIDI & Piano Roll) with complete track management features.
 #### Flutter: UI Polish
 - [ ] Refine spacing, alignment, colors
 - [ ] Smooth animations (panel slide-ins)
-- [ ] Add app icon (Solar logo)
+- [ ] Add app icon (Boojy logo)
 - [ ] Test: App feels polished
 
 #### Bug Fixes
@@ -1364,9 +1364,9 @@ Ready to start M6 (MIDI & Piano Roll) with complete track management features.
 - [ ] Share on Twitter/X
 - [ ] Monitor feedback, fix critical bugs
 - [ ] Record 5-10 YouTube tutorials (5 min each):
-  1. "Getting Started with Solar Audio"
+  1. "Getting Started with Boojy Audio"
   2. "Recording Your First Song"
-  3. "MIDI Editing in Solar"
+  3. "MIDI Editing in Boojy"
   4. "Mixing and Effects"
   5. "Using VST3 Plugins"
   6. "Built-in Instruments"
@@ -1468,7 +1468,7 @@ Ready to start M6 (MIDI & Piano Roll) with complete track management features.
 
 #### Rust: Crash-Safe Recovery (Enhanced)
 - [ ] Save app state to temp file every 1 minute (lighter than full autosave)
-- [ ] On crash: write crash log to `~/.solar/crashes/`
+- [ ] On crash: write crash log to `~/.audio/crashes/`
 - [ ] On relaunch: detect abnormal exit, offer recovery
 - [ ] Test: Force crash → relaunch → verify recovery works
 
@@ -1494,7 +1494,7 @@ Ready to start M6 (MIDI & Piano Roll) with complete track management features.
 - [ ] Test: Start recording → see countdown → see beat flashes
 
 #### UI Polish
-- [ ] Add app icon (Solar logo: #2B2B2B + #A0A0A0 circle)
+- [ ] Add app icon (Boojy logo)
 - [ ] Refine colors, spacing, alignment
 - [ ] Add tooltips to all buttons
 - [ ] Smooth animations (panel slide-ins, playhead scrubbing)
@@ -1748,7 +1748,7 @@ These improvements will be implemented progressively across M7-M10 and future ve
 
 This plan is **aggressive but achievable** if you work consistently (~15-20 hours/week). Adjust timelines based on your availability. The key is to **ship each milestone in a working state** — even if rough — and iterate.
 
-**Good luck building Solar Audio! 🌑☀️**
+**Good luck building Boojy Audio!**
 
 ---
 

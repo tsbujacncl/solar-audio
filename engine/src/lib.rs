@@ -15,6 +15,8 @@ mod project;    // M5: Project serialization
 mod vst3_host;  // M7: VST3 plugin hosting
 
 // Re-export API functions
+// Allow ambiguous re-exports - the API module is the canonical source
+#[allow(ambiguous_glob_reexports)]
 pub use api::*;
 pub use audio_file::*;
 pub use audio_graph::*;

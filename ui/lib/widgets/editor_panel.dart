@@ -93,9 +93,9 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
     return Container(
       height: 250,
       decoration: const BoxDecoration(
-        color: Color(0xFF707070),
+        color: Color(0xFF242424),
         border: Border(
-          top: BorderSide(color: Color(0xFF909090)),
+          top: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Column(
@@ -103,16 +103,16 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
           // Tab bar
           Container(
             decoration: const BoxDecoration(
-              color: Color(0xFF656565),
+              color: Color(0xFF363636),
               border: Border(
-                bottom: BorderSide(color: Color(0xFF909090)),
+                bottom: BorderSide(color: Color(0xFF363636)),
               ),
             ),
             child: TabBar(
               controller: _tabController,
-              indicatorColor: const Color(0xFF4CAF50),
-              labelColor: const Color(0xFF202020),
-              unselectedLabelColor: const Color(0xFF505050),
+              indicatorColor: const Color(0xFF00BCD4),
+              labelColor: const Color(0xFFE0E0E0),
+              unselectedLabelColor: const Color(0xFF9E9E9E),
               labelStyle: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -166,21 +166,21 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
     if (clipData == null) {
       // No track selected - show empty state
       return Container(
-        color: const Color(0xFF707070),
+        color: const Color(0xFF242424),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.piano_outlined,
                 size: 64,
-                color: Color(0xFF909090),
+                color: Colors.grey[700],
               ),
               const SizedBox(height: 16),
               const Text(
                 'Piano Roll',
                 style: TextStyle(
-                  color: Color(0xFF202020),
+                  color: Color(0xFFE0E0E0),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -189,7 +189,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               Text(
                 'Select a MIDI track or clip to start editing',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: Colors.grey[500],
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
@@ -217,7 +217,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
       child: Text(
         text,
         style: const TextStyle(
-          color: Color(0xFF606060),
+          color: Color(0xFF9E9E9E),
           fontSize: 11,
         ),
       ),
@@ -227,21 +227,21 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
   Widget _buildFXChainTab() {
     if (widget.selectedTrackId == null) {
       return Container(
-        color: const Color(0xFF707070),
+        color: const Color(0xFF242424),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.graphic_eq,
                 size: 64,
-                color: Color(0xFF909090),
+                color: Colors.grey[700],
               ),
               const SizedBox(height: 16),
               const Text(
                 'FX Chain',
                 style: TextStyle(
-                  color: Color(0xFF202020),
+                  color: Color(0xFFE0E0E0),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -250,7 +250,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               Text(
                 'Select a track to edit effects',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: Colors.grey[500],
                   fontSize: 14,
                 ),
               ),
@@ -274,21 +274,21 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
   Widget _buildInstrumentTab() {
     if (widget.selectedTrackId == null || widget.currentInstrumentData == null) {
       return Container(
-        color: const Color(0xFF707070),
+        color: const Color(0xFF242424),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.piano,
                 size: 64,
-                color: Color(0xFF909090),
+                color: Colors.grey[700],
               ),
               const SizedBox(height: 16),
               const Text(
                 'Instrument',
                 style: TextStyle(
-                  color: Color(0xFF202020),
+                  color: Color(0xFFE0E0E0),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -297,7 +297,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               Text(
                 'Select a track with an instrument to edit',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: Colors.grey[500],
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,

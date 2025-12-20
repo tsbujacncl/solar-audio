@@ -197,7 +197,7 @@ class _PianoRollState extends State<PianoRoll> {
 
   double _snapToGrid(double beat) {
     if (!_snapEnabled) return beat;
-    return (beat / _gridDivision).round() * _gridDivision;
+    return (beat / _gridDivision).floor() * _gridDivision;
   }
 
   void _zoomIn() {

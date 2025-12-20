@@ -175,6 +175,45 @@ impl Recorder {
         frame_count as f64 / TARGET_SAMPLE_RATE as f64
     }
 
+    /// Get recording waveform preview (downsampled for display)
+    /// Returns a list of peak values suitable for UI display
+    /// Each peak represents multiple samples averaged together
+    pub fn get_recording_waveform(&self, num_peaks: usize) -> Vec<f32> {
+        if let Ok(samples) = self.recorded_samples.lock() {
+            if samples.is_empty() || num_peaks == 0 {
+                return Vec::new();
+            }
+
+            let frame_count = samples.len() / 2; // Stereo interleaved
+            let frames_per_peak = (frame_count / num_peaks).max(1);
+            let mut peaks = Vec::with_capacity(num_peaks);
+
+            for i in 0..num_peaks {
+                let start_frame = i * frames_per_peak;
+                let end_frame = ((i + 1) * frames_per_peak).min(frame_count);
+
+                if start_frame >= frame_count {
+                    break;
+                }
+
+                let mut max_amplitude: f32 = 0.0;
+                for frame in start_frame..end_frame {
+                    let left = samples.get(frame * 2).copied().unwrap_or(0.0).abs();
+                    let right = samples.get(frame * 2 + 1).copied().unwrap_or(0.0).abs();
+                    let amplitude = left.max(right);
+                    if amplitude > max_amplitude {
+                        max_amplitude = amplitude;
+                    }
+                }
+                peaks.push(max_amplitude);
+            }
+
+            peaks
+        } else {
+            Vec::new()
+        }
+    }
+
     /// Reset metronome beat position (called when transport stops)
     pub fn reset_metronome(&self) {
         let old_value = self.sample_counter.swap(0, Ordering::SeqCst);

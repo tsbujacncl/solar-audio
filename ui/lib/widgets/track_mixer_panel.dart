@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'dart:async';
 import '../audio_engine.dart';
 import 'track_mixer_strip.dart';
@@ -67,6 +68,9 @@ class TrackMixerPanel extends StatefulWidget {
   final Function(int, Vst3Plugin)? onVst3PluginDropped; // (trackId, plugin)
   final Function(int)? onEditPluginsPressed; // (trackId) - M10
 
+  // Audio file drag-and-drop
+  final Function(String filePath)? onAudioFileDropped;
+
   // Engine ready state
   final bool isEngineReady;
 
@@ -85,6 +89,7 @@ class TrackMixerPanel extends StatefulWidget {
     this.onFxButtonPressed,
     this.onVst3PluginDropped,
     this.onEditPluginsPressed, // M10
+    this.onAudioFileDropped,
   });
 
   @override
@@ -94,6 +99,9 @@ class TrackMixerPanel extends StatefulWidget {
 class TrackMixerPanelState extends State<TrackMixerPanel> {
   List<TrackData> _tracks = [];
   Timer? _refreshTimer;
+  Timer? _levelTimer;
+  Map<int, double> _peakLevels = {};
+  bool _isAudioFileDragging = false;
 
   @override
   void initState() {
@@ -104,12 +112,50 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadTracksAsync();
     });
+
+    // Poll peak levels every 50ms for responsive meters
+    _levelTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      _updatePeakLevels();
+    });
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _levelTimer?.cancel();
     super.dispose();
+  }
+
+  /// Update peak levels for all tracks
+  void _updatePeakLevels() {
+    if (widget.audioEngine == null || !mounted) return;
+
+    final newLevels = <int, double>{};
+
+    for (final track in _tracks) {
+      try {
+        final levelStr = widget.audioEngine!.getTrackPeakLevels(track.id);
+        // Format: "peak_left_db,peak_right_db"
+        final parts = levelStr.split(',');
+        if (parts.length >= 2) {
+          final leftDb = double.tryParse(parts[0]) ?? -96.0;
+          final rightDb = double.tryParse(parts[1]) ?? -96.0;
+          // Use max of left/right for display
+          final maxDb = leftDb > rightDb ? leftDb : rightDb;
+          // Convert dB to 0.0-1.0 range: -60dB = 0.0, 0dB = 1.0
+          final normalized = ((maxDb + 60.0) / 60.0).clamp(0.0, 1.0);
+          newLevels[track.id] = normalized;
+        }
+      } catch (e) {
+        // Silently fail for level polling
+      }
+    }
+
+    if (mounted && newLevels.isNotEmpty) {
+      setState(() {
+        _peakLevels = newLevels;
+      });
+    }
   }
 
   /// Public method to trigger immediate track refresh
@@ -291,26 +337,96 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 380,
-      decoration: const BoxDecoration(
-        color: Color(0xFF242424),
-        border: Border(
-          left: BorderSide(color: Color(0xFF363636)),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header
-          _buildHeader(),
-
-          // Track strips (vertically scrollable)
-          Expanded(
-            child: _tracks.isEmpty
-                ? _buildEmptyState()
-                : _buildTrackStrips(),
+    return DropTarget(
+      onDragDone: (details) {
+        // Handle audio file drops
+        for (final file in details.files) {
+          final ext = file.path.split('.').last.toLowerCase();
+          if (['wav', 'mp3', 'flac', 'aif', 'aiff'].contains(ext)) {
+            widget.onAudioFileDropped?.call(file.path);
+            return; // Only handle first valid audio file
+          }
+        }
+      },
+      onDragEntered: (details) {
+        setState(() {
+          _isAudioFileDragging = true;
+        });
+      },
+      onDragExited: (details) {
+        setState(() {
+          _isAudioFileDragging = false;
+        });
+      },
+      child: Container(
+        width: 380,
+        decoration: BoxDecoration(
+          color: const Color(0xFF242424),
+          border: Border(
+            left: const BorderSide(color: Color(0xFF363636)),
+            top: _isAudioFileDragging
+                ? const BorderSide(color: Color(0xFF4CAF50), width: 3)
+                : BorderSide.none,
+            bottom: _isAudioFileDragging
+                ? const BorderSide(color: Color(0xFF4CAF50), width: 3)
+                : BorderSide.none,
+            right: _isAudioFileDragging
+                ? const BorderSide(color: Color(0xFF4CAF50), width: 3)
+                : BorderSide.none,
           ),
-        ],
+        ),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Header
+                _buildHeader(),
+
+                // Track strips (vertically scrollable)
+                Expanded(
+                  child: _tracks.isEmpty
+                      ? _buildEmptyState()
+                      : _buildTrackStrips(),
+                ),
+              ],
+            ),
+            // Drop indicator overlay
+            if (_isAudioFileDragging)
+              Positioned.fill(
+                child: Container(
+                  color: const Color(0xFF4CAF50).withOpacity(0.1),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.add_circle_outline,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Drop to create Audio track',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -429,7 +545,7 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
                     pan: track.pan,
                     isMuted: track.mute,
                     isSoloed: track.solo,
-                    peakLevel: 0.0, // TODO: Get real-time level from audio engine
+                    peakLevel: _peakLevels[track.id] ?? 0.0,
                     trackColor: trackColor,
                     audioEngine: widget.audioEngine,
                     isSelected: widget.selectedTrackId == track.id,
@@ -481,7 +597,7 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
           MasterTrackMixerStrip(
             volumeDb: masterTrack.volumeDb,
             pan: masterTrack.pan,
-            peakLevel: 0.0, // TODO: Get real-time level
+            peakLevel: _peakLevels[masterTrack.id] ?? 0.0,
             onVolumeChanged: (volumeDb) {
               setState(() {
                 masterTrack.volumeDb = volumeDb;

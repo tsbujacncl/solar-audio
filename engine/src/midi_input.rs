@@ -49,7 +49,7 @@ impl MidiInputManager {
 
     /// Refresh the list of available MIDI input devices
     pub fn refresh_devices(&mut self) -> Result<()> {
-        let midi_input = MidiInput::new("Solar Audio MIDI Input")?;
+        let midi_input = MidiInput::new("Boojy Audio MIDI Input")?;
 
         let ports = midi_input.ports();
         let port_names: Vec<String> = ports

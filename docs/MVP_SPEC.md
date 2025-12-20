@@ -1,4 +1,4 @@
-# Solar Audio - MVP Specification (v1.0)
+# Boojy Audio - MVP Specification (v1.0)
 
 **Last Updated:** October 27, 2025
 **Status:** In Development (M5.5.1 Complete - UI + Resizable Panels, M6 Ready to Start)
@@ -8,7 +8,7 @@
 
 ## Philosophy
 
-**Solar Audio is:**
+**Boojy Audio is:**
 - **Beautiful, simple, cross-platform DAW** (macOS first, iPad/iPhone later)
 - **GarageBand ease-of-use + Ableton power** (accessible to beginners, powerful for pros)
 - **Hide complexity, focus on music-making** (no overwhelming options, clean UI)
@@ -377,7 +377,7 @@
 - Loads default preset on first add
 - Saves last-used settings per project
 - Plugin's native preset system works
-- No Solar-specific preset layer (v1.0)
+- No Boojy-specific preset layer (v1.0)
 
 **Plugin Parameters:**
 - Automation support (future v1.2)
@@ -389,7 +389,7 @@
 ### File Management
 
 **Project Format:**
-- `.solar/` folder (macOS bundle, appears as single file)
+- `.audio/` folder (macOS bundle, appears as single file)
 - Contains:
   - `project.json` - All metadata and state
   - `audio/` - Imported audio files
@@ -397,7 +397,7 @@
 
 **Project Structure:**
 ```
-MyProject.solar/
+MyProject.audio/
 ├── project.json
 ├── audio/
 │   ├── 001-drums.wav
@@ -417,7 +417,7 @@ MyProject.solar/
 
 **Loading:**
 - File → Open...
-- Select `.solar` folder with macOS folder picker
+- Select `.audio` folder with macOS folder picker
 - `project.json` parsed
 - Tracks restored with settings
 - Effects recreated with parameters
@@ -536,7 +536,7 @@ MyProject.solar/
 - Can be disabled in Preferences
 
 **Preferences Window:**
-- Menu: Solar → Preferences (Cmd+,)
+- Menu: Audio → Preferences (Cmd+,)
 - 4 tabs:
   1. **Audio** - Interface, buffer size, sample rate
   2. **MIDI** - Input devices, quantize options
@@ -653,7 +653,7 @@ MyProject.solar/
 
 ### Recording Your First Song
 
-1. **Launch Solar Audio**
+1. **Launch Boojy Audio**
    - Opens to blank project
    - Master track visible
    - Transport bar ready
@@ -746,7 +746,7 @@ MyProject.solar/
 ### Using VST3 Plugins
 
 1. **Scan Plugins**
-   - First launch: Solar auto-scans VST3 folders
+   - First launch: Boojy auto-scans VST3 folders
    - Or: Preferences → Rescan Plugins
 
 2. **Add Plugin to Track**
@@ -810,7 +810,7 @@ MyProject.solar/
 - Audio: WAV (16/24-bit, 44.1/48kHz), MP3 (320kbps)
 
 **Project:**
-- Format: `.solar/` folder (macOS bundle)
+- Format: `.audio/` folder (macOS bundle)
 - Contains: `project.json` + `audio/` subfolder
 - Human-readable JSON (easy to debug)
 

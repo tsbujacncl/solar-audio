@@ -4,7 +4,7 @@ import FlutterMacOS
 /// Platform channel for VST3 editor communication
 /// Handles method calls from Flutter to manage VST3 editor windows
 class VST3PlatformChannel {
-    static let channelName = "solar_audio.vst3.editor"
+    static let channelName = "boojy_audio.vst3.editor"
 
     private var channel: FlutterMethodChannel
     private var windowManager = VST3WindowManager.shared

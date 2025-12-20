@@ -23,10 +23,12 @@ class TrackMixerStrip extends StatelessWidget {
   final Function(double)? onPanChanged;
   final VoidCallback? onMuteToggle;
   final VoidCallback? onSoloToggle;
+  final VoidCallback? onArmToggle; // Toggle recording arm
   final VoidCallback? onTap; // Unified track selection callback
   final VoidCallback? onDeletePressed;
   final VoidCallback? onDuplicatePressed;
   final bool isSelected; // Track selection state
+  final bool isArmed; // Recording arm state
 
   // MIDI instrument selection
   final InstrumentData? instrumentData;
@@ -54,10 +56,12 @@ class TrackMixerStrip extends StatelessWidget {
     this.onPanChanged,
     this.onMuteToggle,
     this.onSoloToggle,
+    this.onArmToggle,
     this.onTap,
     this.onDeletePressed,
     this.onDuplicatePressed,
     this.isSelected = false,
+    this.isArmed = false,
     this.instrumentData,
     this.onInstrumentSelect,
     this.vst3PluginCount = 0,
@@ -88,12 +92,12 @@ class TrackMixerStrip extends StatelessWidget {
               // Ableton-style selection: brighter background and thicker border when selected
               // M10: Highlight when VST3 plugin is being dragged over
               color: isHovered
-                  ? const Color(0xFF4CAF50).withOpacity(0.2)
-                  : (isSelected ? const Color(0xFF505050) : null),
+                  ? const Color(0xFF00BCD4).withValues(alpha: 0.2)
+                  : (isSelected ? const Color(0xFF363636) : const Color(0xFF242424)),
               border: Border.all(
                 color: isHovered
-                    ? const Color(0xFF4CAF50)
-                    : (isSelected ? (trackColor ?? const Color(0xFF4CAF50)) : const Color(0xFF909090)),
+                    ? const Color(0xFF00BCD4)
+                    : (isSelected ? (trackColor ?? const Color(0xFF00BCD4)) : const Color(0xFF363636)),
                 width: isHovered ? 2 : (isSelected ? 3 : 1),
               ),
             ),
@@ -102,15 +106,15 @@ class TrackMixerStrip extends StatelessWidget {
           // Left section: Colored track name area (Ableton style)
           Container(
             width: 120,
-            color: trackColor ?? const Color(0xFFA0A0A0),
+            color: trackColor ?? const Color(0xFF363636),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: _buildTrackNameSection(),
           ),
 
-          // Right section: Controls area (light grey)
+          // Right section: Controls area (dark grey)
           Expanded(
             child: Container(
-              color: const Color(0xFFA8A8A8), // Medium grey like Ableton
+              color: const Color(0xFF363636), // Dark grey
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
@@ -159,9 +163,9 @@ class TrackMixerStrip extends StatelessWidget {
           value: 'duplicate',
           child: Row(
             children: [
-              Icon(Icons.content_copy, size: 16, color: Color(0xFF202020)),
+              Icon(Icons.content_copy, size: 16, color: Color(0xFFE0E0E0)),
               SizedBox(width: 8),
-              Text('Duplicate', style: TextStyle(color: Color(0xFF202020))),
+              Text('Duplicate', style: TextStyle(color: Color(0xFFE0E0E0))),
             ],
           ),
         ),
@@ -343,6 +347,9 @@ class TrackMixerStrip extends StatelessWidget {
   }
 
   Widget _buildControlButtons() {
+    // Show arm button only for Audio and MIDI tracks (not master, return, group)
+    final canArm = trackType.toLowerCase() == 'audio' || trackType.toLowerCase() == 'midi';
+
     return Row(
       children: [
         // Mute button
@@ -351,8 +358,13 @@ class TrackMixerStrip extends StatelessWidget {
         // Solo button
         _buildControlButton('S', isSoloed, const Color(0xFFFFC107), onSoloToggle),
         const SizedBox(width: 4),
-        // Record button (placeholder - not wired up yet)
-        _buildControlButton('R', false, const Color(0xFFFF5722), null),
+        // Record arm button (only for audio/midi tracks)
+        _buildControlButton(
+          'R',
+          isArmed,
+          const Color(0xFFFF0000), // Bright red when armed
+          canArm ? onArmToggle : null,
+        ),
       ],
     );
   }
@@ -364,10 +376,10 @@ class TrackMixerStrip extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isActive ? activeColor : const Color(0xFFD0D0D0), // Light grey when inactive
+          backgroundColor: isActive ? activeColor : const Color(0xFF3a3a3a), // Dark grey when inactive
           foregroundColor: isActive
               ? (label == 'S' ? Colors.black : Colors.white)
-              : Colors.black, // Black text when inactive
+              : const Color(0xFF9E9E9E), // Grey text when inactive
           padding: EdgeInsets.zero,
           minimumSize: const Size(22, 22),
           textStyle: const TextStyle(
@@ -389,7 +401,7 @@ class TrackMixerStrip extends StatelessWidget {
         Text(
           '${volumeDb.toStringAsFixed(1)} dB',
           style: const TextStyle(
-            color: Colors.black, // Black text on light background
+            color: Color(0xFFE0E0E0), // Light text on dark background
             fontSize: 9,
             fontWeight: FontWeight.w500,
           ),
@@ -409,7 +421,7 @@ class TrackMixerStrip extends StatelessWidget {
                 overlayRadius: 14,
               ),
               activeTrackColor: const Color(0xFF4CAF50), // Green active
-              inactiveTrackColor: const Color(0xFF909090), // Medium grey inactive
+              inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey inactive
               thumbColor: const Color(0xFF4CAF50),
             ),
             child: Slider(
@@ -439,7 +451,7 @@ class TrackMixerStrip extends StatelessWidget {
           Text(
             _panToLabel(pan),
             style: const TextStyle(
-              color: Colors.black, // Black text on light background
+              color: Color(0xFFE0E0E0), // Light text on dark background
               fontSize: 9,
               fontWeight: FontWeight.w500,
             ),
@@ -457,9 +469,9 @@ class TrackMixerStrip extends StatelessWidget {
                 overlayShape: const RoundSliderOverlayShape(
                   overlayRadius: 12,
                 ),
-                activeTrackColor: const Color(0xFF2196F3), // Blue
-                inactiveTrackColor: const Color(0xFF909090), // Medium grey
-                thumbColor: const Color(0xFF2196F3),
+                activeTrackColor: const Color(0xFF00BCD4), // Cyan
+                inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey
+                thumbColor: const Color(0xFF00BCD4),
               ),
               child: Slider(
                 value: pan,
@@ -537,7 +549,7 @@ class MasterTrackMixerStrip extends StatelessWidget {
       height: 100,
       margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
       decoration: const BoxDecoration(
-        color: Color(0xFFA8A8A8), // Light grey like other tracks
+        color: Color(0xFF242424), // Dark grey like other tracks
         border: Border(
           left: BorderSide(color: Color(0xFF4CAF50), width: 4),
           top: BorderSide(color: Color(0xFF4CAF50), width: 2),
@@ -560,7 +572,7 @@ class MasterTrackMixerStrip extends StatelessWidget {
                     child: Text(
                       'MASTER',
                       style: TextStyle(
-                        color: Colors.black, // Black text on light background
+                        color: Color(0xFFE0E0E0), // Light text on dark background
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
@@ -578,7 +590,7 @@ class MasterTrackMixerStrip extends StatelessWidget {
               width: 74,
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFFD0D0D0), // Light grey
+                color: const Color(0xFF363636), // Dark grey
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: const Color(0xFF4CAF50)),
               ),
@@ -611,7 +623,7 @@ class MasterTrackMixerStrip extends StatelessWidget {
                   Text(
                     '${volumeDb.toStringAsFixed(1)} dB',
                     style: const TextStyle(
-                      color: Colors.black, // Black text on light background
+                      color: Color(0xFFE0E0E0), // Light text on dark background
                       fontSize: 9,
                       fontWeight: FontWeight.w500,
                     ),
@@ -631,7 +643,7 @@ class MasterTrackMixerStrip extends StatelessWidget {
                           overlayRadius: 14,
                         ),
                         activeTrackColor: const Color(0xFF4CAF50),
-                        inactiveTrackColor: const Color(0xFF909090), // Medium grey
+                        inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey
                         thumbColor: const Color(0xFF4CAF50),
                       ),
                       child: Slider(
@@ -663,7 +675,7 @@ class MasterTrackMixerStrip extends StatelessWidget {
                   Text(
                     _panToLabel(pan),
                     style: const TextStyle(
-                      color: Colors.black, // Black text on light background
+                      color: Color(0xFFE0E0E0), // Light text on dark background
                       fontSize: 9,
                       fontWeight: FontWeight.w500,
                     ),
@@ -681,9 +693,9 @@ class MasterTrackMixerStrip extends StatelessWidget {
                         overlayShape: const RoundSliderOverlayShape(
                           overlayRadius: 12,
                         ),
-                        activeTrackColor: const Color(0xFF4CAF50),
-                        inactiveTrackColor: const Color(0xFF909090), // Medium grey
-                        thumbColor: const Color(0xFF4CAF50),
+                        activeTrackColor: const Color(0xFF00BCD4),
+                        inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey
+                        thumbColor: const Color(0xFF00BCD4),
                       ),
                       child: Slider(
                         value: pan,

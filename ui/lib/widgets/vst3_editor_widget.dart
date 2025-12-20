@@ -37,7 +37,7 @@ class _VST3EditorWidgetState extends State<VST3EditorWidget> {
       width: widget.width,
       height: widget.height,
       child: AppKitView(
-        viewType: 'solar_audio.vst3.editor_view',
+        viewType: 'boojy_audio.vst3.editor_view',
         creationParams: {
           'effectId': widget.effectId,
         },

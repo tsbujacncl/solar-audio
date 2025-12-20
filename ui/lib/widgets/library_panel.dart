@@ -28,16 +28,16 @@ class _LibraryPanelState extends State<LibraryPanel> {
       return Container(
         width: 40,
         decoration: const BoxDecoration(
-          color: Color(0xFF707070),
+          color: Color(0xFF242424),
           border: Border(
-            right: BorderSide(color: Color(0xFF909090)),
+            right: BorderSide(color: Color(0xFF363636)),
           ),
         ),
         child: Column(
           children: [
             IconButton(
               icon: const Icon(Icons.menu),
-              color: const Color(0xFF404040),
+              color: const Color(0xFF9E9E9E),
               onPressed: widget.onToggle,
               tooltip: 'Show Library (B)',
             ),
@@ -49,9 +49,9 @@ class _LibraryPanelState extends State<LibraryPanel> {
     return Container(
       width: 200,
       decoration: const BoxDecoration(
-        color: Color(0xFF707070),
+        color: Color(0xFF242424),
         border: Border(
-          right: BorderSide(color: Color(0xFF909090)),
+          right: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Column(
@@ -142,23 +142,23 @@ class _LibraryPanelState extends State<LibraryPanel> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
-        color: Color(0xFF656565),
+        color: Color(0xFF363636),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF909090)),
+          bottom: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.library_music,
-            color: Color(0xFF202020),
+            color: Color(0xFFE0E0E0),
             size: 18,
           ),
           const SizedBox(width: 8),
           const Text(
             'LIBRARY',
             style: TextStyle(
-              color: Color(0xFF202020),
+              color: Color(0xFFE0E0E0),
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
@@ -168,7 +168,7 @@ class _LibraryPanelState extends State<LibraryPanel> {
           if (widget.onToggle != null)
             IconButton(
               icon: const Icon(Icons.chevron_left),
-              color: const Color(0xFF404040),
+              color: const Color(0xFF9E9E9E),
               iconSize: 18,
               onPressed: widget.onToggle,
               tooltip: 'Hide Library (B)',
@@ -193,52 +193,28 @@ class _LibraryPanelState extends State<LibraryPanel> {
     return Container(
       decoration: const BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFF656565)),
+          bottom: BorderSide(color: Color(0xFF363636)),
         ),
       ),
       child: Column(
         children: [
           // Category header (clickable)
-          InkWell(
+          _CategoryHeader(
+            icon: icon,
+            title: title,
+            isExpanded: isExpanded,
             onTap: () {
               setState(() {
                 _expandedCategoryIndex = isExpanded ? null : index;
               });
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    size: 16,
-                    color: const Color(0xFF404040),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        color: Color(0xFF202020),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    isExpanded ? Icons.expand_more : Icons.chevron_right,
-                    size: 18,
-                    color: const Color(0xFF505050),
-                  ),
-                ],
-              ),
-            ),
           ),
 
           // Category items (expandable)
           if (isExpanded)
             Container(
               padding: const EdgeInsets.only(left: 20, bottom: 8),
+              color: const Color(0xFF242424),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: items.map((item) => _buildItem(item, isVst3: isVst3Category, isVst3Instrument: isVst3Instrument)).toList(),
@@ -274,7 +250,7 @@ class _LibraryPanelState extends State<LibraryPanel> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50),
+              color: const Color(0xFF00BCD4),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -301,45 +277,18 @@ class _LibraryPanelState extends State<LibraryPanel> {
             child: Text(
               name,
               style: const TextStyle(
-                color: Color(0xFF404040),
+                color: Color(0xFF9E9E9E),
                 fontSize: 12,
               ),
             ),
           ),
         ),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.grab,
-          child: InkWell(
-            onTap: () {},
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-              child: Text(
-                name,
-                style: const TextStyle(
-                  color: Color(0xFF404040),
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ),
-        ),
+        child: _LibraryItem(name: name),
       );
     }
 
     // Non-instrument items are not draggable
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-        child: Text(
-          name,
-          style: const TextStyle(
-            color: Color(0xFF404040),
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
+    return _LibraryItem(name: name);
   }
 
   /// Find instrument by name from available instruments
@@ -378,7 +327,7 @@ class _LibraryPanelState extends State<LibraryPanel> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF4CAF50),
+            color: const Color(0xFF00BCD4),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -409,25 +358,108 @@ class _LibraryPanelState extends State<LibraryPanel> {
           child: Text(
             plugin.name,
             style: const TextStyle(
-              color: Color(0xFF404040),
+              color: Color(0xFF9E9E9E),
               fontSize: 12,
             ),
           ),
         ),
       ),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.grab,
-        child: InkWell(
-          onTap: () {},
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-            child: Text(
-              plugin.name,
-              style: const TextStyle(
-                color: Color(0xFF404040),
-                fontSize: 12,
+      child: _LibraryItem(name: plugin.name),
+    );
+  }
+}
+
+/// Category header with hover animation
+class _CategoryHeader extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final bool isExpanded;
+  final VoidCallback onTap;
+
+  const _CategoryHeader({
+    required this.icon,
+    required this.title,
+    required this.isExpanded,
+    required this.onTap,
+  });
+
+  @override
+  State<_CategoryHeader> createState() => _CategoryHeaderState();
+}
+
+class _CategoryHeaderState extends State<_CategoryHeader> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          color: _isHovered ? const Color(0xFF363636) : Colors.transparent,
+          child: Row(
+            children: [
+              Icon(
+                widget.icon,
+                size: 16,
+                color: _isHovered ? const Color(0xFF00BCD4) : const Color(0xFF9E9E9E),
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  widget.title,
+                  style: TextStyle(
+                    color: _isHovered ? const Color(0xFFE0E0E0) : const Color(0xFFBDBDBD),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                widget.isExpanded ? Icons.expand_more : Icons.chevron_right,
+                size: 18,
+                color: _isHovered ? const Color(0xFF00BCD4) : const Color(0xFF616161),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Library item with hover animation
+class _LibraryItem extends StatefulWidget {
+  final String name;
+
+  const _LibraryItem({required this.name});
+
+  @override
+  State<_LibraryItem> createState() => _LibraryItemState();
+}
+
+class _LibraryItemState extends State<_LibraryItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+        color: _isHovered ? const Color(0xFF363636) : Colors.transparent,
+        child: Text(
+          widget.name,
+          style: TextStyle(
+            color: _isHovered ? const Color(0xFF00BCD4) : const Color(0xFF9E9E9E),
+            fontSize: 12,
           ),
         ),
       ),

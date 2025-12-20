@@ -59,10 +59,10 @@ class _ResizableDividerState extends State<ResizableDivider> {
           width: isVertical ? (_isHovered || _isDragging ? 3 : 1) : double.infinity,
           height: isVertical ? double.infinity : (_isHovered || _isDragging ? 3 : 1),
           color: _isDragging
-              ? const Color(0xFF4CAF50) // Green when dragging
+              ? const Color(0xFF00BCD4) // Cyan when dragging
               : _isHovered
-                  ? const Color(0xFFAAAAAA) // Bright grey on hover
-                  : const Color(0xFF909090), // Subtle grey default
+                  ? const Color(0xFF00838F) // Dim cyan on hover
+                  : const Color(0xFF363636), // Dark grey default
         ),
       ),
     );

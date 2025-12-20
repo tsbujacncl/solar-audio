@@ -63,6 +63,9 @@ class TimelineView extends StatefulWidget {
   final Function(int trackId, Vst3Plugin plugin)? onVst3InstrumentDropped;
   final Function(Vst3Plugin plugin)? onVst3InstrumentDroppedOnEmpty;
 
+  // Audio file drag-and-drop on empty space
+  final Function(String filePath)? onAudioFileDroppedOnEmpty;
+
   const TimelineView({
     super.key,
     required this.playheadPosition,
@@ -81,6 +84,7 @@ class TimelineView extends StatefulWidget {
     this.onInstrumentDroppedOnEmpty,
     this.onVst3InstrumentDropped,
     this.onVst3InstrumentDroppedOnEmpty,
+    this.onAudioFileDroppedOnEmpty,
   });
 
   @override
@@ -97,6 +101,7 @@ class TimelineViewState extends State<TimelineView> {
   List<ClipData> _clips = [];
   PreviewClip? _previewClip;
   int? _dragHoveredTrackId;
+  bool _isAudioFileDraggingOverEmpty = false;
 
   // Drag-to-move state for audio clips
   int? _draggingClipId;
@@ -193,6 +198,13 @@ class TimelineViewState extends State<TimelineView> {
   /// Public method to trigger immediate track refresh
   void refreshTracks() {
     _loadTracksAsync();
+  }
+
+  /// Public method to add a clip to the timeline
+  void addClip(ClipData clip) {
+    setState(() {
+      _clips.add(clip);
+    });
   }
 
   /// Load tracks from audio engine
@@ -326,77 +338,113 @@ class TimelineViewState extends State<TimelineView> {
         }),
 
         // Empty space drop target - wraps spacer to push master track to bottom
+        // Supports: instruments, VST3 plugins, and audio files
         Expanded(
-          child: DragTarget<Vst3Plugin>(
-            onWillAcceptWithDetails: (details) {
-              debugPrint('🎯 VST3 onWillAccept EMPTY SPACE: plugin=${details.data.name}, isInstrument=${details.data.isInstrument}');
-              return details.data.isInstrument; // Only accept VST3 instruments
+          child: DropTarget(
+            onDragDone: (details) {
+              // Handle audio file drops
+              for (final file in details.files) {
+                final ext = file.path.split('.').last.toLowerCase();
+                if (['wav', 'mp3', 'flac', 'aif', 'aiff'].contains(ext)) {
+                  widget.onAudioFileDroppedOnEmpty?.call(file.path);
+                  return; // Only handle first valid audio file
+                }
+              }
             },
-            onAcceptWithDetails: (details) {
-              debugPrint('🎯 VST3 onAccept EMPTY SPACE: plugin=${details.data.name}');
-              widget.onVst3InstrumentDroppedOnEmpty?.call(details.data);
+            onDragEntered: (details) {
+              setState(() {
+                _isAudioFileDraggingOverEmpty = true;
+              });
             },
-            builder: (context, candidateVst3Plugins, rejectedVst3Plugins) {
-              final isVst3PluginHovering = candidateVst3Plugins.isNotEmpty;
+            onDragExited: (details) {
+              setState(() {
+                _isAudioFileDraggingOverEmpty = false;
+              });
+            },
+            child: DragTarget<Vst3Plugin>(
+              onWillAcceptWithDetails: (details) {
+                debugPrint('🎯 VST3 onWillAccept EMPTY SPACE: plugin=${details.data.name}, isInstrument=${details.data.isInstrument}');
+                return details.data.isInstrument; // Only accept VST3 instruments
+              },
+              onAcceptWithDetails: (details) {
+                debugPrint('🎯 VST3 onAccept EMPTY SPACE: plugin=${details.data.name}');
+                widget.onVst3InstrumentDroppedOnEmpty?.call(details.data);
+              },
+              builder: (context, candidateVst3Plugins, rejectedVst3Plugins) {
+                final isVst3PluginHovering = candidateVst3Plugins.isNotEmpty;
 
-              return DragTarget<Instrument>(
-                onWillAcceptWithDetails: (details) {
-                  debugPrint('🎯 onWillAccept EMPTY SPACE: instrument=${details.data.name}');
-                  return true; // Always accept instruments
-                },
-                onAcceptWithDetails: (details) {
-                  debugPrint('🎯 onAccept EMPTY SPACE: instrument=${details.data.name}');
-                  widget.onInstrumentDroppedOnEmpty?.call(details.data);
-                },
-                builder: (context, candidateInstruments, rejectedInstruments) {
-                  final isInstrumentHovering = candidateInstruments.isNotEmpty || isVst3PluginHovering;
+                return DragTarget<Instrument>(
+                  onWillAcceptWithDetails: (details) {
+                    debugPrint('🎯 onWillAccept EMPTY SPACE: instrument=${details.data.name}');
+                    return true; // Always accept instruments
+                  },
+                  onAcceptWithDetails: (details) {
+                    debugPrint('🎯 onAccept EMPTY SPACE: instrument=${details.data.name}');
+                    widget.onInstrumentDroppedOnEmpty?.call(details.data);
+                  },
+                  builder: (context, candidateInstruments, rejectedInstruments) {
+                    final isInstrumentHovering = candidateInstruments.isNotEmpty || isVst3PluginHovering;
+                    final isAnyHovering = isInstrumentHovering || _isAudioFileDraggingOverEmpty;
 
-              return Container(
-                decoration: isInstrumentHovering
-                    ? BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.1),
-                        border: Border.all(
-                          color: const Color(0xFF4CAF50),
-                          width: 3,
-                          style: BorderStyle.solid,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      )
-                    : null,
-                child: isInstrumentHovering
-                    ? Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.add_circle_outline,
-                                color: Colors.white,
-                                size: 20,
+                    // Determine label text
+                    String dropLabel;
+                    if (_isAudioFileDraggingOverEmpty) {
+                      dropLabel = 'Drop to create new Audio track';
+                    } else if (candidateVst3Plugins.isNotEmpty) {
+                      dropLabel = 'Drop to create new MIDI track with ${candidateVst3Plugins.first?.name}';
+                    } else if (candidateInstruments.isNotEmpty) {
+                      dropLabel = 'Drop to create new MIDI track with ${candidateInstruments.first?.name ?? "instrument"}';
+                    } else {
+                      dropLabel = 'Drop to create new track';
+                    }
+
+                    return Container(
+                      decoration: isAnyHovering
+                          ? BoxDecoration(
+                              color: const Color(0xFF4CAF50).withOpacity(0.1),
+                              border: Border.all(
+                                color: const Color(0xFF4CAF50),
+                                width: 3,
+                                style: BorderStyle.solid,
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Drop to create new MIDI track with ${candidateVst3Plugins.isNotEmpty ? candidateVst3Plugins.first?.name : candidateInstruments.first?.name ?? "instrument"}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                              borderRadius: BorderRadius.circular(8),
+                            )
+                          : null,
+                      child: isAnyHovering
+                          ? Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4CAF50),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.add_circle_outline,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      dropLabel,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : const SizedBox.expand(),
-                  );
-                },
-              );
-            },
+                            )
+                          : const SizedBox.expand(),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
 

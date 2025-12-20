@@ -1,4 +1,4 @@
-# Solar Audio — M2 Completion Report
+# Boojy Audio — M2 Completion Report
 
 **Milestone:** M2 - Recording & Input  
 **Status:** ✅ Complete  

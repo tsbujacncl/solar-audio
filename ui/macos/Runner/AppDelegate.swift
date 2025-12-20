@@ -25,7 +25,7 @@ class AppDelegate: FlutterAppDelegate {
     // Register VST3 platform view factory (M7 Phase 2)
     let vst3Factory = VST3PlatformViewFactory(messenger: messenger)
     flutterViewController.engine.registrar(forPlugin: "VST3PlatformView")
-      .register(vst3Factory, withId: "solar_audio.vst3.editor_view")
+      .register(vst3Factory, withId: "boojy_audio.vst3.editor_view")
 
     // Initialize VST3 platform channel (M7 Phase 2)
     vst3PlatformChannel = VST3PlatformChannel(messenger: messenger)

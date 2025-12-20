@@ -1,4 +1,4 @@
-# Solar Audio - Development Roadmap
+# Boojy Audio - Development Roadmap
 
 **Last Updated:** October 30, 2025
 **Current Status:** M6.3 Complete (Native Menu Bar & Editor Panel), M7 Ready to Start
@@ -63,7 +63,7 @@ Week 0    Week 10   Week 15   Week 22
 - ✅ Instrument browser with drag-and-drop
 - ✅ Ableton-style workflow (drag from library → timeline)
 - ✅ Auto-create MIDI tracks on instrument drop
-- ✅ App branding update (Solar Audio logo)
+- ✅ App branding update (Boojy Audio logo)
 - ✅ MIDI clip playback during transport (M6.1)
 - ✅ Proper track deletion cleanup (M6.1)
 
@@ -98,7 +98,7 @@ Week 0    Week 10   Week 15   Week 22
 **Implemented:**
 - ✅ Native macOS menu bar integration using PlatformMenuBar
 - ✅ Complete menu structure with keyboard shortcuts:
-  - **Solar Audio menu**: About, Services, Hide (⌘H), Hide Others (⌥⌘H), Show All, Quit (⌘Q)
+  - **Audio menu**: About, Services, Hide (⌘H), Hide Others (⌥⌘H), Show All, Quit (⌘Q)
   - **File menu**: New (⌘N), Open (⌘O), Save (⌘S), Save As (⇧⌘S), Make Copy, Export Audio/MIDI, Settings (⌘,), Close (⌘W)
   - **Edit menu**: Undo (⌘Z), Redo (⇧⌘Z), Cut (⌘X), Copy (⌘C), Paste (⌘V), Delete (Del), Select All (⌘A) - all disabled for now
   - **View menu**: Toggle Library (⌘L), Mixer (⌘M), Editor (⌘E), Piano (⌘P), Reset Layout, Zoom In/Out/Fit (disabled for now)

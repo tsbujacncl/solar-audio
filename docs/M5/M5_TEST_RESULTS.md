@@ -27,7 +27,7 @@
 6. File → Save As... → "M5 Test Project"
 
 **Result:** ✅ PASS
-- Project saved to `.solar` folder
+- Project saved to `.audio` folder
 - `project.json` created with valid JSON
 - Audio files copied to `audio/` subfolder
 - Success message displayed
@@ -36,7 +36,7 @@
 **Steps:**
 1. Closed app
 2. Reopened app
-3. File → Open... → Selected "M5 Test Project.solar"
+3. File → Open... → Selected "M5 Test Project.audio"
 
 **Result:** ⚠️ FAIL (Bug found)
 - **Issue:** Tracks not appearing in mixer
@@ -59,7 +59,7 @@
 ### ✅ Test 4: Load Project (After Fix)
 **Steps:**
 1. Full app restart
-2. File → Open... → Selected "M5 Test Project.solar"
+2. File → Open... → Selected "M5 Test Project.audio"
 
 **Result:** ✅ PASS
 - All tracks appeared (Master, AUDIO 2, MIDI 2)
@@ -133,7 +133,7 @@ Added `get_all_track_ids()` API to return actual track IDs as comma-separated st
 **Status:** ✅ Fixed
 
 **Description:**
-macOS `osascript` returns paths with trailing slash (e.g., `/path/to/project.solar/`), causing `path.endsWith('.solar')` to fail.
+macOS `osascript` returns paths with trailing slash (e.g., `/path/to/project.audio/`), causing `path.endsWith('.audio')` to fail.
 
 **Fix:**
 Strip trailing slash before validation.
@@ -194,7 +194,7 @@ These are intentionally deferred to later milestones:
 **M5 Save & Export is COMPLETE and fully functional.**
 
 All core save/load functionality is working:
-- ✅ Projects save to `.solar` folders
+- ✅ Projects save to `.audio` folders
 - ✅ All track state persists (volume, pan, mute, solo)
 - ✅ All 6 effect types save with parameters
 - ✅ Audio files copied to project folder

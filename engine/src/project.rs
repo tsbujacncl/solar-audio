@@ -1,6 +1,6 @@
 /// Project serialization for M5: Save & Export
 ///
-/// This module handles saving and loading Solar Audio projects in `.solar` format.
+/// This module handles saving and loading Boojy Audio projects in `.audio` format.
 /// Projects are saved as folders containing:
 /// - project.json (all metadata)
 /// - audio/ (imported audio files)
@@ -140,7 +140,7 @@ pub struct EffectData {
 // PROJECT FILE OPERATIONS
 // ========================================================================
 
-/// Save project to `.solar` folder
+/// Save project to `.audio` folder
 pub fn save_project(project_data: &ProjectData, project_path: &Path) -> Result<()> {
     eprintln!("💾 [Project] Saving project to: {:?}", project_path);
 
@@ -169,7 +169,7 @@ pub fn save_project(project_data: &ProjectData, project_path: &Path) -> Result<(
     Ok(())
 }
 
-/// Load project from `.solar` folder
+/// Load project from `.audio` folder
 pub fn load_project(project_path: &Path) -> Result<ProjectData> {
     eprintln!("📂 [Project] Loading project from: {:?}", project_path);
 
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_save_load_project() {
-        let temp_dir = env::temp_dir().join("solar_test_project.solar");
+        let temp_dir = env::temp_dir().join("boojy_test_project.audio");
         let _ = fs::remove_dir_all(&temp_dir); // Clean up if exists
 
         let mut project = ProjectData::new("Test Save/Load".to_string());

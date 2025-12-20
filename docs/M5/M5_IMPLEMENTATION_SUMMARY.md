@@ -8,7 +8,7 @@
 
 ## Overview
 
-M5 Save & Export has been implemented with **full backend support** for project save/load functionality. The `.solar` project format is working, with audio files copied to the project folder and all state serialized to JSON.
+M5 Save & Export has been implemented with **full backend support** for project save/load functionality. The `.audio` project format is working, with audio files copied to the project folder and all state serialized to JSON.
 
 ---
 
@@ -26,7 +26,7 @@ M5 Save & Export has been implemented with **full backend support** for project 
 - `ClipData` - Audio/MIDI clip timing data
 - `EffectData` - Effect type and parameters
 - `AudioFileData` - Audio file metadata
-- `save_project()` - Creates `.solar` folder, writes `project.json`
+- `save_project()` - Creates `.audio` folder, writes `project.json`
 - `load_project()` - Reads `project.json`
 - `copy_audio_file_to_project()` - Copies audio files to `audio/` subfolder
 - Unit tests for serialization
@@ -70,7 +70,7 @@ M5 Save & Export has been implemented with **full backend support** for project 
 
 #### **ui/lib/screens/daw_screen.dart** (M5 additions: ~220 lines)
 - **State Variables:**
-  - `_currentProjectPath` - Current `.solar` folder path
+  - `_currentProjectPath` - Current `.audio` folder path
   - `_currentProjectName` - Project display name
 
 - **File Menu in AppBar:**
@@ -82,7 +82,7 @@ M5 Save & Export has been implemented with **full backend support** for project 
 
 - **Menu Handlers:**
   - `_newProject()` - Clear project with confirmation
-  - `_openProject()` - macOS folder picker → load `.solar`
+  - `_openProject()` - macOS folder picker → load `.audio`
   - `_saveProject()` - Save to current path or Save As
   - `_saveProjectAs()` - Enter name + choose location
   - `_saveProjectToPath()` - Call FFI save function
@@ -94,7 +94,7 @@ M5 Save & Export has been implemented with **full backend support** for project 
 
 ### Folder Structure:
 ```
-MyProject.solar/
+MyProject.audio/
 ├── project.json          # All metadata and state
 ├── audio/               # Imported audio files
 │   ├── 001-drums.wav
@@ -191,7 +191,7 @@ MyProject.solar/
 1. Click **File** menu → **Save As...**
 2. Enter project name in dialog
 3. Choose save location using macOS folder picker
-4. Engine creates `MyProject.solar/` folder
+4. Engine creates `MyProject.audio/` folder
 5. Audio files copied to `audio/` subfolder
 6. `project.json` written with all state
 7. Success message shown

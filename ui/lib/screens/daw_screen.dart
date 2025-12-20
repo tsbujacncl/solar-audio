@@ -17,6 +17,7 @@ import '../widgets/vst3_plugin_browser.dart';
 import '../models/midi_note_data.dart';
 import '../models/instrument_data.dart';
 import '../models/vst3_plugin_data.dart';
+import '../models/clip_data.dart';
 import '../services/undo_redo_manager.dart';
 import '../services/commands/track_commands.dart';
 
@@ -826,6 +827,56 @@ class _DAWScreenState extends State<DAWScreen> {
       _refreshTrackWidgets();
     } catch (e) {
       debugPrint('❌ Error creating MIDI track with VST3 instrument: $e');
+    }
+  }
+
+  // Audio file drop handler - creates new audio track with clip
+  void _onAudioFileDroppedOnEmpty(String filePath) async {
+    if (_audioEngine == null) return;
+
+    try {
+      // 1. Create new audio track
+      final command = CreateTrackCommand(
+        trackType: 'audio',
+        trackName: 'Audio',
+      );
+
+      await _undoRedoManager.execute(command);
+
+      final trackId = command.createdTrackId;
+      if (trackId == null || trackId < 0) {
+        debugPrint('❌ Failed to create new audio track');
+        return;
+      }
+
+      // 2. Load audio file
+      final clipId = _audioEngine!.loadAudioFile(filePath);
+      if (clipId < 0) {
+        debugPrint('❌ Failed to load audio file: $filePath');
+        return;
+      }
+
+      // 3. Get clip info
+      final duration = _audioEngine!.getClipDuration(clipId);
+      final peaks = _audioEngine!.getWaveformPeaks(clipId, 2000);
+
+      // 4. Add to timeline view's clip list
+      _timelineKey.currentState?.addClip(ClipData(
+        clipId: clipId,
+        trackId: trackId,
+        filePath: filePath,
+        startTime: 0.0,
+        duration: duration,
+        waveformPeaks: peaks,
+      ));
+
+      // 6. Refresh track widgets
+      _refreshTrackWidgets();
+
+      final fileName = filePath.split('/').last;
+      debugPrint('✅ Created audio track $trackId with clip $clipId: $fileName');
+    } catch (e) {
+      debugPrint('❌ Error creating audio track with file: $e');
     }
   }
 
@@ -2382,6 +2433,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           onInstrumentDroppedOnEmpty: _onInstrumentDroppedOnEmpty,
                           onVst3InstrumentDropped: _onVst3InstrumentDropped,
                           onVst3InstrumentDroppedOnEmpty: _onVst3InstrumentDroppedOnEmpty,
+                          onAudioFileDroppedOnEmpty: _onAudioFileDroppedOnEmpty,
                         ),
                       ),
 
@@ -2420,6 +2472,7 @@ class _DAWScreenState extends State<DAWScreen> {
                             onFxButtonPressed: _showVst3PluginBrowser, // M10
                             onVst3PluginDropped: _onVst3PluginDropped, // M10
                             onEditPluginsPressed: _showVst3PluginEditor, // M10
+                            onAudioFileDropped: _onAudioFileDroppedOnEmpty,
                           ),
                         ),
                       ],

@@ -41,7 +41,7 @@ pub struct TimelineMidiClip {
     pub track_id: Option<TrackId>,
 }
 
-/// Track types supported in Solar Audio
+/// Track types supported in Boojy Audio
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrackType {
     /// Audio track: holds audio clips

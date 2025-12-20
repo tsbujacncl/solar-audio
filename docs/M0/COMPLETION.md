@@ -15,7 +15,7 @@ M0 has been successfully completed! We now have a working "Hello World" applicat
 ## Completed Tasks
 
 ### ✅ Repository & Structure
-- [x] Created GitHub repo: `solar-audio` (https://github.com/tsbujacncl/solar-audio)
+- [x] Created GitHub repo: `boojy-audio` (https://github.com/tsbujacncl/boojy-audio)
 - [x] Set up folder structure with `/engine` (Rust) and `/ui` (Flutter)
 - [x] Added `MVP_SPEC.md` and `IMPLEMENTATION_PLAN.md` to `/docs/`
 - [x] Created `.gitignore` (Rust `/target/`, Flutter `/build/`, etc.)
@@ -45,7 +45,7 @@ M0 has been successfully completed! We now have a working "Hello World" applicat
 ### ✅ Flutter UI
 - [x] Initialized Flutter app: `flutter create ui --platforms=macos`
 - [x] Enabled macOS desktop support: `flutter config --enable-macos-desktop`
-- [x] Created Solar Audio themed UI:
+- [x] Created Boojy Audio themed UI:
   - Dark theme (#1E1E1E background, #2B2B2B text, #A0A0A0 accents)
   - App bar with actual Solar logo (wordmark with grey circle "O")
   - "Play Beep" button (centered, large, modern design)
@@ -88,7 +88,7 @@ M0 has been successfully completed! We now have a working "Hello World" applicat
 ```
 ┌─────────────────────────────────────┐
 │   Flutter UI (Dart)                 │
-│   - main.dart (Solar Audio app)    │
+│   - main.dart (Boojy Audio app)    │
 │   - audio_engine.dart (FFI bindings)│
 └──────────────┬──────────────────────┘
                │ dart:ffi
@@ -120,7 +120,7 @@ M0 has been successfully completed! We now have a working "Hello World" applicat
 ## File Structure
 
 ```
-Solar Audio/
+Boojy Audio/
 ├── .git/
 ├── .gitignore
 ├── README.md

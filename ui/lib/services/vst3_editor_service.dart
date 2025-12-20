@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 /// Service for managing VST3 plugin editor windows
 /// Communicates with native platform code to show/hide editor GUIs
 class VST3EditorService {
-  static const _channel = MethodChannel('solar_audio.vst3.editor');
+  static const _channel = MethodChannel('boojy_audio.vst3.editor');
 
   /// Open a floating (undocked) editor window for a VST3 plugin
   ///

@@ -1,4 +1,4 @@
-# Solar Audio - UI Design Notes
+# Boojy Audio - UI Design Notes
 
 **Last Updated:** October 27, 2025
 **Current Version:** M5.5.1 (UI Redesign + Resizable Panels Complete)
@@ -9,11 +9,11 @@
 
 ### Layout Overview
 
-Solar Audio now has a professional 3-panel DAW interface similar to Ableton Live:
+Boojy Audio now has a professional 3-panel DAW interface similar to Ableton Live:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  ☀ SOLAR  |  Transport Controls  |  Tempo  Time  CPU  |  📁 ⚙️  │ Transport Bar
+│  AUDIO    |  Transport Controls  |  Tempo  Time  CPU  |  📁 ⚙️  │ Transport Bar
 ├──────────┬────────────────────────────────────┬─────────────────┤
 │          │                                    │                 │
 │ Library  │         Timeline (Multi-track)     │     Mixer       │
@@ -64,7 +64,7 @@ Solar Audio now has a professional 3-panel DAW interface similar to Ableton Live
 **File:** `ui/lib/widgets/transport_bar.dart`
 
 **Features:**
-- ☀ Solar logo (left side)
+- Logo (left side)
 - Transport controls: ⏮ ⏺ ▶ ⏹ ⏭
 - Metronome toggle 🎵
 - Virtual Piano toggle 🎹

@@ -18,6 +18,12 @@ class TransportBar extends StatelessWidget {
   final double tempo;
   final Function(double)? onTempoChanged;
 
+  // MIDI device selection
+  final List<Map<String, dynamic>> midiDevices;
+  final int selectedMidiDeviceIndex;
+  final Function(int)? onMidiDeviceSelected;
+  final VoidCallback? onRefreshMidiDevices;
+
   // File menu callbacks
   final VoidCallback? onNewProject;
   final VoidCallback? onOpenProject;
@@ -61,6 +67,10 @@ class TransportBar extends StatelessWidget {
     this.virtualPianoEnabled = false,
     this.tempo = 120.0,
     this.onTempoChanged,
+    this.midiDevices = const [],
+    this.selectedMidiDeviceIndex = -1,
+    this.onMidiDeviceSelected,
+    this.onRefreshMidiDevices,
     this.onNewProject,
     this.onOpenProject,
     this.onSaveProject,
@@ -87,27 +97,27 @@ class TransportBar extends StatelessWidget {
     return Container(
       height: 60,
       decoration: const BoxDecoration(
-        color: Color(0xFF707070), // Medium grey panel
+        color: Color(0xFF242424), // Main grey panel
         border: Border(
-          bottom: BorderSide(color: Color(0xFF909090)), // Light grey border
+          bottom: BorderSide(color: Color(0xFF363636)), // Secondary grey border
         ),
       ),
       child: Row(
         children: [
           const SizedBox(width: 16),
 
-          // Solar logo
+          // Audio logo image
           Image.asset(
-            'assets/images/solar_logo.png',
+            'assets/images/boojy_audio_text.png',
             height: 32,
-            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
 
           // File menu button
           PopupMenuButton<String>(
-            icon: const Icon(Icons.folder, color: Color(0xFF404040), size: 20),
+            icon: const Icon(Icons.folder, color: Color(0xFF9E9E9E), size: 20),
             tooltip: 'File',
             onSelected: (String value) {
               switch (value) {
@@ -241,7 +251,7 @@ class TransportBar extends StatelessWidget {
 
           // View menu button
           PopupMenuButton<String>(
-            icon: const Icon(Icons.visibility, color: Color(0xFF404040), size: 20),
+            icon: const Icon(Icons.visibility, color: Color(0xFF9E9E9E), size: 20),
             tooltip: 'View',
             onSelected: (String value) {
               switch (value) {
@@ -338,7 +348,7 @@ class TransportBar extends StatelessWidget {
           ),
 
           const SizedBox(width: 24),
-          const VerticalDivider(color: Color(0xFF909090), width: 1),
+          const VerticalDivider(color: Color(0xFF363636), width: 1),
           const SizedBox(width: 16),
 
           // Play/Pause button
@@ -376,8 +386,16 @@ class TransportBar extends StatelessWidget {
             size: 44,
           ),
 
+          // Recording indicator with duration
+          if (isRecording || isCountingIn)
+            _RecordingIndicator(
+              isRecording: isRecording,
+              isCountingIn: isCountingIn,
+              playheadPosition: playheadPosition,
+            ),
+
           const SizedBox(width: 24),
-          const VerticalDivider(color: Color(0xFF909090), width: 1),
+          const VerticalDivider(color: Color(0xFF363636), width: 1),
           const SizedBox(width: 16),
 
           // Metronome toggle
@@ -396,6 +414,16 @@ class TransportBar extends StatelessWidget {
 
           const SizedBox(width: 8),
 
+          // MIDI device selector
+          _MidiDeviceSelector(
+            devices: midiDevices,
+            selectedIndex: selectedMidiDeviceIndex,
+            onDeviceSelected: onMidiDeviceSelected,
+            onRefresh: onRefreshMidiDevices,
+          ),
+
+          const SizedBox(width: 8),
+
           // Tempo control with drag and tap
           _TempoControl(
             tempo: tempo,
@@ -408,9 +436,9 @@ class TransportBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF656565),
+              color: const Color(0xFF363636),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF909090)),
+              border: Border.all(color: const Color(0xFF363636)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -418,13 +446,13 @@ class TransportBar extends StatelessWidget {
                 const Icon(
                   Icons.access_time,
                   size: 14,
-                  color: Color(0xFF404040),
+                  color: Color(0xFF9E9E9E),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   _formatTime(playheadPosition),
                   style: const TextStyle(
-                    color: Color(0xFF202020),
+                    color: Color(0xFFE0E0E0),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     fontFeatures: [FontFeature.tabularFigures()],
@@ -440,14 +468,14 @@ class TransportBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF656565),
+              color: const Color(0xFF363636),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF909090)),
+              border: Border.all(color: const Color(0xFF363636)),
             ),
             child: Text(
               _formatPosition(playheadPosition, tempo),
               style: const TextStyle(
-                color: Color(0xFF202020),
+                color: Color(0xFFE0E0E0),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 fontFeatures: [FontFeature.tabularFigures()],
@@ -456,14 +484,14 @@ class TransportBar extends StatelessWidget {
           ),
 
           const SizedBox(width: 24),
-          const VerticalDivider(color: Color(0xFF909090), width: 1),
+          const VerticalDivider(color: Color(0xFF363636), width: 1),
           const SizedBox(width: 16),
 
           // Mixer toggle button
           IconButton(
             icon: Icon(
               Icons.tune,
-              color: mixerVisible ? const Color(0xFF4CAF50) : const Color(0xFF404040),
+              color: mixerVisible ? const Color(0xFF00BCD4) : const Color(0xFF9E9E9E),
               size: 20,
             ),
             onPressed: onToggleMixer,
@@ -501,8 +529,8 @@ class TransportBar extends StatelessWidget {
   }
 }
 
-/// Individual transport button widget
-class _TransportButton extends StatelessWidget {
+/// Individual transport button widget with hover animation
+class _TransportButton extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback? onPressed;
@@ -518,35 +546,66 @@ class _TransportButton extends StatelessWidget {
   });
 
   @override
+  State<_TransportButton> createState() => _TransportButtonState();
+}
+
+class _TransportButtonState extends State<_TransportButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isEnabled = widget.onPressed != null;
+    final scale = _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0);
+
     return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(size / 2),
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: onPressed != null 
-                  ? color.withOpacity(0.2)
-                  : const Color(0xFF404040),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: onPressed != null 
-                    ? color
-                    : const Color(0xFF909090),
-                width: 2,
+      message: widget.tooltip,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) {
+            setState(() => _isPressed = false);
+            widget.onPressed?.call();
+          },
+          onTapCancel: () => setState(() => _isPressed = false),
+          child: AnimatedScale(
+            scale: scale,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                color: isEnabled
+                    ? widget.color.withValues(alpha: _isHovered ? 0.3 : 0.2)
+                    : const Color(0xFF363636),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isEnabled
+                      ? widget.color
+                      : const Color(0xFF363636),
+                  width: 2,
+                ),
+                boxShadow: _isHovered && isEnabled
+                    ? [
+                        BoxShadow(
+                          color: widget.color.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
-            ),
-            child: Icon(
-              icon,
-              size: size * 0.5,
-              color: onPressed != null 
-                  ? color
-                  : const Color(0xFF505050),
+              child: Icon(
+                widget.icon,
+                size: widget.size * 0.5,
+                color: isEnabled
+                    ? widget.color
+                    : const Color(0xFF616161),
+              ),
             ),
           ),
         ),
@@ -555,8 +614,8 @@ class _TransportButton extends StatelessWidget {
   }
 }
 
-/// Metronome toggle button widget
-class _MetronomeButton extends StatelessWidget {
+/// Metronome toggle button widget with hover animation
+class _MetronomeButton extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onPressed;
 
@@ -566,35 +625,65 @@ class _MetronomeButton extends StatelessWidget {
   });
 
   @override
+  State<_MetronomeButton> createState() => _MetronomeButtonState();
+}
+
+class _MetronomeButtonState extends State<_MetronomeButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0);
+
     return Tooltip(
-      message: enabled ? 'Metronome On' : 'Metronome Off',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: enabled
-                  ? const Color(0xFF2196F3).withOpacity(0.2)
-                  : const Color(0xFF5A5A5A),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: enabled
-                    ? const Color(0xFF2196F3)
-                    : const Color(0xFF909090),
-                width: 2,
+      message: widget.enabled ? 'Metronome On' : 'Metronome Off',
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) {
+            setState(() => _isPressed = false);
+            widget.onPressed?.call();
+          },
+          onTapCancel: () => setState(() => _isPressed = false),
+          child: AnimatedScale(
+            scale: scale,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: widget.enabled
+                    ? const Color(0xFF00BCD4).withValues(alpha: _isHovered ? 0.3 : 0.2)
+                    : Color(0xFF363636).withValues(alpha: _isHovered ? 1.0 : 0.8),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.enabled
+                      ? const Color(0xFF00BCD4)
+                      : const Color(0xFF363636),
+                  width: 2,
+                ),
+                boxShadow: _isHovered && widget.enabled
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF00BCD4).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
-            ),
-            child: Icon(
-              Icons.graphic_eq,
-              size: 20,
-              color: enabled
-                  ? const Color(0xFF2196F3)
-                  : const Color(0xFF404040),
+              child: Icon(
+                Icons.graphic_eq,
+                size: 20,
+                color: widget.enabled
+                    ? const Color(0xFF00BCD4)
+                    : const Color(0xFF616161),
+              ),
             ),
           ),
         ),
@@ -603,8 +692,8 @@ class _MetronomeButton extends StatelessWidget {
   }
 }
 
-/// Virtual piano toggle button widget
-class _PianoButton extends StatelessWidget {
+/// Virtual piano toggle button widget with hover animation
+class _PianoButton extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onPressed;
 
@@ -614,35 +703,65 @@ class _PianoButton extends StatelessWidget {
   });
 
   @override
+  State<_PianoButton> createState() => _PianoButtonState();
+}
+
+class _PianoButtonState extends State<_PianoButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0);
+
     return Tooltip(
-      message: enabled ? 'Virtual Piano On (z,x,c,w,e,r...)' : 'Virtual Piano Off',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: enabled
-                  ? const Color(0xFF4CAF50).withOpacity(0.2)
-                  : const Color(0xFF5A5A5A),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: enabled
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFF909090),
-                width: 2,
+      message: widget.enabled ? 'Virtual Piano On (z,x,c,w,e,r...)' : 'Virtual Piano Off',
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) {
+            setState(() => _isPressed = false);
+            widget.onPressed?.call();
+          },
+          onTapCancel: () => setState(() => _isPressed = false),
+          child: AnimatedScale(
+            scale: scale,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: widget.enabled
+                    ? const Color(0xFF4CAF50).withValues(alpha: _isHovered ? 0.3 : 0.2)
+                    : Color(0xFF363636).withValues(alpha: _isHovered ? 1.0 : 0.8),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.enabled
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFF363636),
+                  width: 2,
+                ),
+                boxShadow: _isHovered && widget.enabled
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
-            ),
-            child: Icon(
-              Icons.piano,
-              size: 20,
-              color: enabled
-                  ? const Color(0xFF4CAF50)
-                  : const Color(0xFF404040),
+              child: Icon(
+                Icons.piano,
+                size: 20,
+                color: widget.enabled
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFF616161),
+              ),
             ),
           ),
         ),
@@ -712,15 +831,15 @@ class _TempoControlState extends State<_TempoControl> {
             decoration: BoxDecoration(
               color: _tapTimes.isNotEmpty &&
                      DateTime.now().difference(_tapTimes.last).inMilliseconds < 500
-                  ? const Color(0xFF4CAF50).withOpacity(0.3)
-                  : const Color(0xFF656565),
+                  ? const Color(0xFF00BCD4).withValues(alpha: 0.3)
+                  : const Color(0xFF363636),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF909090)),
+              border: Border.all(color: const Color(0xFF363636)),
             ),
             child: const Text(
               'Tap',
               style: TextStyle(
-                color: Color(0xFF202020),
+                color: Color(0xFFE0E0E0),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -760,13 +879,13 @@ class _TempoControlState extends State<_TempoControl> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: _isDragging
-                    ? const Color(0xFF4CAF50).withOpacity(0.2)
-                    : const Color(0xFF656565),
+                    ? const Color(0xFF00BCD4).withValues(alpha: 0.2)
+                    : const Color(0xFF363636),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: _isDragging
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFF909090),
+                      ? const Color(0xFF00BCD4)
+                      : const Color(0xFF363636),
                 ),
               ),
               child: Row(
@@ -775,13 +894,13 @@ class _TempoControlState extends State<_TempoControl> {
                   const Icon(
                     Icons.speed,
                     size: 14,
-                    color: Color(0xFF404040),
+                    color: Color(0xFF9E9E9E),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '$tempoText BPM',
                     style: const TextStyle(
-                      color: Color(0xFF202020),
+                      color: Color(0xFFE0E0E0),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -796,3 +915,288 @@ class _TempoControlState extends State<_TempoControl> {
   }
 }
 
+/// MIDI device selector dropdown widget
+class _MidiDeviceSelector extends StatefulWidget {
+  final List<Map<String, dynamic>> devices;
+  final int selectedIndex;
+  final Function(int)? onDeviceSelected;
+  final VoidCallback? onRefresh;
+
+  const _MidiDeviceSelector({
+    required this.devices,
+    required this.selectedIndex,
+    this.onDeviceSelected,
+    this.onRefresh,
+  });
+
+  @override
+  State<_MidiDeviceSelector> createState() => _MidiDeviceSelectorState();
+}
+
+class _MidiDeviceSelectorState extends State<_MidiDeviceSelector> {
+  bool _isHovered = false;
+
+  String get _selectedDeviceName {
+    if (widget.devices.isEmpty) {
+      return 'No MIDI';
+    }
+    if (widget.selectedIndex < 0 || widget.selectedIndex >= widget.devices.length) {
+      return 'Select MIDI';
+    }
+    final name = widget.devices[widget.selectedIndex]['name'] as String? ?? 'Unknown';
+    // Truncate long names
+    return name.length > 16 ? '${name.substring(0, 14)}...' : name;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: PopupMenuButton<int>(
+        tooltip: 'MIDI Input Device',
+        onSelected: (int index) {
+          if (index == -2) {
+            // Refresh option
+            widget.onRefresh?.call();
+          } else {
+            widget.onDeviceSelected?.call(index);
+          }
+        },
+        offset: const Offset(0, 40),
+        itemBuilder: (BuildContext context) {
+          final items = <PopupMenuEntry<int>>[];
+
+          if (widget.devices.isEmpty) {
+            items.add(
+              const PopupMenuItem<int>(
+                enabled: false,
+                child: Text(
+                  'No MIDI devices found',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            );
+          } else {
+            for (int i = 0; i < widget.devices.length; i++) {
+              final device = widget.devices[i];
+              final name = device['name'] as String? ?? 'Unknown';
+              final isDefault = device['isDefault'] as bool? ?? false;
+              final isSelected = i == widget.selectedIndex;
+
+              items.add(
+                PopupMenuItem<int>(
+                  value: i,
+                  child: Row(
+                    children: [
+                      Icon(
+                        isSelected ? Icons.check : Icons.piano,
+                        size: 18,
+                        color: isSelected ? const Color(0xFF00BCD4) : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            color: isSelected ? const Color(0xFF00BCD4) : null,
+                            fontWeight: isSelected ? FontWeight.w600 : null,
+                          ),
+                        ),
+                      ),
+                      if (isDefault)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF363636),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Default',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          }
+
+          items.add(const PopupMenuDivider());
+          items.add(
+            const PopupMenuItem<int>(
+              value: -2,
+              child: Row(
+                children: [
+                  Icon(Icons.refresh, size: 18),
+                  SizedBox(width: 8),
+                  Text('Refresh Devices'),
+                ],
+              ),
+            ),
+          );
+
+          return items;
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? const Color(0xFF363636)
+                : const Color(0xFF2A2A2A),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: widget.selectedIndex >= 0
+                  ? const Color(0xFF00BCD4).withValues(alpha: 0.5)
+                  : const Color(0xFF363636),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.piano,
+                size: 14,
+                color: widget.selectedIndex >= 0
+                    ? const Color(0xFF00BCD4)
+                    : const Color(0xFF9E9E9E),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _selectedDeviceName,
+                style: TextStyle(
+                  color: widget.selectedIndex >= 0
+                      ? const Color(0xFFE0E0E0)
+                      : const Color(0xFF9E9E9E),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_drop_down,
+                size: 16,
+                color: widget.selectedIndex >= 0
+                    ? const Color(0xFF00BCD4)
+                    : const Color(0xFF9E9E9E),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Recording indicator with pulsing REC label and duration
+class _RecordingIndicator extends StatefulWidget {
+  final bool isRecording;
+  final bool isCountingIn;
+  final double playheadPosition;
+
+  const _RecordingIndicator({
+    required this.isRecording,
+    required this.isCountingIn,
+    required this.playheadPosition,
+  });
+
+  @override
+  State<_RecordingIndicator> createState() => _RecordingIndicatorState();
+}
+
+class _RecordingIndicatorState extends State<_RecordingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(double seconds) {
+    final mins = (seconds / 60).floor();
+    final secs = (seconds % 60).floor();
+    final ms = ((seconds % 1) * 100).floor();
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}.${ms.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2B2B2B),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: widget.isRecording
+                ? const Color(0xFFFF0000)
+                : const Color(0xFFFF9800),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Pulsing REC indicator
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.isRecording
+                        ? Color.fromRGBO(255, 0, 0, _pulseAnimation.value)
+                        : Color.fromRGBO(255, 152, 0, _pulseAnimation.value),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 6),
+            Text(
+              widget.isCountingIn ? 'COUNT-IN' : 'REC',
+              style: TextStyle(
+                color: widget.isRecording
+                    ? const Color(0xFFFF0000)
+                    : const Color(0xFFFF9800),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+            if (widget.isRecording) ...[
+              const SizedBox(width: 8),
+              Text(
+                _formatDuration(widget.playheadPosition),
+                style: const TextStyle(
+                  color: Color(0xFFE0E0E0),
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

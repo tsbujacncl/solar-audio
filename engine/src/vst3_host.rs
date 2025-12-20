@@ -1,6 +1,5 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_float, c_int, c_void};
-use std::ptr;
 
 // C FFI bindings to the C++ VST3 host library
 
@@ -685,7 +684,7 @@ impl VST3Effect {
 // Implement the Effect trait for VST3Effect
 impl crate::effects::Effect for VST3Effect {
     fn process_frame(&mut self, left: f32, right: f32) -> (f32, f32) {
-        let mut plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().unwrap();
 
         // For now, create single-sample buffers
         // TODO: Optimize by batching frames
