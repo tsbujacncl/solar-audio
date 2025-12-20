@@ -82,6 +82,22 @@ pub struct MidiClip {
 }
 
 impl MidiClip {
+    /// Snap duration to next bar boundary (at 120 BPM, 4/4 time)
+    /// One bar = 4 beats = 2 seconds = 96000 samples at 48kHz
+    /// Examples: 3.5 bars -> 4 bars, 3.1 bars -> 4 bars, 3.0 bars -> 3 bars
+    fn snap_to_bar(samples: u64, sample_rate: u32) -> u64 {
+        let samples_per_bar = (sample_rate as u64) * 2; // 2 seconds per bar at 120 BPM
+        if samples == 0 {
+            return samples_per_bar; // Minimum 1 bar
+        }
+        // If already on a bar boundary, keep it; otherwise round up
+        if samples % samples_per_bar == 0 {
+            samples
+        } else {
+            ((samples / samples_per_bar) + 1) * samples_per_bar
+        }
+    }
+
     /// Create a new empty MIDI clip
     pub fn new(sample_rate: u32) -> Self {
         Self {
@@ -96,11 +112,12 @@ impl MidiClip {
         // Sort events by timestamp
         events.sort();
 
-        // Calculate duration (last event timestamp + some padding)
-        let duration_samples = events
+        // Calculate duration snapped to bar boundary
+        let last_event_samples = events
             .last()
-            .map(|e| e.timestamp_samples + sample_rate as u64) // Add 1 second padding
+            .map(|e| e.timestamp_samples)
             .unwrap_or(0);
+        let duration_samples = Self::snap_to_bar(last_event_samples, sample_rate);
 
         Self {
             events,
@@ -114,9 +131,9 @@ impl MidiClip {
         self.events.push(event);
         self.events.sort();
 
-        // Update duration if needed
+        // Update duration if event extends beyond current duration, snap to bar
         if event.timestamp_samples > self.duration_samples {
-            self.duration_samples = event.timestamp_samples + self.sample_rate as u64;
+            self.duration_samples = Self::snap_to_bar(event.timestamp_samples, self.sample_rate);
         }
     }
 

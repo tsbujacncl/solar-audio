@@ -1392,8 +1392,10 @@ class _DAWScreenState extends State<DAWScreen> {
             .map((note) => note.startTime + note.duration)
             .reduce((a, b) => a > b ? a : b);
 
-        // Add 1 bar (4 beats) of padding after the last note
-        final totalBeats = furthestBeat + 4.0;
+        // Snap to bar boundary (4 beats per bar)
+        // If exactly on a bar, keep it; otherwise round up to next bar
+        final barsNeeded = (furthestBeat / 4.0).ceil();
+        final totalBeats = barsNeeded * 4.0;
 
         // Convert beats to seconds: seconds = (beats / BPM) * 60
         durationInSeconds = (totalBeats / _tempo) * 60.0;
