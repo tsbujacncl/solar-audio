@@ -19,7 +19,6 @@ import '../models/instrument_data.dart';
 import '../models/vst3_plugin_data.dart';
 import '../services/undo_redo_manager.dart';
 import '../services/commands/track_commands.dart';
-import '../services/commands/mixer_commands.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -43,30 +42,30 @@ class _DAWScreenState extends State<DAWScreen> {
   double? _clipDuration;
   List<double> _waveformPeaks = [];
   bool _isPlaying = false;
-  bool _audioGraphInitialized = false;
+  bool _isAudioGraphInitialized = false;
   String _statusMessage = '';
   bool _isLoading = false;
 
   // M2: Recording state
   bool _isRecording = false;
   bool _isCountingIn = false;
-  bool _metronomeEnabled = true;
+  bool _isMetronomeEnabled = true;
   double _tempo = 120.0;
 
   // M3: Virtual piano state
-  bool _virtualPianoEnabled = false;
-  bool _virtualPianoVisible = false;
+  bool _isVirtualPianoEnabled = false;
+  bool _isVirtualPianoVisible = false;
 
   // M4: Mixer state
-  bool _mixerVisible = true; // Always visible by default
+  bool _isMixerVisible = true; // Always visible by default
 
   // M5: Project state
   String? _currentProjectPath;
   String _currentProjectName = 'Untitled Project';
 
   // M6: UI panel state
-  bool _libraryPanelCollapsed = false;
-  bool _editorPanelVisible = true; // Show editor panel by default
+  bool _isLibraryPanelCollapsed = false;
+  bool _isEditorPanelVisible = true; // Show editor panel by default
 
   // M7: Resizable panels state
   double _libraryPanelWidth = 200.0;
@@ -93,7 +92,7 @@ class _DAWScreenState extends State<DAWScreen> {
   List<Map<String, String>> _availableVst3Plugins = []; // Scanned plugin list
   Map<int, List<int>> _trackVst3Effects = {}; // trackId -> [effectIds]
   Map<int, Map<String, String>> _vst3PluginCache = {}; // effectId -> plugin metadata
-  bool _pluginsScanned = false;
+  bool _isPluginsScanned = false;
   bool _isScanningVst3Plugins = false;
 
   // MIDI Recording state
@@ -173,10 +172,10 @@ class _DAWScreenState extends State<DAWScreen> {
 
       if (mounted) {
         setState(() {
-          _audioGraphInitialized = true;
+          _isAudioGraphInitialized = true;
           _statusMessage = 'Ready to record or load audio files';
           _tempo = 120.0;
-          _metronomeEnabled = true;
+          _isMetronomeEnabled = true;
         });
       }
 
@@ -184,7 +183,7 @@ class _DAWScreenState extends State<DAWScreen> {
       _undoRedoManager.initialize(_audioEngine!);
 
       // Scan VST3 plugins after audio graph is ready
-      if (!_pluginsScanned && mounted) {
+      if (!_isPluginsScanned && mounted) {
         _scanVst3Plugins();
       }
 
@@ -201,7 +200,7 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _loadAudioFile(String path) async {
-    if (_audioEngine == null || !_audioGraphInitialized) return;
+    if (_audioEngine == null || !_isAudioGraphInitialized) return;
 
     setState(() {
       _isLoading = true;
@@ -520,10 +519,10 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_audioEngine == null) return;
 
     try {
-      final newState = !_metronomeEnabled;
+      final newState = !_isMetronomeEnabled;
       _audioEngine!.setMetronomeEnabled(newState);
       setState(() {
-        _metronomeEnabled = newState;
+        _isMetronomeEnabled = newState;
         _statusMessage = newState ? 'Metronome enabled' : 'Metronome disabled';
       });
     } catch (e) {
@@ -558,9 +557,9 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_audioEngine == null) return;
 
     setState(() {
-      _virtualPianoEnabled = !_virtualPianoEnabled;
+      _isVirtualPianoEnabled = !_isVirtualPianoEnabled;
 
-      if (_virtualPianoEnabled) {
+      if (_isVirtualPianoEnabled) {
         // Enable: Initialize MIDI, start audio stream, and show panel
         try {
           _audioEngine!.startMidiInput();
@@ -569,18 +568,18 @@ class _DAWScreenState extends State<DAWScreen> {
           // The synthesizer generates audio but needs the stream running to output it
           _audioEngine!.transportPlay();
 
-          _virtualPianoVisible = true;
+          _isVirtualPianoVisible = true;
           _statusMessage = 'Virtual piano enabled - Press keys to play!';
         } catch (e) {
           debugPrint('❌ Virtual piano enable error: $e');
           _statusMessage = 'Virtual piano error: $e';
-          _virtualPianoEnabled = false;
-          _virtualPianoVisible = false;
+          _isVirtualPianoEnabled = false;
+          _isVirtualPianoVisible = false;
         }
       } else {
         // Disable: Hide panel
-        _virtualPianoVisible = false;
-        _editorPanelVisible = false; // Hide editor panel when piano disabled
+        _isVirtualPianoVisible = false;
+        _isEditorPanelVisible = false; // Hide editor panel when piano disabled
         _statusMessage = 'Virtual piano disabled';
       }
     });
@@ -656,7 +655,7 @@ class _DAWScreenState extends State<DAWScreen> {
   // M4: Mixer methods
   void _toggleMixer() {
     setState(() {
-      _mixerVisible = !_mixerVisible;
+      _isMixerVisible = !_isMixerVisible;
     });
   }
 
@@ -665,14 +664,14 @@ class _DAWScreenState extends State<DAWScreen> {
     if (trackId == null) {
       setState(() {
         _selectedTrackId = null;
-        _editorPanelVisible = false;
+        _isEditorPanelVisible = false;
       });
       return;
     }
 
     setState(() {
       _selectedTrackId = trackId;
-      _editorPanelVisible = true;
+      _isEditorPanelVisible = true;
 
       // Clear clip selection when selecting just a track
       _selectedMidiClipId = null;
@@ -687,7 +686,7 @@ class _DAWScreenState extends State<DAWScreen> {
       final instrumentData = InstrumentData.defaultSynthesizer(trackId);
       _trackInstruments[trackId] = instrumentData;
       _selectedTrackId = trackId; // Select the track when instrument is assigned
-      _editorPanelVisible = true; // Show editor panel when instrument selected
+      _isEditorPanelVisible = true; // Show editor panel when instrument selected
 
       // Call audio engine to set instrument
       if (_audioEngine != null) {
@@ -870,7 +869,7 @@ class _DAWScreenState extends State<DAWScreen> {
 
         setState(() {
           _availableVst3Plugins = plugins;
-          _pluginsScanned = true;
+          _isPluginsScanned = true;
         });
       }
     } catch (e) {
@@ -894,7 +893,7 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_audioEngine == null || _isScanningVst3Plugins) return;
 
     // Load from cache if not forcing rescan
-    if (!forceRescan && !_pluginsScanned) {
+    if (!forceRescan && !_isPluginsScanned) {
       await _loadCachedVst3Plugins();
 
       // If cache loaded successfully, we're done
@@ -916,7 +915,7 @@ class _DAWScreenState extends State<DAWScreen> {
 
       setState(() {
         _availableVst3Plugins = plugins;
-        _pluginsScanned = true;
+        _isPluginsScanned = true;
         _isScanningVst3Plugins = false;
         _statusMessage = 'Found ${plugins.length} VST3 plugin${plugins.length == 1 ? '' : 's'}';
       });
@@ -1274,13 +1273,13 @@ class _DAWScreenState extends State<DAWScreen> {
   // M6: Panel toggle methods
   void _toggleLibraryPanel() {
     setState(() {
-      _libraryPanelCollapsed = !_libraryPanelCollapsed;
+      _isLibraryPanelCollapsed = !_isLibraryPanelCollapsed;
     });
   }
 
   void _toggleEditor() {
     setState(() {
-      _editorPanelVisible = !_editorPanelVisible;
+      _isEditorPanelVisible = !_isEditorPanelVisible;
     });
   }
 
@@ -1292,9 +1291,9 @@ class _DAWScreenState extends State<DAWScreen> {
       _editorPanelHeight = 250.0;
 
       // Reset visibility states
-      _libraryPanelCollapsed = false;
-      _mixerVisible = true;
-      _editorPanelVisible = true;
+      _isLibraryPanelCollapsed = false;
+      _isMixerVisible = true;
+      _isEditorPanelVisible = true;
 
       _statusMessage = 'Panel layout reset';
     });
@@ -1311,7 +1310,7 @@ class _DAWScreenState extends State<DAWScreen> {
       _currentEditingClip = clipData;
       if (clipId != null && clipData != null) {
         // Open piano roll and set the selected track
-        _editorPanelVisible = true;
+        _isEditorPanelVisible = true;
         _selectedTrackId = clipData.trackId;
       }
     });
@@ -1685,9 +1684,9 @@ class _DAWScreenState extends State<DAWScreen> {
           'bottom_height': _editorPanelHeight,
         },
         'panel_collapsed': {
-          'library': _libraryPanelCollapsed,
-          'mixer': !_mixerVisible,
-          'bottom': !(_editorPanelVisible || _virtualPianoVisible),
+          'library': _isLibraryPanelCollapsed,
+          'mixer': !_isMixerVisible,
+          'bottom': !(_isEditorPanelVisible || _isVirtualPianoVisible),
         },
       };
 
@@ -1727,8 +1726,8 @@ class _DAWScreenState extends State<DAWScreen> {
         // Load collapsed states
         final panelCollapsed = data['panel_collapsed'] as Map<String, dynamic>?;
         if (panelCollapsed != null) {
-          _libraryPanelCollapsed = panelCollapsed['library'] as bool? ?? false;
-          _mixerVisible = !(panelCollapsed['mixer'] as bool? ?? false);
+          _isLibraryPanelCollapsed = panelCollapsed['library'] as bool? ?? false;
+          _isMixerVisible = !(panelCollapsed['mixer'] as bool? ?? false);
           final bottomCollapsed = panelCollapsed['bottom'] as bool? ?? false;
           if (!bottomCollapsed) {
             // Only restore if it was expanded before
@@ -2239,22 +2238,22 @@ class _DAWScreenState extends State<DAWScreen> {
           label: 'View',
           menus: [
             PlatformMenuItem(
-              label: !_libraryPanelCollapsed ? '✓ Show Library Panel' : 'Show Library Panel',
+              label: !_isLibraryPanelCollapsed ? '✓ Show Library Panel' : 'Show Library Panel',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyL, meta: true),
               onSelected: _toggleLibraryPanel,
             ),
             PlatformMenuItem(
-              label: _mixerVisible ? '✓ Show Mixer Panel' : 'Show Mixer Panel',
+              label: _isMixerVisible ? '✓ Show Mixer Panel' : 'Show Mixer Panel',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyM, meta: true),
               onSelected: _toggleMixer,
             ),
             PlatformMenuItem(
-              label: _editorPanelVisible ? '✓ Show Editor Panel' : 'Show Editor Panel',
+              label: _isEditorPanelVisible ? '✓ Show Editor Panel' : 'Show Editor Panel',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true),
               onSelected: _toggleEditor,
             ),
             PlatformMenuItem(
-              label: _virtualPianoEnabled ? '✓ Show Virtual Piano' : 'Show Virtual Piano',
+              label: _isVirtualPianoEnabled ? '✓ Show Virtual Piano' : 'Show Virtual Piano',
               shortcut: const SingleActivator(LogicalKeyboardKey.keyP, meta: true),
               onSelected: _toggleVirtualPiano,
             ),
@@ -2297,8 +2296,8 @@ class _DAWScreenState extends State<DAWScreen> {
             canPlay: true, // Always allow transport controls
             isRecording: _isRecording,
             isCountingIn: _isCountingIn,
-            metronomeEnabled: _metronomeEnabled,
-            virtualPianoEnabled: _virtualPianoEnabled,
+            metronomeEnabled: _isMetronomeEnabled,
+            virtualPianoEnabled: _isVirtualPianoEnabled,
             tempo: _tempo,
             onTempoChanged: _onTempoChanged,
             // MIDI device selection
@@ -2322,10 +2321,10 @@ class _DAWScreenState extends State<DAWScreen> {
             onToggleEditor: _toggleEditor,
             onTogglePiano: _toggleVirtualPiano,
             onResetPanelLayout: _resetPanelLayout,
-            libraryVisible: !_libraryPanelCollapsed,
-            mixerVisible: _mixerVisible,
-            editorVisible: _editorPanelVisible,
-            pianoVisible: _virtualPianoEnabled,
+            libraryVisible: !_isLibraryPanelCollapsed,
+            mixerVisible: _isMixerVisible,
+            editorVisible: _isEditorPanelVisible,
+            pianoVisible: _isVirtualPianoEnabled,
             isLoading: _isLoading,
           ),
 
@@ -2339,9 +2338,9 @@ class _DAWScreenState extends State<DAWScreen> {
                     children: [
                       // Left: Library panel
                       SizedBox(
-                        width: _libraryPanelCollapsed ? 40 : _libraryPanelWidth,
+                        width: _isLibraryPanelCollapsed ? 40 : _libraryPanelWidth,
                         child: LibraryPanel(
-                          isCollapsed: _libraryPanelCollapsed,
+                          isCollapsed: _isLibraryPanelCollapsed,
                           onToggle: _toggleLibraryPanel,
                           availableVst3Plugins: _availableVst3Plugins,
                         ),
@@ -2350,7 +2349,7 @@ class _DAWScreenState extends State<DAWScreen> {
                       // Divider: Library/Timeline
                       ResizableDivider(
                         orientation: DividerOrientation.vertical,
-                        isCollapsed: _libraryPanelCollapsed,
+                        isCollapsed: _isLibraryPanelCollapsed,
                         onDrag: (delta) {
                           setState(() {
                             _libraryPanelWidth = (_libraryPanelWidth + delta)
@@ -2359,7 +2358,7 @@ class _DAWScreenState extends State<DAWScreen> {
                         },
                         onDoubleClick: () {
                           setState(() {
-                            _libraryPanelCollapsed = !_libraryPanelCollapsed;
+                            _isLibraryPanelCollapsed = !_isLibraryPanelCollapsed;
                           });
                         },
                       ),
@@ -2387,7 +2386,7 @@ class _DAWScreenState extends State<DAWScreen> {
                       ),
 
                       // Right: Track mixer panel (always visible)
-                      if (_mixerVisible) ...[
+                      if (_isMixerVisible) ...[
                         // Divider: Timeline/Mixer
                         ResizableDivider(
                           orientation: DividerOrientation.vertical,
@@ -2400,7 +2399,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           },
                           onDoubleClick: () {
                             setState(() {
-                              _mixerVisible = false;
+                              _isMixerVisible = false;
                             });
                           },
                         ),
@@ -2410,7 +2409,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           child: TrackMixerPanel(
                             key: _mixerKey,
                             audioEngine: _audioEngine,
-                            isEngineReady: _audioGraphInitialized,
+                            isEngineReady: _isAudioGraphInitialized,
                             selectedTrackId: _selectedTrackId,
                             onTrackSelected: _onTrackSelected,
                             onInstrumentSelected: _onInstrumentSelected,
@@ -2429,7 +2428,7 @@ class _DAWScreenState extends State<DAWScreen> {
                 ),
 
                 // Editor panel: Piano Roll / FX Chain / Instrument / Virtual Piano
-                if (_editorPanelVisible || _virtualPianoVisible) ...[
+                if (_isEditorPanelVisible || _isVirtualPianoVisible) ...[
                   // Divider: Timeline/Editor Panel
                   ResizableDivider(
                     orientation: DividerOrientation.horizontal,
@@ -2442,9 +2441,9 @@ class _DAWScreenState extends State<DAWScreen> {
                     },
                     onDoubleClick: () {
                       setState(() {
-                        _editorPanelVisible = false;
-                        _virtualPianoVisible = false;
-                        _virtualPianoEnabled = false;
+                        _isEditorPanelVisible = false;
+                        _isVirtualPianoVisible = false;
+                        _isVirtualPianoEnabled = false;
                       });
                     },
                   ),
@@ -2453,7 +2452,7 @@ class _DAWScreenState extends State<DAWScreen> {
                     height: _editorPanelHeight,
                     child: EditorPanel(
                       audioEngine: _audioEngine,
-                      virtualPianoEnabled: _virtualPianoEnabled,
+                      virtualPianoEnabled: _isVirtualPianoEnabled,
                       selectedTrackId: _selectedTrackId,
                       currentInstrumentData: _selectedTrackId != null
                           ? _trackInstruments[_selectedTrackId]
@@ -2497,17 +2496,17 @@ class _DAWScreenState extends State<DAWScreen> {
       child: Row(
         children: [
           Icon(
-            _audioGraphInitialized ? Icons.check_circle : Icons.error,
+            _isAudioGraphInitialized ? Icons.check_circle : Icons.error,
             size: 12,
-            color: _audioGraphInitialized
+            color: _isAudioGraphInitialized
                 ? const Color(0xFF00BCD4)
                 : const Color(0xFF616161),
           ),
           const SizedBox(width: 6),
           Text(
-            _audioGraphInitialized ? 'Audio Engine Ready' : 'Initializing...',
+            _isAudioGraphInitialized ? 'Audio Engine Ready' : 'Initializing...',
             style: TextStyle(
-              color: _audioGraphInitialized
+              color: _isAudioGraphInitialized
                   ? const Color(0xFF9E9E9E)
                   : const Color(0xFF616161),
               fontSize: 11,
