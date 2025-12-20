@@ -1269,9 +1269,19 @@ pub fn create_track(track_type_str: &str, name: String) -> Result<TrackId, Strin
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    let mut track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
 
-    let track_id = track_manager.create_track(track_type, name);
+    let track_id = {
+        let mut track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+        track_manager.create_track(track_type, name)
+    };
+
+    // Auto-create synthesizer for MIDI tracks so they can produce sound immediately
+    if track_type == TrackType::Midi {
+        let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
+        synth_manager.create_synth(track_id);
+        println!("✅ Auto-created synth for MIDI track {}", track_id);
+    }
+
     Ok(track_id)
 }
 

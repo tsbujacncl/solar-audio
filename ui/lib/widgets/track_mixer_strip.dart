@@ -3,6 +3,8 @@ import '../audio_engine.dart';
 import 'instrument_browser.dart';
 import '../models/instrument_data.dart';
 import '../models/vst3_plugin_data.dart';
+import 'pan_knob.dart';
+import 'horizontal_level_meter.dart';
 
 /// Unified track strip combining track info and mixer controls
 /// Displayed on the right side of timeline, aligned with each track row
@@ -195,15 +197,24 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
 
                   const SizedBox(width: 12),
 
-                  // Horizontal volume slider
+                  // Horizontal level meter with volume slider overlaid
                   Expanded(
-                    child: _buildHorizontalVolumeSlider(),
+                    child: HorizontalLevelMeter(
+                      leftLevel: widget.peakLevel,
+                      rightLevel: widget.peakLevel, // TODO: Add stereo levels from engine
+                      volumeDb: widget.volumeDb,
+                      onVolumeChanged: widget.onVolumeChanged,
+                    ),
                   ),
 
                   const SizedBox(width: 12),
 
-                  // Center-split pan slider
-                  _buildPanSlider(),
+                  // Rotary pan knob (Ableton-style)
+                  PanKnob(
+                    pan: widget.pan,
+                    onChanged: widget.onPanChanged,
+                    size: 36,
+                  ),
                 ],
               ),
             ),
@@ -498,100 +509,6 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
     );
   }
 
-  Widget _buildHorizontalVolumeSlider() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // dB label
-        Text(
-          '${widget.volumeDb.toStringAsFixed(1)} dB',
-          style: const TextStyle(
-            color: Color(0xFFE0E0E0), // Light text on dark background
-            fontSize: 9,
-            fontWeight: FontWeight.w500,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        // Horizontal slider
-        SizedBox(
-          height: 40,
-          child: SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 8,
-              thumbShape: const RoundSliderThumbShape(
-                enabledThumbRadius: 8,
-              ),
-              overlayShape: const RoundSliderOverlayShape(
-                overlayRadius: 14,
-              ),
-              activeTrackColor: const Color(0xFF4CAF50), // Green active
-              inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey inactive
-              thumbColor: const Color(0xFF4CAF50),
-            ),
-            child: Slider(
-              value: _volumeDbToSlider(widget.volumeDb),
-              min: 0.0,
-              max: 1.0,
-              onChanged: widget.onVolumeChanged != null
-                  ? (value) {
-                      final volumeDb = _sliderToVolumeDb(value);
-                      widget.onVolumeChanged!(volumeDb);
-                    }
-                  : null,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPanSlider() {
-    return SizedBox(
-      width: 70,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Pan label
-          Text(
-            _panToLabel(widget.pan),
-            style: const TextStyle(
-              color: Color(0xFFE0E0E0), // Light text on dark background
-              fontSize: 9,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Center-split pan slider
-          SizedBox(
-            height: 40,
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 6,
-                thumbShape: const RoundSliderThumbShape(
-                  enabledThumbRadius: 6,
-                ),
-                overlayShape: const RoundSliderOverlayShape(
-                  overlayRadius: 12,
-                ),
-                activeTrackColor: const Color(0xFF00BCD4), // Cyan
-                inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey
-                thumbColor: const Color(0xFF00BCD4),
-              ),
-              child: Slider(
-                value: widget.pan,
-                min: -1.0,
-                max: 1.0,
-                onChanged: widget.onPanChanged,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _getTrackEmoji() {
     final lowerName = widget.trackName.toLowerCase();
     final lowerType = widget.trackType.toLowerCase();
@@ -607,27 +524,6 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
     if (lowerType == 'audio') return '🔊';
 
     return '🎵'; // Default
-  }
-
-  // Helper functions for volume conversion
-  double _volumeDbToSlider(double volumeDb) {
-    // Convert dB (-60 to +6) to slider (0 to 1)
-    return (volumeDb + 60.0) / 66.0;
-  }
-
-  double _sliderToVolumeDb(double slider) {
-    // Convert slider (0 to 1) to dB (-60 to +6)
-    return (slider * 66.0) - 60.0;
-  }
-
-  String _panToLabel(double pan) {
-    if (pan < -0.05) {
-      return 'L${(pan.abs() * 100).toStringAsFixed(0)}';
-    } else if (pan > 0.05) {
-      return 'R${(pan * 100).toStringAsFixed(0)}';
-    } else {
-      return 'C';
-    }
   }
 }
 
@@ -719,122 +615,27 @@ class MasterTrackMixerStrip extends StatelessWidget {
 
             const SizedBox(width: 12),
 
-            // Horizontal volume slider
+            // Horizontal level meter with volume slider overlaid
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // dB label
-                  Text(
-                    '${volumeDb.toStringAsFixed(1)} dB',
-                    style: const TextStyle(
-                      color: Color(0xFFE0E0E0), // Light text on dark background
-                      fontSize: 9,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  // Horizontal slider
-                  SizedBox(
-                    height: 40,
-                    child: SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 8,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 8,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 14,
-                        ),
-                        activeTrackColor: const Color(0xFF4CAF50),
-                        inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey
-                        thumbColor: const Color(0xFF4CAF50),
-                      ),
-                      child: Slider(
-                        value: _volumeDbToSlider(volumeDb),
-                        min: 0.0,
-                        max: 1.0,
-                        onChanged: onVolumeChanged != null
-                            ? (value) {
-                                final volumeDb = _sliderToVolumeDb(value);
-                                onVolumeChanged!(volumeDb);
-                              }
-                            : null,
-                      ),
-                    ),
-                  ),
-                ],
+              child: HorizontalLevelMeter(
+                leftLevel: peakLevel,
+                rightLevel: peakLevel,
+                volumeDb: volumeDb,
+                onVolumeChanged: onVolumeChanged,
               ),
             ),
 
             const SizedBox(width: 12),
 
-            // Center-split pan slider
-            SizedBox(
-              width: 70,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Pan label
-                  Text(
-                    _panToLabel(pan),
-                    style: const TextStyle(
-                      color: Color(0xFFE0E0E0), // Light text on dark background
-                      fontSize: 9,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Pan slider
-                  SizedBox(
-                    height: 40,
-                    child: SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 6,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 6,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 12,
-                        ),
-                        activeTrackColor: const Color(0xFF00BCD4),
-                        inactiveTrackColor: const Color(0xFF3a3a3a), // Dark grey
-                        thumbColor: const Color(0xFF00BCD4),
-                      ),
-                      child: Slider(
-                        value: pan,
-                        min: -1.0,
-                        max: 1.0,
-                        onChanged: onPanChanged,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            // Rotary pan knob (Ableton-style)
+            PanKnob(
+              pan: pan,
+              onChanged: onPanChanged,
+              size: 36,
             ),
           ],
         ),
       ),
     );
-  }
-
-  double _volumeDbToSlider(double volumeDb) {
-    return (volumeDb + 60.0) / 66.0;
-  }
-
-  double _sliderToVolumeDb(double slider) {
-    return (slider * 66.0) - 60.0;
-  }
-
-  String _panToLabel(double pan) {
-    if (pan < -0.05) {
-      return 'L${(pan.abs() * 100).toStringAsFixed(0)}';
-    } else if (pan > 0.05) {
-      return 'R${(pan * 100).toStringAsFixed(0)}';
-    } else {
-      return 'C';
-    }
   }
 }

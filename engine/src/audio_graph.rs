@@ -9,6 +9,7 @@ use crate::synth::{Synthesizer, TrackSynthManager};
 use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackId, TrackManager};  // Import from track module
 use crate::effects::{Effect, EffectManager, Limiter};  // Import from effects module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 
@@ -535,6 +536,11 @@ impl AudioGraph {
                     }
                 }
 
+                // Track peak levels per track for metering (track_id -> (max_left, max_right))
+                let mut track_peaks: HashMap<TrackId, (f32, f32)> = HashMap::new();
+                let mut master_peak_left = 0.0f32;
+                let mut master_peak_right = 0.0f32;
+
                 // Process each frame (using snapshots - NO LOCKS!)
                 for frame_idx in 0..frames {
                     let playhead_frame = current_playhead + frame_idx as u64;
@@ -584,6 +590,33 @@ impl AudioGraph {
                             }
                         }
 
+                        // Process per-track MIDI clips
+                        for timeline_midi_clip in &track_snap.midi_clips {
+                            let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
+                            let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
+
+                            // Check if clip is active at this frame
+                            if playhead_frame >= clip_start_samples && playhead_frame < clip_end_samples {
+                                let frame_in_clip = playhead_frame - clip_start_samples;
+
+                                // Check for MIDI events at this exact frame
+                                for event in &timeline_midi_clip.clip.events {
+                                    if event.timestamp_samples == frame_in_clip {
+                                        if let Ok(mut synth_manager) = track_synth_manager.lock() {
+                                            match event.event_type {
+                                                crate::midi::MidiEventType::NoteOn { note, velocity } => {
+                                                    synth_manager.note_on(track_snap.id, note, velocity);
+                                                }
+                                                crate::midi::MidiEventType::NoteOff { note, velocity } => {
+                                                    synth_manager.note_off(track_snap.id, note, velocity);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Add per-track synthesizer output (M6)
                         if let Ok(mut synth_manager) = track_synth_manager.lock() {
                             let synth_sample = synth_manager.process_sample(track_snap.id);
@@ -614,6 +647,11 @@ impl AudioGraph {
                                 }
                             }
                         }
+
+                        // Update track peak levels for metering
+                        let entry = track_peaks.entry(track_snap.id).or_insert((0.0, 0.0));
+                        entry.0 = entry.0.max(fx_left.abs());
+                        entry.1 = entry.1.max(fx_right.abs());
 
                         // Accumulate to mix bus
                         mix_left += fx_left;
@@ -724,9 +762,31 @@ impl AudioGraph {
                         (master_left.clamp(-1.0, 1.0), master_right.clamp(-1.0, 1.0))
                     };
 
+                    // Update master peak levels for metering
+                    master_peak_left = master_peak_left.max(limited_left.abs());
+                    master_peak_right = master_peak_right.max(limited_right.abs());
+
                     // Write to output buffer (interleaved stereo)
                     data[frame_idx * 2] = limited_left;
                     data[frame_idx * 2 + 1] = limited_right;
+                }
+
+                // Update track peak levels in track manager (brief lock after buffer processing)
+                if let Ok(tm) = track_manager.lock() {
+                    for (track_id, (peak_l, peak_r)) in &track_peaks {
+                        if let Some(track_arc) = tm.get_track(*track_id) {
+                            if let Ok(mut track) = track_arc.lock() {
+                                track.update_peaks(*peak_l, *peak_r);
+                            }
+                        }
+                    }
+                    // Update master track peaks
+                    {
+                        let master_arc = tm.get_master_track();
+                        if let Ok(mut master) = master_arc.lock() {
+                            master.update_peaks(master_peak_left, master_peak_right);
+                        };
+                    }
                 }
 
                 // Advance playhead
