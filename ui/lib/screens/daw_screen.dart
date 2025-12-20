@@ -294,6 +294,11 @@ class _DAWScreenState extends State<DAWScreen> {
         _statusMessage = 'Paused';
       });
       _stopPlayheadTimer();
+
+      // Keep audio stream running for virtual piano
+      if (_isVirtualPianoEnabled) {
+        _audioEngine!.transportPlay();
+      }
     } catch (e) {
       setState(() {
         _statusMessage = 'Pause error: $e';
@@ -319,6 +324,11 @@ class _DAWScreenState extends State<DAWScreen> {
         _statusMessage = 'Stopped';
       });
       _stopPlayheadTimer();
+
+      // Keep audio stream running for virtual piano
+      if (_isVirtualPianoEnabled) {
+        _audioEngine!.transportPlay();
+      }
       print('🏁 [Flutter] _stopPlayback() completed');
     } catch (e) {
       print('❌ [Flutter] Stop error: $e');
