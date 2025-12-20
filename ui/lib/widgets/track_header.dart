@@ -14,6 +14,7 @@ class TrackHeader extends StatelessWidget {
   final VoidCallback? onSoloToggle;
   final VoidCallback? onDuplicatePressed;
   final VoidCallback? onDeletePressed;
+  final VoidCallback? onRenamePressed;
 
   const TrackHeader({
     super.key,
@@ -28,6 +29,7 @@ class TrackHeader extends StatelessWidget {
     this.onSoloToggle,
     this.onDuplicatePressed,
     this.onDeletePressed,
+    this.onRenamePressed,
   });
 
   @override
@@ -167,6 +169,16 @@ class TrackHeader extends StatelessWidget {
       ),
       items: [
         const PopupMenuItem<String>(
+          value: 'rename',
+          child: Row(
+            children: [
+              Icon(Icons.edit, size: 16, color: Color(0xFF202020)),
+              SizedBox(width: 8),
+              Text('Rename', style: TextStyle(color: Color(0xFF202020))),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
           value: 'duplicate',
           child: Row(
             children: [
@@ -188,7 +200,9 @@ class TrackHeader extends StatelessWidget {
         ),
       ],
     ).then((value) {
-      if (value == 'duplicate' && onDuplicatePressed != null) {
+      if (value == 'rename' && onRenamePressed != null) {
+        onRenamePressed!();
+      } else if (value == 'duplicate' && onDuplicatePressed != null) {
         onDuplicatePressed!();
       } else if (value == 'delete' && onDeletePressed != null) {
         onDeletePressed!();

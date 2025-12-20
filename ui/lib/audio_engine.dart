@@ -64,6 +64,7 @@ class AudioEngine {
   late final _SetTrackMuteFfi _setTrackMute;
   late final _SetTrackSoloFfi _setTrackSolo;
   late final _SetTrackArmedFfi _setTrackArmed;
+  late final _SetTrackNameFfi _setTrackName;
   late final _GetTrackCountFfi _getTrackCount;
   late final _GetAllTrackIdsFfi _getAllTrackIds;
   late final _GetTrackInfoFfi _getTrackInfo;
@@ -402,6 +403,12 @@ class AudioEngine {
               'set_track_armed_ffi')
           .asFunction();
       print('  ✅ set_track_armed_ffi bound');
+
+      _setTrackName = _lib
+          .lookup<ffi.NativeFunction<_SetTrackNameFfiNative>>(
+              'set_track_name_ffi')
+          .asFunction();
+      print('  ✅ set_track_name_ffi bound');
 
       _getTrackCount = _lib
           .lookup<ffi.NativeFunction<_GetTrackCountFfiNative>>(
@@ -1503,6 +1510,21 @@ class AudioEngine {
     }
   }
 
+  /// Rename a track
+  String setTrackName(int trackId, String name) {
+    try {
+      final namePtr = name.toNativeUtf8();
+      final resultPtr = _setTrackName(trackId, namePtr);
+      calloc.free(namePtr);
+      final result = resultPtr.toDartString();
+      _freeRustString(resultPtr);
+      return result;
+    } catch (e) {
+      print('❌ [AudioEngine] Set track name failed: $e');
+      rethrow;
+    }
+  }
+
   /// Get total number of tracks
   int getTrackCount() {
     try {
@@ -2187,6 +2209,9 @@ typedef _SetTrackSoloFfi = ffi.Pointer<Utf8> Function(int, bool);
 
 typedef _SetTrackArmedFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Bool);
 typedef _SetTrackArmedFfi = ffi.Pointer<Utf8> Function(int, bool);
+
+typedef _SetTrackNameFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64, ffi.Pointer<Utf8>);
+typedef _SetTrackNameFfi = ffi.Pointer<Utf8> Function(int, ffi.Pointer<Utf8>);
 
 typedef _GetTrackCountFfiNative = ffi.Size Function();
 typedef _GetTrackCountFfi = int Function();

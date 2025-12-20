@@ -12,7 +12,7 @@ import '../services/commands/track_commands.dart';
 /// Track data model
 class TrackData {
   final int id;
-  final String name;
+  String name;
   final String type;
   double volumeDb;
   double pan;
@@ -586,6 +586,12 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
                     },
                     onDuplicatePressed: () => _duplicateTrack(track),
                     onDeletePressed: () => _confirmDeleteTrack(track),
+                    onNameChanged: (newName) {
+                      widget.audioEngine?.setTrackName(track.id, newName);
+                      setState(() {
+                        track.name = newName;
+                      });
+                    },
                   );
                 }).toList(),
             ),

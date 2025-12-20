@@ -1363,6 +1363,22 @@ pub fn set_track_solo(track_id: TrackId, solo: bool) -> Result<String, String> {
     }
 }
 
+/// Set track name
+pub fn set_track_name(track_id: TrackId, name: String) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.name = name.clone();
+        Ok(format!("Track {} renamed to '{}'", track_id, name))
+    } else {
+        Err(format!("Track {} not found", track_id))
+    }
+}
+
 /// Get total number of tracks (including master)
 pub fn get_track_count() -> Result<usize, String> {
     let graph_mutex = AUDIO_GRAPH.get()

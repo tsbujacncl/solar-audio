@@ -613,6 +613,21 @@ pub extern "C" fn set_track_armed_ffi(track_id: u64, armed: bool) -> *mut c_char
     }
 }
 
+/// Set track name
+#[no_mangle]
+pub extern "C" fn set_track_name_ffi(track_id: u64, name: *const c_char) -> *mut c_char {
+    let name_str = unsafe {
+        if name.is_null() {
+            return CString::new("Error: name is null").unwrap().into_raw();
+        }
+        CStr::from_ptr(name).to_string_lossy().to_string()
+    };
+    match api::set_track_name(track_id, name_str) {
+        Ok(msg) => CString::new(msg).unwrap().into_raw(),
+        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+    }
+}
+
 /// Get track count
 #[no_mangle]
 pub extern "C" fn get_track_count_ffi() -> usize {
