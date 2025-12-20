@@ -706,6 +706,7 @@ pub struct TrackSynthesizer {
     filter_cutoff: f32,
     filter_resonance: f32,
     envelope_params: EnvelopeParams,
+    #[allow(dead_code)]
     sample_rate: f32,
 }
 
@@ -884,6 +885,16 @@ impl TrackSynthesizer {
     pub fn active_voice_count(&self) -> usize {
         self.voices.iter().filter(|v| v.is_active).count()
     }
+
+    /// Immediately silence all voices (panic/all notes off)
+    /// Unlike note_off which triggers release phase, this stops sound instantly
+    pub fn all_notes_off(&mut self) {
+        for voice in &mut self.voices {
+            voice.is_active = false;
+            voice.envelope.state = EnvelopeState::Idle;
+            voice.envelope.level = 0.0;
+        }
+    }
 }
 
 /// Manager for per-track synthesizers
@@ -935,6 +946,13 @@ impl TrackSynthManager {
 
     pub fn has_synth(&self, track_id: u64) -> bool {
         self.synths.contains_key(&track_id)
+    }
+
+    /// Immediately silence all voices on all track synthesizers (panic/all notes off)
+    pub fn all_notes_off(&mut self) {
+        for synth in self.synths.values_mut() {
+            synth.all_notes_off();
+        }
     }
 
     /// Copy synthesizer from one track to another

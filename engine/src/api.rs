@@ -201,39 +201,79 @@ pub fn load_audio_file_api(path: String) -> Result<u64, String> {
     Ok(clip_id)
 }
 
-/// Start playback
+/// Start playback (non-blocking: uses try_lock to avoid UI freeze)
 pub fn transport_play() -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
-    let mut graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
-    graph.play().map_err(|e| e.to_string())?;
-    Ok("Playing".to_string())
+
+    // Try to acquire lock immediately without blocking
+    match graph_mutex.try_lock() {
+        Ok(mut graph) => {
+            graph.play().map_err(|e| e.to_string())?;
+            Ok("Playing".to_string())
+        }
+        Err(_) => {
+            // Lock is busy - spawn thread to retry (UI won't freeze)
+            eprintln!("⚠️ [API] transport_play: lock busy, spawning thread");
+            std::thread::spawn(|| {
+                if let Some(m) = AUDIO_GRAPH.get() {
+                    if let Ok(mut g) = m.lock() {
+                        let _ = g.play();
+                        eprintln!("✅ [API] transport_play: completed in background thread");
+                    }
+                }
+            });
+            Ok("Play queued".to_string())
+        }
+    }
 }
 
-/// Pause playback
+/// Pause playback (non-blocking: uses try_lock to avoid UI freeze)
 pub fn transport_pause() -> Result<String, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
-    let mut graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
-    graph.pause().map_err(|e| e.to_string())?;
-    Ok("Paused".to_string())
+
+    match graph_mutex.try_lock() {
+        Ok(mut graph) => {
+            graph.pause().map_err(|e| e.to_string())?;
+            Ok("Paused".to_string())
+        }
+        Err(_) => {
+            eprintln!("⚠️ [API] transport_pause: lock busy, spawning thread");
+            std::thread::spawn(|| {
+                if let Some(m) = AUDIO_GRAPH.get() {
+                    if let Ok(mut g) = m.lock() {
+                        let _ = g.pause();
+                    }
+                }
+            });
+            Ok("Pause queued".to_string())
+        }
+    }
 }
 
-/// Stop playback and reset to start
+/// Stop playback and reset to start (non-blocking: uses try_lock to avoid UI freeze)
 pub fn transport_stop() -> Result<String, String> {
-    eprintln!("🟠 [API] transport_stop() called");
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
 
-    eprintln!("🟠 [API] Acquiring AudioGraph lock...");
-    let mut graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    eprintln!("🟠 [API] Lock acquired, calling graph.stop()...");
-
-    graph.stop().map_err(|e| e.to_string())?;
-    eprintln!("🟠 [API] graph.stop() completed");
-    Ok("Stopped".to_string())
+    match graph_mutex.try_lock() {
+        Ok(mut graph) => {
+            graph.stop().map_err(|e| e.to_string())?;
+            Ok("Stopped".to_string())
+        }
+        Err(_) => {
+            eprintln!("⚠️ [API] transport_stop: lock busy, spawning thread");
+            std::thread::spawn(|| {
+                if let Some(m) = AUDIO_GRAPH.get() {
+                    if let Ok(mut g) = m.lock() {
+                        let _ = g.stop();
+                    }
+                }
+            });
+            Ok("Stop queued".to_string())
+        }
+    }
 }
 
 /// Seek to a position in seconds
@@ -577,8 +617,24 @@ pub fn get_recorded_duration() -> Result<f64, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
+
     Ok(graph.recorder.get_recorded_duration())
+}
+
+/// Get recording waveform preview (downsampled for display)
+/// Returns CSV of peak values (0.0-1.0) for UI display
+pub fn get_recording_waveform(num_peaks: usize) -> Result<String, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let peaks = graph.recorder.get_recording_waveform(num_peaks);
+    let csv = peaks.iter()
+        .map(|p| format!("{:.3}", p))
+        .collect::<Vec<_>>()
+        .join(",");
+
+    Ok(csv)
 }
 
 /// Set count-in duration in bars

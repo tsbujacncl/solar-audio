@@ -10,14 +10,25 @@ use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackId, TrackManager
 use crate::effects::{Effect, EffectManager, Limiter};  // Import from effects module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 
 /// Transport state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportState {
-    Stopped,
-    Playing,
-    Paused,
+    Stopped = 0,
+    Playing = 1,
+    Paused = 2,
+}
+
+impl TransportState {
+    /// Convert from atomic u8 value
+    fn from_u8(value: u8) -> Self {
+        match value {
+            1 => TransportState::Playing,
+            2 => TransportState::Paused,
+            _ => TransportState::Stopped,
+        }
+    }
 }
 
 /// The main audio graph that manages playback
@@ -28,8 +39,8 @@ pub struct AudioGraph {
     midi_clips: Arc<Mutex<Vec<TimelineMidiClip>>>,
     /// Current playhead position in samples
     playhead_samples: Arc<AtomicU64>,
-    /// Transport state
-    state: Arc<Mutex<TransportState>>,
+    /// Transport state (atomic: 0=Stopped, 1=Playing, 2=Paused)
+    state: Arc<AtomicU8>,
     /// Audio output stream (kept alive)
     stream: Option<cpal::Stream>,
     /// Next clip ID
@@ -86,7 +97,7 @@ impl AudioGraph {
             clips: Arc::new(Mutex::new(Vec::new())),
             midi_clips: Arc::new(Mutex::new(Vec::new())),
             playhead_samples,
-            state: Arc::new(Mutex::new(TransportState::Stopped)),
+            state: Arc::new(AtomicU8::new(TransportState::Stopped as u8)),
             stream: None,
             next_clip_id: Arc::new(Mutex::new(0)),
             input_manager: Arc::new(Mutex::new(input_manager)),
@@ -252,18 +263,17 @@ impl AudioGraph {
 
     /// Get current transport state
     pub fn get_state(&self) -> TransportState {
-        *self.state.lock().unwrap()
+        TransportState::from_u8(self.state.load(Ordering::SeqCst))
     }
 
-    /// Start playback
+    /// Start playback (lock-free state change)
     pub fn play(&mut self) -> anyhow::Result<()> {
-        {
-            let mut state = self.state.lock().unwrap();
-            if *state == TransportState::Playing {
-                return Ok(()); // Already playing
-            }
-            *state = TransportState::Playing;
+        // Use atomic compare-exchange to avoid starting if already playing
+        let current = self.state.load(Ordering::SeqCst);
+        if current == TransportState::Playing as u8 {
+            return Ok(()); // Already playing
         }
+        self.state.store(TransportState::Playing as u8, Ordering::SeqCst);
 
         // Stream is pre-created during initialization
         if let Some(stream) = &self.stream {
@@ -275,12 +285,9 @@ impl AudioGraph {
         Ok(())
     }
 
-    /// Pause playback (keeps position)
+    /// Pause playback (keeps position) - lock-free state change
     pub fn pause(&mut self) -> anyhow::Result<()> {
-        {
-            let mut state = self.state.lock().unwrap();
-            *state = TransportState::Paused;
-        }
+        self.state.store(TransportState::Paused as u8, Ordering::SeqCst);
 
         if let Some(stream) = &self.stream {
             stream.pause()?;
@@ -289,17 +296,24 @@ impl AudioGraph {
         Ok(())
     }
 
-    /// Stop playback (resets to start)
+    /// Stop playback (resets to start) - lock-free state change
     pub fn stop(&mut self) -> anyhow::Result<()> {
         eprintln!("⏹️  [AudioGraph] stop() called - resetting playhead and metronome");
 
-        {
-            let mut state = self.state.lock().unwrap();
-            *state = TransportState::Stopped;
-        }
+        self.state.store(TransportState::Stopped as u8, Ordering::SeqCst);
 
         if let Some(stream) = &self.stream {
             stream.pause()?;
+        }
+
+        // Silence all synthesizers to prevent stuck notes/drone
+        if let Ok(mut synth_manager) = self.track_synth_manager.lock() {
+            synth_manager.all_notes_off();
+            eprintln!("   All track synth notes silenced");
+        }
+        if let Ok(mut synth) = self.synthesizer.lock() {
+            synth.all_notes_off();
+            eprintln!("   Legacy synth notes silenced");
         }
 
         // Reset playhead to start
@@ -341,11 +355,8 @@ impl AudioGraph {
         let stream = device.build_output_stream(
             &config.into(),
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                // Check if we should be playing
-                let is_playing = {
-                    let s = state.lock().unwrap();
-                    *s == TransportState::Playing
-                };
+                // Check if we should be playing (lock-free atomic read)
+                let is_playing = state.load(Ordering::SeqCst) == TransportState::Playing as u8;
 
                 if !is_playing {
                     // Even when not playing, we might be recording
@@ -1151,8 +1162,39 @@ impl AudioGraph {
                     }
                 }
 
-                // Note: Synthesizer processing skipped for offline render (MIDI playback TBD)
-                // For now, only audio clips are rendered
+                // Process MIDI clips through track synthesizer
+                for timeline_midi_clip in &track_snap.midi_clips {
+                    let clip_start_samples = (timeline_midi_clip.start_time * sample_rate as f64) as u64;
+                    let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
+
+                    // Check if clip is active at this frame
+                    if frame_idx as u64 >= clip_start_samples && (frame_idx as u64) < clip_end_samples {
+                        let frame_in_clip = frame_idx as u64 - clip_start_samples;
+
+                        // Check for MIDI events at this exact frame
+                        for event in &timeline_midi_clip.clip.events {
+                            if event.timestamp_samples == frame_in_clip {
+                                if let Ok(mut synth_manager) = self.track_synth_manager.lock() {
+                                    match event.event_type {
+                                        crate::midi::MidiEventType::NoteOn { note, velocity } => {
+                                            synth_manager.note_on(track_snap.id, note, velocity);
+                                        }
+                                        crate::midi::MidiEventType::NoteOff { note, velocity } => {
+                                            synth_manager.note_off(track_snap.id, note, velocity);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Add synthesizer output
+                if let Ok(mut synth_manager) = self.track_synth_manager.lock() {
+                    let synth_sample = synth_manager.process_sample(track_snap.id);
+                    track_left += synth_sample;
+                    track_right += synth_sample;
+                }
 
                 // Apply track volume
                 track_left *= track_snap.volume_gain;
