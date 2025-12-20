@@ -604,16 +604,13 @@ class _PianoRollState extends State<PianoRoll> {
   /// Quantize all notes in the clip to the specified grid division
   void _quantizeClip(int gridDivision) {
     if (_currentClip == null || widget.audioEngine == null) {
-      debugPrint('⚠️ Cannot quantize: no clip or audio engine');
       return;
     }
 
     final clipId = _currentClip!.clipId;
-    debugPrint('🎵 Quantizing clip $clipId to 1/$gridDivision grid...');
 
     // Call the Rust engine to quantize
-    final result = widget.audioEngine!.quantizeMidiClip(clipId, gridDivision);
-    debugPrint('Quantize result: $result');
+    widget.audioEngine!.quantizeMidiClip(clipId, gridDivision);
 
     // Reload notes from clip to show updated positions
     _loadClipFromEngine();
@@ -626,7 +623,6 @@ class _PianoRollState extends State<PianoRoll> {
     // Notify parent to refresh clip data from engine
     widget.onClipUpdated?.call(_currentClip!);
     setState(() {});
-    debugPrint('✅ Clip UI refreshed after quantize');
   }
 
   Widget _buildPianoKey(int midiNote) {

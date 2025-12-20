@@ -159,7 +159,7 @@ class _DAWScreenState extends State<DAWScreen> {
       _audioEngine!.initAudioEngine();
 
       // Initialize audio graph
-      final result = _audioEngine!.initAudioGraph();
+      _audioEngine!.initAudioGraph();
 
       // Initialize recording settings
       try {
@@ -167,16 +167,8 @@ class _DAWScreenState extends State<DAWScreen> {
         _audioEngine!.setTempo(120.0);   // Default: 120 BPM
         _audioEngine!.setMetronomeEnabled(true); // Default: enabled
 
-        // Get initial values
-        final tempo = _audioEngine!.getTempo();
-        final metronome = _audioEngine!.isMetronomeEnabled();
-
-        debugPrint('🎵 Recording settings initialized:');
-        debugPrint('   - Count-in: 2 bars');
-        debugPrint('   - Tempo: $tempo BPM');
-        debugPrint('   - Metronome: ${metronome ? "ON" : "OFF"}');
       } catch (e) {
-        debugPrint('⚠️  Failed to initialize recording settings: $e');
+        debugPrint('❌ Failed to initialize recording settings: $e');
       }
 
       if (mounted) {
@@ -188,14 +180,11 @@ class _DAWScreenState extends State<DAWScreen> {
         });
       }
 
-      debugPrint('✅ Audio graph initialized: $result');
-
       // Initialize undo/redo manager with engine
       _undoRedoManager.initialize(_audioEngine!);
 
       // Scan VST3 plugins after audio graph is ready
       if (!_pluginsScanned && mounted) {
-        debugPrint('📦 Starting deferred VST3 plugin scan...');
         _scanVst3Plugins();
       }
 
@@ -245,7 +234,6 @@ class _DAWScreenState extends State<DAWScreen> {
         _isLoading = false;
       });
       
-      debugPrint('✅ Loaded clip $clipId: $duration seconds, ${peaks.length} peaks');
     } catch (e) {
       setState(() {
         _statusMessage = 'Error loading file: $e';
@@ -257,7 +245,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _startPlayheadTimer() {
     _playheadTimer?.cancel();
-    print('⏱️  Starting playhead timer');
     _playheadTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (_audioEngine != null && mounted) {
         final pos = _audioEngine!.getPlayheadPosition();
@@ -280,7 +267,6 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _play() {
-    print('▶️  [Flutter] _play() called');
     if (_audioEngine == null) return;
 
     try {
@@ -372,23 +358,15 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_audioEngine == null) return;
 
     try {
-      // Check current settings
+      // Check current settings for status message
       final countInBars = _audioEngine!.getCountInBars();
       final tempo = _audioEngine!.getTempo();
-      final metronomeEnabled = _audioEngine!.isMetronomeEnabled();
-
-      debugPrint('🎙️  Starting recording with:');
-      debugPrint('   - Count-in: $countInBars bars');
-      debugPrint('   - Tempo: $tempo BPM');
-      debugPrint('   - Metronome: ${metronomeEnabled ? "ON" : "OFF"}');
 
       // Start audio recording
-      final result = _audioEngine!.startRecording();
-      debugPrint('   - Audio recording: $result');
+      _audioEngine!.startRecording();
 
       // Also start MIDI recording (for armed MIDI tracks)
-      final midiResult = _audioEngine!.startMidiRecording();
-      debugPrint('   - MIDI recording: $midiResult');
+      _audioEngine!.startMidiRecording();
 
       setState(() {
         _isCountingIn = true;
@@ -416,7 +394,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
       // Stop MIDI recording
       final midiClipId = _audioEngine!.stopMidiRecording();
-      debugPrint('🎹 MIDI recording stopped, clip ID: $midiClipId');
 
       setState(() {
         _isRecording = false;
@@ -443,7 +420,6 @@ class _DAWScreenState extends State<DAWScreen> {
       if (midiClipId > 0) {
         // Get clip info from engine: "clip_id,track_id,start_time,duration,note_count"
         final clipInfo = _audioEngine!.getMidiClipInfo(midiClipId);
-        debugPrint('🎹 MIDI clip info: $clipInfo');
 
         if (!clipInfo.startsWith('Error')) {
           try {
@@ -468,7 +444,6 @@ class _DAWScreenState extends State<DAWScreen> {
                 _midiClips.add(clipData);
               });
 
-              debugPrint('✅ MIDI clip added to timeline: track=$trackId, start=$startTime, duration=$duration, notes=$noteCount');
               recordedItems.add('MIDI ($noteCount notes)');
             }
           } catch (e) {
@@ -511,15 +486,6 @@ class _DAWScreenState extends State<DAWScreen> {
       final state = _audioEngine!.getRecordingState();
       final duration = _audioEngine!.getRecordedDuration();
 
-      // Debug: Log state changes
-      if (state == 1 && !_isCountingIn) {
-        debugPrint('📊 State: Counting In');
-      } else if (state == 2 && !_isRecording) {
-        debugPrint('📊 State: Recording (duration: ${duration.toStringAsFixed(1)}s)');
-      } else if (state == 0 && (_isRecording || _isCountingIn)) {
-        debugPrint('📊 State: Stopped');
-      }
-
       if (state == 1 && !_isCountingIn) {
         // Transitioned to count-in
         setState(() {
@@ -555,13 +521,11 @@ class _DAWScreenState extends State<DAWScreen> {
 
     try {
       final newState = !_metronomeEnabled;
-      debugPrint('🎵 Toggling metronome: ${newState ? "ON" : "OFF"}');
       _audioEngine!.setMetronomeEnabled(newState);
       setState(() {
         _metronomeEnabled = newState;
         _statusMessage = newState ? 'Metronome enabled' : 'Metronome disabled';
       });
-      debugPrint('✅ Metronome toggled successfully');
     } catch (e) {
       debugPrint('❌ Metronome toggle error: $e');
       setState(() {
@@ -581,7 +545,6 @@ class _DAWScreenState extends State<DAWScreen> {
       setState(() {
         _tempo = clampedBpm;
       });
-      debugPrint('🎵 Tempo changed to: ${clampedBpm.toStringAsFixed(1)} BPM');
     } catch (e) {
       debugPrint('❌ Tempo change error: $e');
       setState(() {
@@ -592,55 +555,35 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // M3: Virtual piano methods
   void _toggleVirtualPiano() {
-    debugPrint('🎹 [DEBUG] _toggleVirtualPiano called');
-    debugPrint('🎹 [DEBUG] _audioEngine is null: ${_audioEngine == null}');
-    debugPrint('🎹 [DEBUG] Current _virtualPianoEnabled: $_virtualPianoEnabled');
-    debugPrint('🎹 [DEBUG] Current _virtualPianoVisible: $_virtualPianoVisible');
-
-    if (_audioEngine == null) {
-      debugPrint('❌ [DEBUG] Audio engine is null, returning');
-      return;
-    }
+    if (_audioEngine == null) return;
 
     setState(() {
       _virtualPianoEnabled = !_virtualPianoEnabled;
-      debugPrint('🎹 [DEBUG] New _virtualPianoEnabled: $_virtualPianoEnabled');
 
       if (_virtualPianoEnabled) {
         // Enable: Initialize MIDI, start audio stream, and show panel
         try {
-          debugPrint('🎹 [DEBUG] Starting MIDI input...');
           _audioEngine!.startMidiInput();
-          debugPrint('✅ [DEBUG] MIDI input started');
 
           // CRITICAL: Start audio output stream so synthesizer can be heard
           // The synthesizer generates audio but needs the stream running to output it
-          debugPrint('🎹 [DEBUG] Starting transport play...');
           _audioEngine!.transportPlay();
-          debugPrint('✅ [DEBUG] Transport play started');
 
           _virtualPianoVisible = true;
-          debugPrint('🎹 [DEBUG] Set _virtualPianoVisible = true');
           _statusMessage = 'Virtual piano enabled - Press keys to play!';
-          debugPrint('✅ Virtual piano enabled');
         } catch (e) {
           debugPrint('❌ Virtual piano enable error: $e');
-          debugPrint('❌ [DEBUG] Stack trace: ${StackTrace.current}');
           _statusMessage = 'Virtual piano error: $e';
           _virtualPianoEnabled = false;
           _virtualPianoVisible = false;
         }
       } else {
         // Disable: Hide panel
-        debugPrint('🎹 [DEBUG] Hiding piano panel...');
         _virtualPianoVisible = false;
         _editorPanelVisible = false; // Hide editor panel when piano disabled
         _statusMessage = 'Virtual piano disabled';
-        debugPrint('🎹 Virtual piano disabled');
       }
     });
-
-    debugPrint('🎹 [DEBUG] After setState - _virtualPianoVisible: $_virtualPianoVisible');
   }
 
   // MIDI Device methods
@@ -649,7 +592,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
     try {
       final devices = _audioEngine!.getMidiInputDevices();
-      debugPrint('🎹 Loaded ${devices.length} MIDI devices');
 
       setState(() {
         _midiDevices = devices;
@@ -672,8 +614,7 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_audioEngine == null) return;
 
     try {
-      final result = _audioEngine!.selectMidiInputDevice(deviceIndex);
-      debugPrint('🎹 Selected MIDI device: $result');
+      _audioEngine!.selectMidiInputDevice(deviceIndex);
 
       setState(() {
         _selectedMidiDeviceIndex = deviceIndex;
@@ -737,8 +678,6 @@ class _DAWScreenState extends State<DAWScreen> {
       _selectedMidiClipId = null;
       _currentEditingClip = null;
     });
-
-    debugPrint('🎯 Track $trackId selected');
   }
 
   // M9: Instrument methods
@@ -755,7 +694,6 @@ class _DAWScreenState extends State<DAWScreen> {
         _audioEngine!.setTrackInstrument(trackId, instrumentId);
       }
     });
-    debugPrint('🎹 Track $trackId instrument set to: $instrumentId');
   }
 
   void _onTrackDeleted(int trackId) {
@@ -777,8 +715,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
       // Remove instrument mapping
       _trackInstruments.remove(trackId);
-
-      debugPrint('🧹 Cleaned up MIDI state for deleted track $trackId');
     });
   }
 
@@ -793,24 +729,17 @@ class _DAWScreenState extends State<DAWScreen> {
           type: sourceInstrument.type,
           parameters: Map.from(sourceInstrument.parameters),
         );
-        debugPrint('🎹 Copied instrument from track $sourceTrackId to track $newTrackId');
       }
     });
   }
 
   void _onInstrumentDropped(int trackId, Instrument instrument) {
-    debugPrint('🎹 _onInstrumentDropped CALLED: track=$trackId, instrument=${instrument.name}');
     // Reuse the same logic as _onInstrumentSelected
     _onInstrumentSelected(trackId, instrument.id);
-    debugPrint('🎹 Instrument "${instrument.name}" dropped on track $trackId');
   }
 
   void _onInstrumentDroppedOnEmpty(Instrument instrument) async {
-    debugPrint('🎹 _onInstrumentDroppedOnEmpty CALLED: instrument=${instrument.name}');
-    if (_audioEngine == null) {
-      debugPrint('❌ Audio engine is null');
-      return;
-    }
+    if (_audioEngine == null) return;
 
     // Create a new MIDI track using UndoRedoManager
     final command = CreateTrackCommand(
@@ -828,7 +757,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
     // Assign the instrument to the new track
     _onInstrumentSelected(trackId, instrument.id);
-    debugPrint('✅ Created new MIDI track $trackId with instrument "${instrument.name}"');
 
     // Immediately refresh track widgets so the new track appears instantly
     _refreshTrackWidgets();
@@ -836,11 +764,7 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // VST3 Instrument drop handlers
   void _onVst3InstrumentDropped(int trackId, Vst3Plugin plugin) async {
-    debugPrint('🎹 _onVst3InstrumentDropped CALLED: track=$trackId, plugin=${plugin.name}');
-    if (_audioEngine == null) {
-      debugPrint('❌ Audio engine is null');
-      return;
-    }
+    if (_audioEngine == null) return;
 
     try {
       // Load the VST3 plugin as a track instrument
@@ -859,19 +783,13 @@ class _DAWScreenState extends State<DAWScreen> {
           effectId: effectId,
         );
       });
-
-      debugPrint('✅ VST3 instrument "${plugin.name}" loaded on track $trackId (effectId: $effectId)');
     } catch (e) {
       debugPrint('❌ Error loading VST3 instrument: $e');
     }
   }
 
   void _onVst3InstrumentDroppedOnEmpty(Vst3Plugin plugin) async {
-    debugPrint('🎹 _onVst3InstrumentDroppedOnEmpty CALLED: plugin=${plugin.name}');
-    if (_audioEngine == null) {
-      debugPrint('❌ Audio engine is null');
-      return;
-    }
+    if (_audioEngine == null) return;
 
     try {
       // Create a new MIDI track using UndoRedoManager
@@ -905,8 +823,6 @@ class _DAWScreenState extends State<DAWScreen> {
         );
       });
 
-      debugPrint('✅ Created new MIDI track $trackId with VST3 instrument "${plugin.name}" (effectId: $effectId)');
-
       // Immediately refresh track widgets so the new track appears instantly
       _refreshTrackWidgets();
     } catch (e) {
@@ -918,7 +834,6 @@ class _DAWScreenState extends State<DAWScreen> {
     setState(() {
       _trackInstruments[instrumentData.trackId] = instrumentData;
     });
-    debugPrint('🎹 Updated instrument parameters for track ${instrumentData.trackId}');
   }
 
   // M10: VST3 Plugin methods
@@ -928,13 +843,9 @@ class _DAWScreenState extends State<DAWScreen> {
       final cachedVersion = prefs.getInt('vst3_cache_version') ?? 0;
       const currentVersion = 8; // Incremented - default to INSTRUMENT instead of EFFECT
 
-      debugPrint('📦 Cache check: cached version=$cachedVersion, current version=$currentVersion');
-
       // Invalidate cache if version doesn't match
       if (cachedVersion != currentVersion) {
-        debugPrint('📦 ❌ Cache version MISMATCH - deleting old cache and forcing fresh scan');
         await prefs.remove('vst3_plugins_cache');
-        debugPrint('📦 ✅ Old cache deleted');
         await prefs.remove('vst3_plugins_cache');
         await prefs.remove('vst3_scan_timestamp');
         await prefs.setInt('vst3_cache_version', currentVersion);
@@ -944,14 +855,8 @@ class _DAWScreenState extends State<DAWScreen> {
       final cachedJson = prefs.getString('vst3_plugins_cache');
 
       if (cachedJson != null) {
-        debugPrint('📦 Loading VST3 cache from SharedPreferences');
         final List<dynamic> decoded = jsonDecode(cachedJson);
         final plugins = decoded.map((item) => Map<String, String>.from(item as Map)).toList();
-
-        debugPrint('📦 Decoded ${plugins.length} plugins from cache:');
-        for (var plugin in plugins) {
-          debugPrint('  - ${plugin['name']} at ${plugin['path']} (instrument: ${plugin['is_instrument']}, effect: ${plugin['is_effect']})');
-        }
 
         // Verify that plugins have type information
         bool hasTypeInfo = plugins.every((plugin) =>
@@ -959,7 +864,6 @@ class _DAWScreenState extends State<DAWScreen> {
         );
 
         if (!hasTypeInfo) {
-          debugPrint('⚠️  Cache missing type information - invalidating cache');
           await prefs.remove('vst3_plugins_cache');
           return;
         }
@@ -968,14 +872,9 @@ class _DAWScreenState extends State<DAWScreen> {
           _availableVst3Plugins = plugins;
           _pluginsScanned = true;
         });
-
-        debugPrint('✅ Loaded ${plugins.length} VST3 plugins from cache');
-        debugPrint('✅ _availableVst3Plugins now has ${_availableVst3Plugins.length} items');
-      } else {
-        debugPrint('⚠️  No VST3 cache found in SharedPreferences');
       }
     } catch (e) {
-      debugPrint('⚠️  Failed to load VST3 cache: $e');
+      debugPrint('❌ Failed to load VST3 cache: $e');
     }
   }
 
@@ -986,28 +885,22 @@ class _DAWScreenState extends State<DAWScreen> {
       await prefs.setString('vst3_plugins_cache', json);
       await prefs.setInt('vst3_scan_timestamp', DateTime.now().millisecondsSinceEpoch);
       await prefs.setInt('vst3_cache_version', 8); // Save cache version
-      debugPrint('✅ Saved ${plugins.length} VST3 plugins to cache (version 8)');
     } catch (e) {
-      debugPrint('⚠️  Failed to save VST3 cache: $e');
+      debugPrint('❌ Failed to save VST3 cache: $e');
     }
   }
 
   void _scanVst3Plugins({bool forceRescan = false}) async {
     if (_audioEngine == null || _isScanningVst3Plugins) return;
 
-    debugPrint('📦 _scanVst3Plugins called (forceRescan=$forceRescan, _pluginsScanned=$_pluginsScanned)');
-
     // Load from cache if not forcing rescan
     if (!forceRescan && !_pluginsScanned) {
-      debugPrint('📦 Attempting to load from cache...');
       await _loadCachedVst3Plugins();
 
       // If cache loaded successfully, we're done
       if (_availableVst3Plugins.isNotEmpty) {
-        debugPrint('📦 ✅ Cache loaded successfully, skipping fresh scan');
         return;
       }
-      debugPrint('📦 ⚠️  Cache empty, proceeding to fresh scan');
     }
 
     setState(() {
@@ -1016,14 +909,7 @@ class _DAWScreenState extends State<DAWScreen> {
     });
 
     try {
-      debugPrint('📦 🔍 Starting fresh VST3 plugin scan from C++...');
       final plugins = _audioEngine!.scanVst3PluginsStandard();
-      debugPrint('📦 🔍 Scan returned ${plugins.length} plugins');
-
-      // Log each plugin's categorization
-      for (final plugin in plugins) {
-        debugPrint('📦 Plugin: ${plugin['name']} | is_instrument: ${plugin['is_instrument']} | is_effect: ${plugin['is_effect']}');
-      }
 
       // Save to cache
       await _saveVst3PluginsCache(plugins);
@@ -1034,8 +920,6 @@ class _DAWScreenState extends State<DAWScreen> {
         _isScanningVst3Plugins = false;
         _statusMessage = 'Found ${plugins.length} VST3 plugin${plugins.length == 1 ? '' : 's'}';
       });
-
-      debugPrint('✅ Found ${plugins.length} VST3 plugins');
     } catch (e) {
       setState(() {
         _isScanningVst3Plugins = false;
@@ -1047,8 +931,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _addVst3PluginToTrack(int trackId, Map<String, String> plugin) {
     if (_audioEngine == null) return;
-
-    debugPrint('🔌 Adding VST3 plugin "${plugin['name']}" to track $trackId');
 
     try {
       final pluginPath = plugin['path'] ?? '';
@@ -1070,8 +952,6 @@ class _DAWScreenState extends State<DAWScreen> {
             backgroundColor: const Color(0xFF4CAF50),
           ),
         );
-
-        debugPrint('✅ VST3 plugin added with effect ID: $effectId');
       } else {
         setState(() {
           _statusMessage = 'Failed to add VST3 plugin';
@@ -1109,8 +989,6 @@ class _DAWScreenState extends State<DAWScreen> {
   void _removeVst3Plugin(int effectId) {
     if (_audioEngine == null) return;
 
-    debugPrint('🗑️ Removing VST3 plugin effect $effectId');
-
     // Find which track this effect is on
     int? trackId;
     for (final entry in _trackVst3Effects.entries) {
@@ -1134,8 +1012,6 @@ class _DAWScreenState extends State<DAWScreen> {
         _vst3PluginCache.remove(effectId);
         _statusMessage = 'Removed VST3 plugin';
       });
-
-      debugPrint('✅ VST3 plugin removed');
     } catch (e) {
       setState(() {
         _statusMessage = 'Error removing plugin: $e';
@@ -1146,12 +1022,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _showVst3PluginBrowser(int trackId) async {
     if (_audioEngine == null) return;
-
-    debugPrint('🔍 Opening VST3 browser with ${_availableVst3Plugins.length} plugins');
-    debugPrint('🔍 _pluginsScanned: $_pluginsScanned, _isScanningVst3Plugins: $_isScanningVst3Plugins');
-    for (var plugin in _availableVst3Plugins) {
-      debugPrint('  - ${plugin['name']} (${plugin['path']})');
-    }
 
     // Import the browser
     final vst3Browser = await showVst3PluginBrowser(
@@ -1174,8 +1044,6 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _onVst3PluginDropped(int trackId, Vst3Plugin plugin) {
-    debugPrint('🎯 VST3 plugin dropped on track $trackId: ${plugin.name}');
-
     // Add the plugin to the track
     _addVst3PluginToTrack(trackId, {
       'name': plugin.name,
@@ -1243,7 +1111,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
     try {
       _audioEngine!.setVst3ParameterValue(effectId, paramIndex, value);
-      debugPrint('🎛️  VST3 parameter changed: effect=$effectId, param=$paramIndex, value=$value');
     } catch (e) {
       debugPrint('❌ Error setting VST3 parameter: $e');
     }
@@ -1489,7 +1356,6 @@ class _DAWScreenState extends State<DAWScreen> {
             _midiClips[index] = _currentEditingClip!;
           }
 
-          debugPrint('✅ Updated existing MIDI clip ${_currentEditingClip!.clipId} (duration: ${durationInSeconds.toStringAsFixed(2)}s)');
         } else if (updatedClip.notes.isNotEmpty) {
           // Create a brand new clip only if we have notes and no clip is being edited
           final newClipId = DateTime.now().millisecondsSinceEpoch;
@@ -1503,8 +1369,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
           // Add to clips list for timeline visualization
           _midiClips.add(_currentEditingClip!);
-
-          debugPrint('✅ Auto-created MIDI clip $newClipId at ${_playheadPosition.toStringAsFixed(2)}s (duration: ${durationInSeconds.toStringAsFixed(2)}s)');
         } else {
           // No notes and no existing clip - just update current editing clip
           _currentEditingClip = updatedClip.copyWith(
@@ -1535,12 +1399,6 @@ class _DAWScreenState extends State<DAWScreen> {
   void _scheduleMidiClipPlayback(MidiClipData clip) {
     if (_audioEngine == null) return;
 
-    debugPrint('🎵 Syncing MIDI clip to Rust audio graph');
-    debugPrint('   Clip: ${clip.name} (Dart ID: ${clip.clipId})');
-    debugPrint('   Track: ${clip.trackId}');
-    debugPrint('   Start time: ${clip.startTime}s');
-    debugPrint('   ${clip.notes.length} notes');
-
     // Check if this Dart clip already has a Rust clip
     int rustClipId;
     bool isNewClip = false;
@@ -1548,15 +1406,9 @@ class _DAWScreenState extends State<DAWScreen> {
     if (_dartToRustClipIds.containsKey(clip.clipId)) {
       // Existing clip - reuse the Rust clip ID
       rustClipId = _dartToRustClipIds[clip.clipId]!;
-      debugPrint('   Reusing existing Rust clip ID: $rustClipId');
 
       // Clear existing notes (we'll re-add all of them)
-      final clearResult = _audioEngine!.clearMidiClip(rustClipId);
-      if (clearResult.startsWith('Error')) {
-        debugPrint('   ⚠️  Failed to clear clip: $clearResult');
-      } else {
-        debugPrint('   ✓ Cleared existing notes');
-      }
+      _audioEngine!.clearMidiClip(rustClipId);
     } else {
       // New clip - create in Rust
       rustClipId = _audioEngine!.createMidiClip();
@@ -1566,7 +1418,6 @@ class _DAWScreenState extends State<DAWScreen> {
       }
       _dartToRustClipIds[clip.clipId] = rustClipId;
       isNewClip = true;
-      debugPrint('   Created new Rust clip ID: $rustClipId');
     }
 
     // Add all notes to the Rust clip
@@ -1575,17 +1426,13 @@ class _DAWScreenState extends State<DAWScreen> {
       final startTimeSeconds = note.startTimeInSeconds(_tempo);
       final durationSeconds = note.durationInSeconds(_tempo);
 
-      final result = _audioEngine!.addMidiNoteToClip(
+      _audioEngine!.addMidiNoteToClip(
         rustClipId,
         note.note,
         note.velocity,
         startTimeSeconds,
         durationSeconds,
       );
-
-      if (result.startsWith('Error')) {
-        debugPrint('   ⚠️  Failed to add note ${note.noteName}: $result');
-      }
     }
 
     // Only add to timeline if this is a new clip
@@ -1596,13 +1443,9 @@ class _DAWScreenState extends State<DAWScreen> {
         clip.startTime,
       );
 
-      if (result == 0) {
-        debugPrint('✅ MIDI clip synced to audio graph successfully');
-      } else {
+      if (result != 0) {
         debugPrint('❌ Failed to add MIDI clip to track timeline (result: $result)');
       }
-    } else {
-      debugPrint('✅ MIDI clip notes updated (${clip.notes.length} notes)');
     }
   }
 
@@ -1674,7 +1517,6 @@ class _DAWScreenState extends State<DAWScreen> {
                 _selectedMidiClipId = null;
                 _currentEditingClip = null;
               });
-              debugPrint('🧹 Cleared MIDI clip state for new project');
             },
             child: const Text('Create'),
           ),
@@ -1698,10 +1540,7 @@ class _DAWScreenState extends State<DAWScreen> {
           path = path.substring(0, path.length - 1);
         }
 
-        debugPrint('📂 Selected path: $path');
-
         if (path.isEmpty) {
-          debugPrint('❌ Path is empty');
           return;
         }
 
@@ -1719,7 +1558,6 @@ class _DAWScreenState extends State<DAWScreen> {
 
           // Clear MIDI clip ID mappings since Rust side has reset
           _dartToRustClipIds.clear();
-          debugPrint('🧹 Cleared MIDI clip ID mappings on project load');
 
           // Load UI layout data
           _loadUILayout(path);
@@ -1856,9 +1694,8 @@ class _DAWScreenState extends State<DAWScreen> {
       final jsonString = const JsonEncoder.withIndent('  ').convert(uiLayoutData);
       final uiLayoutFile = File('$projectPath/ui_layout.json');
       uiLayoutFile.writeAsStringSync(jsonString);
-      debugPrint('💾 UI layout saved to: ${uiLayoutFile.path}');
     } catch (e) {
-      debugPrint('⚠️  Failed to save UI layout: $e');
+      debugPrint('❌ Failed to save UI layout: $e');
     }
   }
 
@@ -1867,7 +1704,6 @@ class _DAWScreenState extends State<DAWScreen> {
     try {
       final uiLayoutFile = File('$projectPath/ui_layout.json');
       if (!uiLayoutFile.existsSync()) {
-        debugPrint('ℹ️  No UI layout file found, using defaults');
         return;
       }
 
@@ -1900,10 +1736,8 @@ class _DAWScreenState extends State<DAWScreen> {
           }
         }
       });
-
-      debugPrint('📂 UI layout loaded from: ${uiLayoutFile.path}');
     } catch (e) {
-      debugPrint('⚠️  Failed to load UI layout: $e');
+      debugPrint('❌ Failed to load UI layout: $e');
     }
   }
 
