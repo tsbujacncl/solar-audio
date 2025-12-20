@@ -5,7 +5,7 @@ use crate::recorder::Recorder;
 use crate::midi::MidiClip;
 use crate::midi_input::MidiInputManager;
 use crate::midi_recorder::MidiRecorder;
-use crate::synth::{Synthesizer, TrackSynthManager};
+use crate::synth::TrackSynthManager;
 use crate::track::{ClipId, TimelineClip, TimelineMidiClip, TrackId, TrackManager};  // Import from track module
 use crate::effects::{Effect, EffectManager, Limiter};  // Import from effects module
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -54,9 +54,6 @@ pub struct AudioGraph {
     pub midi_input_manager: Arc<Mutex<MidiInputManager>>,
     /// MIDI recorder
     pub midi_recorder: Arc<Mutex<MidiRecorder>>,
-    /// Built-in synthesizer
-    pub synthesizer: Arc<Mutex<Synthesizer>>,
-
     // --- M4: Mixing & Effects ---
     /// Track manager (handles all tracks)
     pub track_manager: Arc<Mutex<TrackManager>>,
@@ -105,7 +102,6 @@ impl AudioGraph {
             recorder: Arc::new(Recorder::new()),
             midi_input_manager: Arc::new(Mutex::new(midi_input_manager)),
             midi_recorder: Arc::new(Mutex::new(midi_recorder)),
-            synthesizer: Arc::new(Mutex::new(Synthesizer::new())),
             track_manager: Arc::new(Mutex::new(track_manager)),
             effect_manager: Arc::new(Mutex::new(effect_manager)),
             master_limiter: Arc::new(Mutex::new(master_limiter)),
@@ -320,12 +316,8 @@ impl AudioGraph {
 
         // Silence all synthesizers to prevent stuck notes/drone
         if let Ok(mut synth_manager) = self.track_synth_manager.lock() {
-            synth_manager.all_notes_off();
-            eprintln!("   All track synth notes silenced");
-        }
-        if let Ok(mut synth) = self.synthesizer.lock() {
-            synth.all_notes_off();
-            eprintln!("   Legacy synth notes silenced");
+            synth_manager.all_notes_off_all_tracks();
+            eprintln!("   All synth notes silenced");
         }
 
         // Reset playhead to start
@@ -354,7 +346,6 @@ impl AudioGraph {
         let state = self.state.clone();
         let input_manager = self.input_manager.clone();
         let recorder_refs = self.recorder.get_callback_refs();
-        let synthesizer = self.synthesizer.clone();
 
         // M4: Clone track and effect managers
         let track_manager = self.track_manager.clone();
@@ -437,41 +428,10 @@ impl AudioGraph {
                 };
 
                 // Get current tempo for MIDI playback scaling
-                // MIDI events are stored at 120 BPM base tempo
-                // Higher tempo = events trigger faster, lower tempo = events trigger slower
                 let current_tempo = *recorder_refs.tempo.lock().unwrap();
-                let tempo_ratio = current_tempo / 120.0; // Scale factor for playback speed
+                let tempo_ratio = current_tempo / 120.0;
 
-                // Process MIDI events for this buffer
-                // We scale the playhead position to "speed up" or "slow down" MIDI playback
-                // At 240 BPM (ratio=2), playhead*2 means we progress through MIDI events twice as fast
-                let scaled_playhead = (current_playhead as f64 * tempo_ratio) as u64;
-                let scaled_buffer_end = ((current_playhead + frames as u64) as f64 * tempo_ratio) as u64;
-
-                for timeline_midi_clip in &midi_clips_snapshot {
-                    // Clip start time is in seconds, convert to samples at base tempo (120 BPM)
-                    let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
-
-                    // Check if clip is active in this buffer
-                    let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
-                    if clip_end_samples <= scaled_playhead || clip_start_samples >= scaled_buffer_end {
-                        continue; // Clip not active in this buffer
-                    }
-
-                    // Process events within the clip
-                    for event in &timeline_midi_clip.clip.events {
-                        // Convert event timestamp from clip-relative to absolute timeline
-                        let event_absolute_samples = clip_start_samples + event.timestamp_samples;
-
-                        // Check if event is in this buffer (using scaled playhead)
-                        if event_absolute_samples >= scaled_playhead && event_absolute_samples < scaled_buffer_end {
-                            // Send event to synthesizer
-                            if let Ok(mut synth) = synthesizer.lock() {
-                                synth.process_event(event);
-                            }
-                        }
-                    }
-                }
+                // NOTE: Legacy MIDI clip processing removed - all MIDI now handled per-track
 
                 // M5.5: Track-based mixing (replaces legacy clip mixing)
 
@@ -607,8 +567,8 @@ impl AudioGraph {
                                                 crate::midi::MidiEventType::NoteOn { note, velocity } => {
                                                     synth_manager.note_on(track_snap.id, note, velocity);
                                                 }
-                                                crate::midi::MidiEventType::NoteOff { note, velocity } => {
-                                                    synth_manager.note_off(track_snap.id, note, velocity);
+                                                crate::midi::MidiEventType::NoteOff { note, velocity: _ } => {
+                                                    synth_manager.note_off(track_snap.id, note);
                                                 }
                                             }
                                         }
@@ -658,13 +618,7 @@ impl AudioGraph {
                         mix_right += fx_right;
                     }
 
-                    // Add synthesizer output (MIDI playback)
-                    // Note: MIDI events are processed above, synth generates audio here
-                    if let Ok(mut synth) = synthesizer.lock() {
-                        let synth_sample = synth.process_sample();
-                        mix_left += synth_sample;
-                        mix_right += synth_sample;
-                    }
+                    // NOTE: Legacy synth output removed - all synth now per-track
 
                     // REMOVED: Legacy mixing that bypassed track controls
                     // All clips now go through tracks with proper volume/pan/mute/solo
@@ -1257,8 +1211,8 @@ impl AudioGraph {
                                         crate::midi::MidiEventType::NoteOn { note, velocity } => {
                                             synth_manager.note_on(track_snap.id, note, velocity);
                                         }
-                                        crate::midi::MidiEventType::NoteOff { note, velocity } => {
-                                            synth_manager.note_off(track_snap.id, note, velocity);
+                                        crate::midi::MidiEventType::NoteOff { note, velocity: _ } => {
+                                            synth_manager.note_off(track_snap.id, note);
                                         }
                                     }
                                 }

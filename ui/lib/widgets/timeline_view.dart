@@ -44,7 +44,7 @@ class TimelineView extends StatefulWidget {
   final double? clipDuration; // in seconds (null if no clip loaded)
   final List<double> waveformPeaks; // waveform data
   final AudioEngine? audioEngine;
-  final VoidCallback? onSeek; // callback when user clicks timeline
+  final Function(double)? onSeek; // callback when user drags playhead (passes position in seconds)
 
   // MIDI editing state
   final int? selectedMidiTrackId;
@@ -1014,36 +1014,58 @@ class TimelineViewState extends State<TimelineView> {
 
   Widget _buildPlayhead() {
     final playheadX = widget.playheadPosition * _pixelsPerSecond;
-    
+
     return Positioned(
-      left: playheadX,
+      left: playheadX - 10, // Center the 20px wide handle on the playhead position
       top: 0,
       bottom: 0,
-      child: Column(
-        children: [
-          // Playhead handle
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF44336),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: const Icon(
-              Icons.play_arrow,
-              size: 12,
-              color: Colors.white,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: (details) {
+          // Calculate new position from drag delta
+          final newX = (playheadX + details.delta.dx).clamp(0.0, double.infinity);
+          final newPosition = newX / _pixelsPerSecond;
+
+          // Clamp to valid range (0 to project duration)
+          final maxDuration = widget.clipDuration ?? 300.0; // Default to 5 minutes if no clip
+          final clampedPosition = newPosition.clamp(0.0, maxDuration);
+
+          widget.onSeek?.call(clampedPosition);
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.resizeColumn,
+          child: SizedBox(
+            width: 20, // Hit area width
+            child: Column(
+              children: [
+                // Playhead handle
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF44336),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
+                // Playhead line
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: 2,
+                      color: const Color(0xFFF44336),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          // Playhead line
-          Expanded(
-            child: Container(
-              width: 2,
-              color: const Color(0xFFF44336),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

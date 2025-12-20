@@ -70,16 +70,14 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
           // Header
           _buildHeader(),
 
-          // Synth controls
+          // Synth controls - Minimal: 1 osc, filter cutoff, ADSR
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildOscillatorSection(1),
-                  const SizedBox(height: 20),
-                  _buildOscillatorSection(2),
+                  _buildOscillatorSection(),
                   const SizedBox(height: 20),
                   _buildFilterSection(),
                   const SizedBox(height: 20),
@@ -198,14 +196,9 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
     );
   }
 
-  Widget _buildOscillatorSection(int oscNum) {
-    final typeKey = 'osc${oscNum}_type';
-    final levelKey = 'osc${oscNum}_level';
-    final detuneKey = 'osc${oscNum}_detune';
-
-    final type = _currentData.getParameter<String>(typeKey, 'saw');
-    final level = _currentData.getParameter<double>(levelKey, 0.5);
-    final detune = _currentData.getParameter<double>(detuneKey, 0.0);
+  Widget _buildOscillatorSection() {
+    // Single oscillator - uses 'osc_type' key to match new minimal synth
+    final type = _currentData.getParameter<String>('osc_type', 'saw');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -220,15 +213,15 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
           // Section header with waveform preview
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.graphic_eq,
-                color: const Color(0xFF4CAF50),
+                color: Color(0xFF4CAF50),
                 size: 18,
               ),
               const SizedBox(width: 8),
-              Text(
-                'OSCILLATOR $oscNum',
-                style: const TextStyle(
+              const Text(
+                'OSCILLATOR',
+                style: TextStyle(
                   color: Color(0xFFA0A0A0),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -248,29 +241,7 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
             'Type',
             type,
             ['sine', 'saw', 'square', 'triangle'],
-            (value) => _updateParameter(typeKey, value),
-          ),
-          const SizedBox(height: 12),
-
-          // Level slider
-          _buildSlider(
-            'Level',
-            level,
-            0.0,
-            1.0,
-            (value) => _updateParameter(levelKey, value),
-            formatter: (val) => '${(val * 100).toStringAsFixed(0)}%',
-          ),
-          const SizedBox(height: 12),
-
-          // Detune slider
-          _buildSlider(
-            'Detune',
-            detune,
-            -50.0,
-            50.0,
-            (value) => _updateParameter(detuneKey, value),
-            formatter: (val) => '${val.toStringAsFixed(1)}¢',
+            (value) => _updateParameter('osc_type', value),
           ),
         ],
       ),
@@ -293,9 +264,8 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
   }
 
   Widget _buildFilterSection() {
-    final filterType = _currentData.getParameter<String>('filter_type', 'lowpass');
-    final cutoff = _currentData.getParameter<double>('filter_cutoff', 0.8);
-    final resonance = _currentData.getParameter<double>('filter_resonance', 0.2);
+    // Simple one-pole lowpass filter - cutoff only
+    final cutoff = _currentData.getParameter<double>('filter_cutoff', 1.0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -317,7 +287,7 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
               ),
               SizedBox(width: 8),
               Text(
-                'FILTER',
+                'FILTER (LOWPASS)',
                 style: TextStyle(
                   color: Color(0xFFA0A0A0),
                   fontSize: 12,
@@ -329,15 +299,6 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
           ),
           const SizedBox(height: 16),
 
-          // Filter type dropdown
-          _buildDropdown(
-            'Type',
-            filterType,
-            ['lowpass', 'highpass', 'bandpass'],
-            (value) => _updateParameter('filter_type', value),
-          ),
-          const SizedBox(height: 12),
-
           // Cutoff slider
           _buildSlider(
             'Cutoff',
@@ -346,24 +307,14 @@ class _SynthesizerPanelState extends State<SynthesizerPanel> {
             1.0,
             (value) => _updateParameter('filter_cutoff', value),
             formatter: (val) {
-              // Map 0-1 to frequency range (50Hz - 20kHz, exponential)
-              final freq = 50 * exp(5.3 * val); // exp(5.3) ≈ 200, giving 50Hz to 10kHz range
+              // Map 0-1 to frequency range
+              if (val >= 0.95) return 'OPEN';
+              final freq = 100 + (val * 9900); // 100Hz to 10kHz
               if (freq >= 1000) {
                 return '${(freq / 1000).toStringAsFixed(1)}kHz';
               }
               return '${freq.toStringAsFixed(0)}Hz';
             },
-          ),
-          const SizedBox(height: 12),
-
-          // Resonance slider
-          _buildSlider(
-            'Resonance',
-            resonance,
-            0.0,
-            1.0,
-            (value) => _updateParameter('filter_resonance', value),
-            formatter: (val) => '${(val * 100).toStringAsFixed(0)}%',
           ),
         ],
       ),

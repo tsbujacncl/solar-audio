@@ -765,9 +765,9 @@ pub fn start_midi_input() -> Result<String, String> {
 
     let mut midi_manager = graph.midi_input_manager.lock().map_err(|e| e.to_string())?;
 
-    // Set up event callback to forward to MIDI recorder and synthesizer
+    // Set up event callback to forward to MIDI recorder
+    // Note: Live synth playback happens via per-track synths during audio callback
     let midi_recorder = graph.midi_recorder.clone();
-    let synthesizer = graph.synthesizer.clone();
 
     midi_manager.set_event_callback(move |event| {
         // Send to recorder if recording
@@ -776,11 +776,7 @@ pub fn start_midi_input() -> Result<String, String> {
                 recorder.record_event(event);
             }
         }
-
-        // Send to synthesizer for live playback
-        if let Ok(mut synth) = synthesizer.lock() {
-            synth.process_event(&event);
-        }
+        // Note: Per-track synth is triggered from audio_graph audio callback
     });
 
     midi_manager.start_capture().map_err(|e| e.to_string())?;
@@ -888,36 +884,16 @@ pub fn get_midi_recording_state() -> Result<i32, String> {
     Ok(state)
 }
 
-/// Set synthesizer oscillator type (0=Sine, 1=Saw, 2=Square)
-pub fn set_synth_oscillator_type(osc_type: i32) -> Result<String, String> {
-    let graph_mutex = AUDIO_GRAPH.get()
-        .ok_or("Audio graph not initialized")?;
-    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-
-    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
-
-    use crate::synth::OscillatorType;
-    let osc = match osc_type {
-        0 => OscillatorType::Sine,
-        1 => OscillatorType::Saw,
-        2 => OscillatorType::Square,
-        _ => return Err("Invalid oscillator type".to_string()),
-    };
-
-    synth.set_oscillator_type(osc);
-    Ok(format!("Oscillator type set to {:?}", osc))
+/// Set synthesizer oscillator type (LEGACY - use set_synth_parameter instead)
+pub fn set_synth_oscillator_type(_osc_type: i32) -> Result<String, String> {
+    // Legacy API - no-op, use set_synth_parameter for per-track synths
+    Ok("Legacy API deprecated - use set_synth_parameter".to_string())
 }
 
-/// Set synthesizer master volume (0.0 to 1.0)
-pub fn set_synth_volume(volume: f32) -> Result<String, String> {
-    let graph_mutex = AUDIO_GRAPH.get()
-        .ok_or("Audio graph not initialized")?;
-    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-
-    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
-    synth.set_master_volume(volume);
-
-    Ok(format!("Synth volume set to {:.2}", volume))
+/// Set synthesizer master volume (LEGACY - use track volume instead)
+pub fn set_synth_volume(_volume: f32) -> Result<String, String> {
+    // Legacy API - no-op, use track volume for per-track synths
+    Ok("Legacy API deprecated - use track volume".to_string())
 }
 
 /// Get number of MIDI clips on timeline
@@ -991,9 +967,36 @@ pub fn send_midi_note_on(note: u8, velocity: u8) -> Result<String, String> {
         }
     }
 
-    // Send to synthesizer for live playback
-    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
-    synth.process_event(&event);
+    // Send to per-track synthesizer for live playback
+    // Route to first armed MIDI track (or first MIDI track if none armed)
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+    let tracks = track_manager.get_all_tracks();
+
+    let mut target_track_id: Option<TrackId> = None;
+    let mut first_midi_track_id: Option<TrackId> = None;
+
+    for track_arc in tracks {
+        if let Ok(track) = track_arc.lock() {
+            if track.track_type == TrackType::Midi {
+                if first_midi_track_id.is_none() {
+                    first_midi_track_id = Some(track.id);
+                }
+                if track.armed {
+                    target_track_id = Some(track.id);
+                    break;
+                }
+            }
+        }
+    }
+    drop(track_manager);
+
+    // Use armed track, or fallback to first MIDI track
+    let target = target_track_id.or(first_midi_track_id);
+
+    if let Some(track_id) = target {
+        let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
+        synth_manager.note_on(track_id, note, velocity);
+    }
 
     Ok(format!("Note On: {} (velocity: {})", note, velocity))
 }
@@ -1021,9 +1024,36 @@ pub fn send_midi_note_off(note: u8, velocity: u8) -> Result<String, String> {
         }
     }
 
-    // Send to synthesizer for live playback
-    let mut synth = graph.synthesizer.lock().map_err(|e| e.to_string())?;
-    synth.process_event(&event);
+    // Send to per-track synthesizer for live playback
+    // Route to first armed MIDI track (or first MIDI track if none armed)
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+    let tracks = track_manager.get_all_tracks();
+
+    let mut target_track_id: Option<TrackId> = None;
+    let mut first_midi_track_id: Option<TrackId> = None;
+
+    for track_arc in tracks {
+        if let Ok(track) = track_arc.lock() {
+            if track.track_type == TrackType::Midi {
+                if first_midi_track_id.is_none() {
+                    first_midi_track_id = Some(track.id);
+                }
+                if track.armed {
+                    target_track_id = Some(track.id);
+                    break;
+                }
+            }
+        }
+    }
+    drop(track_manager);
+
+    // Use armed track, or fallback to first MIDI track
+    let target = target_track_id.or(first_midi_track_id);
+
+    if let Some(track_id) = target {
+        let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
+        synth_manager.note_off(track_id, note);
+    }
 
     Ok(format!("Note Off: {} (velocity: {})", note, velocity))
 }
@@ -2032,9 +2062,11 @@ pub fn delete_track(track_id: TrackId) -> Result<String, String> {
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    // Stop any playing notes on the synthesizer to prevent stuck notes
-    if let Ok(mut synth) = graph.synthesizer.lock() {
-        synth.all_notes_off();
+    // Stop any playing notes on the per-track synth to prevent stuck notes
+    if let Ok(mut synth_manager) = graph.track_synth_manager.lock() {
+        synth_manager.all_notes_off(track_id);
+        // Also remove the synth for this track
+        synth_manager.remove_synth(track_id);
     }
 
     // Remove all MIDI clips belonging to this track from the global collection
@@ -2453,7 +2485,7 @@ pub fn send_track_midi_note_off(track_id: u64, note: u8, velocity: u8) -> Result
 
     // Send to track synthesizer for live playback
     let mut synth_manager = graph.track_synth_manager.lock().map_err(|e| e.to_string())?;
-    synth_manager.note_off(track_id, note, velocity);
+    synth_manager.note_off(track_id, note);
     Ok(format!("Track {} note off: {}", track_id, note))
 }
 

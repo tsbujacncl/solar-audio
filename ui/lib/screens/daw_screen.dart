@@ -2434,6 +2434,12 @@ class _DAWScreenState extends State<DAWScreen> {
                           onVst3InstrumentDropped: _onVst3InstrumentDropped,
                           onVst3InstrumentDroppedOnEmpty: _onVst3InstrumentDroppedOnEmpty,
                           onAudioFileDroppedOnEmpty: _onAudioFileDroppedOnEmpty,
+                          onSeek: (position) {
+                            _audioEngine?.transportSeek(position);
+                            setState(() {
+                              _playheadPosition = position;
+                            });
+                          },
                         ),
                       ),
 
