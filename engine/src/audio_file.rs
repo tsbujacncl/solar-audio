@@ -1,6 +1,6 @@
 /// Audio file loading and decoding
 use anyhow::{Context, Result};
-use rubato::{FastFixedIn, Resampler};
+use rubato::{FftFixedInOut, Resampler};
 use std::path::Path;
 use symphonia::core::audio::{AudioBufferRef, Signal};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
@@ -217,7 +217,7 @@ fn interleave_channels(left: &[f32], right: &[f32], frames: usize) -> Vec<f32> {
     output
 }
 
-/// Resample audio from source sample rate to target sample rate
+/// Resample audio from source sample rate to target sample rate using FFT-based resampling
 fn resample_audio(
     input: &[f32],
     source_rate: u32,
@@ -231,56 +231,67 @@ fn resample_audio(
     // Deinterleave channels for resampling
     let frames = input.len() / channels;
     let mut channel_buffers: Vec<Vec<f32>> = vec![Vec::with_capacity(frames); channels];
-    
+
     for frame_idx in 0..frames {
         for ch in 0..channels {
             channel_buffers[ch].push(input[frame_idx * channels + ch]);
         }
     }
 
-    // Create resampler
-    let mut resampler = FastFixedIn::<f32>::new(
-        target_rate as f64 / source_rate as f64,
-        1.0, // max relative ratio change
-        rubato::PolynomialDegree::Septic,
+    // Use FFT-based resampler for offline processing (handles buffering correctly)
+    let mut resampler = FftFixedInOut::<f32>::new(
+        source_rate as usize,
+        target_rate as usize,
         1024, // chunk size
         channels,
     )?;
 
-    // Resample each channel
     let mut resampled_buffers: Vec<Vec<f32>> = vec![Vec::new(); channels];
-    
-    // Process in chunks
     let chunk_size = resampler.input_frames_next();
     let mut position = 0;
-    
-    while position < frames {
-        let end = (position + chunk_size).min(frames);
-        let mut chunk: Vec<Vec<f32>> = channel_buffers
+
+    // Process full chunks
+    while position + chunk_size <= frames {
+        let chunk: Vec<Vec<f32>> = channel_buffers
             .iter()
-            .map(|ch| ch[position..end].to_vec())
+            .map(|ch| ch[position..position + chunk_size].to_vec())
             .collect();
 
-        // Pad the last chunk if necessary
-        if chunk[0].len() < chunk_size {
-            for ch_buf in &mut chunk {
-                ch_buf.resize(chunk_size, 0.0);
-            }
-        }
-
         let resampled = resampler.process(&chunk, None)?;
-        
         for (ch_idx, ch_data) in resampled.iter().enumerate() {
             resampled_buffers[ch_idx].extend_from_slice(ch_data);
         }
+        position += chunk_size;
+    }
 
-        position = end;
+    // Handle remaining samples with padding
+    if position < frames {
+        let remaining = frames - position;
+        let padded_chunk: Vec<Vec<f32>> = channel_buffers
+            .iter()
+            .map(|ch| {
+                let mut chunk = ch[position..].to_vec();
+                chunk.resize(chunk_size, 0.0);
+                chunk
+            })
+            .collect();
+
+        let resampled = resampler.process(&padded_chunk, None)?;
+
+        // Calculate how many output frames correspond to actual input
+        let ratio = target_rate as f64 / source_rate as f64;
+        let output_for_remaining = (remaining as f64 * ratio).ceil() as usize;
+
+        for (ch_idx, ch_data) in resampled.iter().enumerate() {
+            let take_count = output_for_remaining.min(ch_data.len());
+            resampled_buffers[ch_idx].extend_from_slice(&ch_data[..take_count]);
+        }
     }
 
     // Interleave resampled channels
     let output_frames = resampled_buffers[0].len();
     let mut output = Vec::with_capacity(output_frames * channels);
-    
+
     for frame_idx in 0..output_frames {
         for ch in 0..channels {
             output.push(resampled_buffers[ch][frame_idx]);
