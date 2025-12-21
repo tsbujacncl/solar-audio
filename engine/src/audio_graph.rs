@@ -186,26 +186,44 @@ impl AudioGraph {
     }
 
     /// Add a MIDI clip to a specific track (M5.5)
-    pub fn add_midi_clip_to_track(&self, track_id: TrackId, clip: Arc<MidiClip>, start_time: f64) -> Option<ClipId> {
-        let id = {
-            let mut next_id = self.next_clip_id.lock().expect("mutex poisoned");
-            let id = *next_id;
-            *next_id += 1;
-            id
-        };
-
+    /// Uses the provided clip_id to ensure consistency with global storage
+    pub fn add_midi_clip_to_track(&self, track_id: TrackId, clip: Arc<MidiClip>, start_time: f64, clip_id: ClipId) -> Option<ClipId> {
         let track_manager = self.track_manager.lock().expect("mutex poisoned");
         if let Some(track_arc) = track_manager.get_track(track_id) {
             let mut track = track_arc.lock().expect("mutex poisoned");
             track.midi_clips.push(TimelineMidiClip {
-                id,
+                id: clip_id,  // Use the same ID as in global storage
                 clip,
                 start_time,
                 track_id: Some(track_id),
             });
-            Some(id)
+            Some(clip_id)
         } else {
             None
+        }
+    }
+
+    /// Sync a MIDI clip from global storage to the track
+    /// This is needed after modifying a clip because Arc::make_mut creates a new copy
+    pub fn sync_midi_clip_to_track(&self, clip_id: ClipId) {
+        // Get the updated clip from global storage
+        let updated_clip = {
+            let midi_clips = self.midi_clips.lock().expect("mutex poisoned");
+            midi_clips.iter()
+                .find(|c| c.id == clip_id)
+                .map(|c| (c.clip.clone(), c.track_id, c.clip.events.len()))
+        };
+
+        if let Some((clip_arc, Some(track_id), _event_count)) = updated_clip {
+            // Update the track's copy
+            let track_manager = self.track_manager.lock().expect("mutex poisoned");
+            if let Some(track_arc) = track_manager.get_track(track_id) {
+                let mut track = track_arc.lock().expect("mutex poisoned");
+                // Find and update the MIDI clip in the track
+                if let Some(timeline_clip) = track.midi_clips.iter_mut().find(|c| c.id == clip_id) {
+                    timeline_clip.clip = clip_arc;
+                }
+            }
         }
     }
 
@@ -487,15 +505,6 @@ impl AudioGraph {
                 let (track_snapshots, has_solo, master_snapshot) = track_data_option
                     .unwrap_or_else(|| (Vec::new(), false, None));
 
-                // DEBUG: Log track count once
-                static TRACK_COUNT_LOGGED: AtomicBool = AtomicBool::new(false);
-                if !TRACK_COUNT_LOGGED.swap(true, Ordering::Relaxed) {
-                    eprintln!("🎵 [AudioCallback] Processing {} tracks", track_snapshots.len());
-                    for snap in &track_snapshots {
-                        eprintln!("   - Track {}: {} audio clips, {} MIDI clips", snap.id, snap.audio_clips.len(), snap.midi_clips.len());
-                    }
-                }
-
                 // Track peak levels per track for metering (track_id -> (max_left, max_right))
                 let mut track_peaks: HashMap<TrackId, (f32, f32)> = HashMap::new();
                 let mut master_peak_left = 0.0f32;
@@ -559,7 +568,7 @@ impl AudioGraph {
                             if playhead_frame >= clip_start_samples && playhead_frame < clip_end_samples {
                                 let frame_in_clip = playhead_frame - clip_start_samples;
 
-                                // Check for MIDI events at this exact frame
+                                // Check for MIDI events that should trigger at this exact sample
                                 for event in &timeline_midi_clip.clip.events {
                                     if event.timestamp_samples == frame_in_clip {
                                         if let Ok(mut synth_manager) = track_synth_manager.lock() {

@@ -82,6 +82,9 @@ class _PianoRollState extends State<PianoRoll> {
   // Remember last note duration (default = 1 beat = quarter note)
   double _lastNoteDuration = 1.0;
 
+  // Note audition (preview) when creating/selecting notes
+  bool _auditionEnabled = true;
+
   // Global undo/redo manager
   final UndoRedoManager _undoRedoManager = UndoRedoManager();
 
@@ -129,6 +132,26 @@ class _PianoRollState extends State<PianoRoll> {
 
     // Trigger rebuild to recalculate totalBeats and update grey overlay
     setState(() {});
+  }
+
+  /// Preview/audition a note when creating or selecting
+  void _auditionNote(int midiNote, int velocity) {
+    if (!_auditionEnabled) return;
+    final trackId = _currentClip?.trackId;
+    if (trackId != null && widget.audioEngine != null) {
+      widget.audioEngine!.sendTrackMidiNoteOn(trackId, midiNote, velocity);
+      // Schedule note off after short preview duration
+      Future.delayed(const Duration(milliseconds: 200), () {
+        widget.audioEngine?.sendTrackMidiNoteOff(trackId, midiNote, 64);
+      });
+    }
+  }
+
+  /// Toggle note audition on/off
+  void _toggleAudition() {
+    setState(() {
+      _auditionEnabled = !_auditionEnabled;
+    });
   }
 
   /// Save current state snapshot before making changes
@@ -462,6 +485,16 @@ class _PianoRollState extends State<PianoRoll> {
 
           const SizedBox(width: 8),
 
+          // Audition toggle (hear notes when creating/selecting)
+          _buildHeaderButton(
+            icon: _auditionEnabled ? Icons.volume_up : Icons.volume_off,
+            label: 'Audition',
+            isActive: _auditionEnabled,
+            onTap: _toggleAudition,
+          ),
+
+          const SizedBox(width: 8),
+
           // Zoom controls
           _buildHeaderButton(
             icon: Icons.remove,
@@ -775,7 +808,7 @@ class _PianoRollState extends State<PianoRoll> {
     final clickedNote = _findNoteAtPosition(details.localPosition);
 
     if (clickedNote != null) {
-      // Select note
+      // Select note and preview it
       setState(() {
         _currentClip = _currentClip?.copyWith(
           notes: _currentClip!.notes.map((n) {
@@ -783,6 +816,8 @@ class _PianoRollState extends State<PianoRoll> {
           }).toList(),
         );
       });
+      // Audition the selected note
+      _auditionNote(clickedNote.note, clickedNote.velocity);
     } else {
       // Create new note on single click (no dragging required)
       _saveToHistory(); // Save before creating note
@@ -802,6 +837,9 @@ class _PianoRollState extends State<PianoRoll> {
       });
       _notifyClipUpdated();
       _commitToHistory('Add note: ${newNote.noteName}');
+
+      // Audition the newly created note
+      _auditionNote(note, 100);
 
       debugPrint('🎵 Created note: ${newNote.noteName} (duration: $_lastNoteDuration beats)');
     }

@@ -1713,16 +1713,23 @@ class _DAWScreenState extends State<DAWScreen> {
     }
 
     // Add all notes to the Rust clip
+    // Note: clip.startTime is the clip's position on the timeline (in seconds)
+    // Note timestamps within the clip must be RELATIVE to the clip start
+    final clipStartTimeSeconds = clip.startTime;
+
     for (final note in clip.notes) {
       // Convert beats to seconds using current tempo
-      final startTimeSeconds = note.startTimeInSeconds(_tempo);
+      final absoluteStartTimeSeconds = note.startTimeInSeconds(_tempo);
       final durationSeconds = note.durationInSeconds(_tempo);
+
+      // Make note time relative to clip start
+      final relativeStartTimeSeconds = absoluteStartTimeSeconds - clipStartTimeSeconds;
 
       _audioEngine!.addMidiNoteToClip(
         rustClipId,
         note.note,
         note.velocity,
-        startTimeSeconds,
+        relativeStartTimeSeconds,
         durationSeconds,
       );
     }

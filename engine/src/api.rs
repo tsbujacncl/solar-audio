@@ -862,24 +862,22 @@ pub fn stop_midi_recording() -> Result<Option<u64>, String> {
         };
 
         // If no MIDI tracks are armed, add clip to global storage
+        // First add clip to global storage to get an ID
+        let clip_id = graph.add_midi_clip(clip_arc.clone(), playhead_seconds);
+
         if armed_midi_track_ids.is_empty() {
-            let clip_id = graph.add_midi_clip(clip_arc, playhead_seconds);
             eprintln!("✅ [API] MIDI clip recorded with ID: {} (no armed tracks, added globally)", clip_id);
             return Ok(Some(clip_id));
         }
 
-        // Add clip to each armed MIDI track
-        let mut first_clip_id: Option<u64> = None;
+        // Add clip to each armed MIDI track using the same clip_id
         for track_id in armed_midi_track_ids {
-            if let Some(clip_id) = graph.add_midi_clip_to_track(track_id, clip_arc.clone(), playhead_seconds) {
+            if let Some(_) = graph.add_midi_clip_to_track(track_id, clip_arc.clone(), playhead_seconds, clip_id) {
                 eprintln!("✅ [API] MIDI clip {} added to armed track {}", clip_id, track_id);
-                if first_clip_id.is_none() {
-                    first_clip_id = Some(clip_id);
-                }
             }
         }
 
-        Ok(first_clip_id)
+        Ok(Some(clip_id))
     } else {
         Ok(None)
     }
@@ -1119,28 +1117,33 @@ pub fn add_midi_note_to_clip(
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    // Get the MIDI clip
-    let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
-    let timeline_clip = midi_clips
-        .iter_mut()
-        .find(|c| c.id == clip_id)
-        .ok_or("MIDI clip not found")?;
+    // Get the MIDI clip and modify it
+    {
+        let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+        let timeline_clip = midi_clips
+            .iter_mut()
+            .find(|c| c.id == clip_id)
+            .ok_or("MIDI clip not found")?;
 
-    // Get mutable reference to the clip data
-    // Note: We need to clone the Arc, get the data, modify it, and replace it
-    let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
+        // Get mutable reference to the clip data
+        // Note: Arc::make_mut may clone the data if there are multiple references
+        let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
 
-    // Convert time to samples
-    let start_samples = (start_time * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
-    let duration_samples = (duration * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
+        // Convert time to samples
+        let start_samples = (start_time * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
+        let duration_samples = (duration * crate::audio_file::TARGET_SAMPLE_RATE as f64) as u64;
 
-    // Create note events
-    let note_on = MidiEvent::note_on(note, velocity, start_samples);
-    let note_off = MidiEvent::note_off(note, 64, start_samples + duration_samples);
+        // Create note events
+        let note_on = MidiEvent::note_on(note, velocity, start_samples);
+        let note_off = MidiEvent::note_off(note, 64, start_samples + duration_samples);
 
-    // Add events to clip
-    clip_data.add_event(note_on);
-    clip_data.add_event(note_off);
+        // Add events to clip
+        clip_data.add_event(note_on);
+        clip_data.add_event(note_off);
+    }
+
+    // Sync the updated clip to the track (needed because Arc::make_mut may have created a new copy)
+    graph.sync_midi_clip_to_track(clip_id);
 
     Ok(format!("Added note {} at {:.3}s, duration {:.3}s", note, start_time, duration))
 }
@@ -1209,18 +1212,23 @@ pub fn clear_midi_clip(clip_id: u64) -> Result<String, String> {
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
 
-    // Get the MIDI clip
-    let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
-    let timeline_clip = midi_clips
-        .iter_mut()
-        .find(|c| c.id == clip_id)
-        .ok_or("MIDI clip not found")?;
+    // Get the MIDI clip and clear it
+    {
+        let mut midi_clips = graph.get_midi_clips().lock().map_err(|e| e.to_string())?;
+        let timeline_clip = midi_clips
+            .iter_mut()
+            .find(|c| c.id == clip_id)
+            .ok_or("MIDI clip not found")?;
 
-    // Get mutable reference to the clip data
-    let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
+        // Get mutable reference to the clip data
+        let clip_data: &mut crate::midi::MidiClip = Arc::make_mut(&mut timeline_clip.clip);
 
-    // Clear all events
-    clip_data.clear();
+        // Clear all events
+        clip_data.clear();
+    }
+
+    // Sync the updated clip to the track (needed because Arc::make_mut may have created a new copy)
+    graph.sync_midi_clip_to_track(clip_id);
 
     Ok("Cleared all events".to_string())
 }
@@ -1283,8 +1291,8 @@ pub fn add_midi_clip_to_track(track_id: u64, clip_id: u64, start_time_seconds: f
         timeline_clip.clip.clone()
     };
 
-    // Add the clip to the track's timeline
-    graph.add_midi_clip_to_track(track_id, clip_arc, start_time_seconds)
+    // Add the clip to the track's timeline (use the same clip_id for consistency)
+    graph.add_midi_clip_to_track(track_id, clip_arc, start_time_seconds, clip_id)
         .ok_or(format!("Failed to add MIDI clip to track {}", track_id))?;
 
     Ok(())
