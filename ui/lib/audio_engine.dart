@@ -118,20 +118,39 @@ class AudioEngine {
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
-      // Use the symlink in macos/Runner/ which points to engine/target/release/libengine.dylib
-      // This makes the path relative and works on any machine
-      final libPath = 'macos/Runner/libengine.dylib';
-      print('🔍 [AudioEngine] Attempting to load library from: $libPath');
+      // Find the library by searching from current directory upward for the engine folder
+      // This works regardless of where flutter is launched from
 
-      // Check if file exists
-      final file = File(libPath);
-      if (file.existsSync()) {
-        print('✅ [AudioEngine] Library file exists');
-      } else {
-        print('❌ [AudioEngine] Library file NOT found at: $libPath');
-        print('   Make sure to run: cd engine && cargo build --release');
-        throw Exception('Library file not found at: $libPath. Run: cd engine && cargo build --release');
+      String? libPath;
+      var searchDir = Directory.current;
+
+      // Search up to 5 levels up from current directory
+      for (var i = 0; i < 5; i++) {
+        final engineLib = File('${searchDir.path}/engine/target/release/libengine.dylib');
+        if (engineLib.existsSync()) {
+          libPath = engineLib.path;
+          break;
+        }
+        // Also check if we're in the ui directory
+        final symlinkPath = File('${searchDir.path}/macos/Runner/libengine.dylib');
+        if (symlinkPath.existsSync()) {
+          libPath = symlinkPath.path;
+          break;
+        }
+        // Go up one directory
+        final parent = searchDir.parent;
+        if (parent.path == searchDir.path) break; // Reached root
+        searchDir = parent;
       }
+
+      if (libPath == null) {
+        print('❌ [AudioEngine] Library file NOT found');
+        print('   Current directory: ${Directory.current.path}');
+        print('   Make sure to run: cd engine && cargo build --release');
+        throw Exception('Library file not found. Run: cd engine && cargo build --release');
+      }
+
+      print('🔍 [AudioEngine] Found library at: $libPath');
 
       try {
         _lib = ffi.DynamicLibrary.open(libPath);
