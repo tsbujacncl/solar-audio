@@ -18,8 +18,10 @@ import '../models/midi_note_data.dart';
 import '../models/instrument_data.dart';
 import '../models/vst3_plugin_data.dart';
 import '../models/clip_data.dart';
+import '../models/library_item.dart';
 import '../services/undo_redo_manager.dart';
 import '../services/commands/track_commands.dart';
+import '../services/library_service.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -36,6 +38,9 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // Undo/Redo manager
   final UndoRedoManager _undoRedoManager = UndoRedoManager();
+
+  // Library service
+  final LibraryService _libraryService = LibraryService();
 
   // State
   double _playheadPosition = 0.0;
@@ -859,8 +864,8 @@ class _DAWScreenState extends State<DAWScreen> {
         return;
       }
 
-      // 2. Load audio file
-      final clipId = _audioEngine!.loadAudioFile(filePath);
+      // 2. Load audio file to the newly created track
+      final clipId = _audioEngine!.loadAudioFileToTrack(filePath, trackId);
       if (clipId < 0) {
         debugPrint('❌ Failed to load audio file: $filePath');
         return;
@@ -888,6 +893,231 @@ class _DAWScreenState extends State<DAWScreen> {
     } catch (e) {
       debugPrint('❌ Error creating audio track with file: $e');
     }
+  }
+
+  // Library double-click handlers
+  void _handleLibraryItemDoubleClick(LibraryItem item) {
+    if (_audioEngine == null) return;
+
+    final selectedTrack = _selectedTrackId;
+    final isEmptyMidi = selectedTrack != null && _isEmptyMidiTrack(selectedTrack);
+    final isEmptyAudio = selectedTrack != null && _isEmptyAudioTrack(selectedTrack);
+
+    switch (item.type) {
+      case LibraryItemType.instrument:
+        // Find the matching Instrument from availableInstruments
+        final instrument = _findInstrumentByName(item.name);
+        if (instrument != null) {
+          if (isEmptyMidi) {
+            // Load onto selected empty MIDI track
+            _onInstrumentSelected(selectedTrack, instrument.id);
+          } else {
+            // Create new MIDI track with instrument
+            _onInstrumentDroppedOnEmpty(instrument);
+          }
+        }
+        break;
+
+      case LibraryItemType.preset:
+        if (item is PresetItem) {
+          // Find the instrument for this preset
+          final instrument = _findInstrumentById(item.instrumentId);
+          if (instrument != null) {
+            if (isEmptyMidi) {
+              // Load onto selected empty MIDI track
+              _onInstrumentSelected(selectedTrack, instrument.id);
+              // TODO: Load preset data when presets are implemented
+            } else {
+              // Create new MIDI track with instrument
+              _onInstrumentDroppedOnEmpty(instrument);
+              // TODO: Load preset data when presets are implemented
+            }
+          }
+        }
+        break;
+
+      case LibraryItemType.sample:
+        if (item is SampleItem && item.filePath.isNotEmpty) {
+          if (isEmptyAudio) {
+            // Add clip to selected empty audio track
+            _addAudioClipToTrack(selectedTrack, item.filePath);
+          } else {
+            // Create new audio track with clip
+            _onAudioFileDroppedOnEmpty(item.filePath);
+          }
+        } else {
+          _showSnackBar('Sample not available [WIP]');
+        }
+        break;
+
+      case LibraryItemType.audioFile:
+        if (item is AudioFileItem) {
+          if (isEmptyAudio) {
+            // Add clip to selected empty audio track
+            _addAudioClipToTrack(selectedTrack, item.filePath);
+          } else {
+            // Create new audio track with clip
+            _onAudioFileDroppedOnEmpty(item.filePath);
+          }
+        }
+        break;
+
+      case LibraryItemType.effect:
+        if (selectedTrack != null) {
+          // Add effect to selected track
+          if (item is EffectItem) {
+            _addBuiltInEffectToTrack(selectedTrack, item.effectType);
+          }
+        } else {
+          _showSnackBar('Select a track first to add effects');
+        }
+        break;
+
+      case LibraryItemType.vst3Instrument:
+      case LibraryItemType.vst3Effect:
+        // Handled by _handleVst3DoubleClick
+        break;
+
+      case LibraryItemType.folder:
+        // Folders are not double-clickable for adding
+        break;
+    }
+  }
+
+  void _handleVst3DoubleClick(Vst3Plugin plugin) {
+    if (_audioEngine == null) return;
+
+    final selectedTrack = _selectedTrackId;
+    final isEmptyMidi = selectedTrack != null && _isEmptyMidiTrack(selectedTrack);
+
+    if (plugin.isInstrument) {
+      if (isEmptyMidi) {
+        // Load VST3 instrument onto selected empty MIDI track
+        _onVst3InstrumentDropped(selectedTrack, plugin);
+      } else {
+        // Create new MIDI track with VST3 instrument
+        _onVst3InstrumentDroppedOnEmpty(plugin);
+      }
+    } else {
+      // VST3 effect
+      if (selectedTrack != null) {
+        _onVst3PluginDropped(selectedTrack, plugin);
+      } else {
+        _showSnackBar('Select a track first to add effects');
+      }
+    }
+  }
+
+  // Helper: Check if track is an empty MIDI track (no instrument assigned)
+  bool _isEmptyMidiTrack(int trackId) {
+    final info = _audioEngine?.getTrackInfo(trackId) ?? '';
+    if (info.isEmpty) return false;
+
+    final parts = info.split(',');
+    if (parts.length < 3) return false;
+
+    final trackType = parts[2];
+    if (trackType != 'midi') return false;
+
+    // Empty if no instrument assigned
+    return !_trackInstruments.containsKey(trackId);
+  }
+
+  // Helper: Check if track is an empty Audio track (no clips)
+  bool _isEmptyAudioTrack(int trackId) {
+    final info = _audioEngine?.getTrackInfo(trackId) ?? '';
+    if (info.isEmpty) return false;
+
+    final parts = info.split(',');
+    if (parts.length < 3) return false;
+
+    final trackType = parts[2];
+    if (trackType != 'audio') return false;
+
+    // Check if any clips are on this track
+    final hasClips = _timelineKey.currentState?.hasClipsOnTrack(trackId) ?? false;
+    return !hasClips;
+  }
+
+  // Helper: Find instrument by name
+  Instrument? _findInstrumentByName(String name) {
+    try {
+      return availableInstruments.firstWhere(
+        (inst) => inst.name.toLowerCase() == name.toLowerCase(),
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Helper: Find instrument by ID
+  Instrument? _findInstrumentById(String id) {
+    try {
+      return availableInstruments.firstWhere(
+        (inst) => inst.id == id,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Helper: Add audio clip to existing track
+  void _addAudioClipToTrack(int trackId, String filePath) {
+    if (_audioEngine == null) return;
+
+    try {
+      final clipId = _audioEngine!.loadAudioFileToTrack(filePath, trackId);
+      if (clipId < 0) {
+        debugPrint('❌ Failed to load audio file: $filePath');
+        return;
+      }
+
+      final duration = _audioEngine!.getClipDuration(clipId);
+      final peaks = _audioEngine!.getWaveformPeaks(clipId, 2000);
+
+      _timelineKey.currentState?.addClip(ClipData(
+        clipId: clipId,
+        trackId: trackId,
+        filePath: filePath,
+        startTime: 0.0,
+        duration: duration,
+        waveformPeaks: peaks,
+      ));
+
+      final fileName = filePath.split('/').last;
+      debugPrint('✅ Added clip $clipId to track $trackId: $fileName');
+    } catch (e) {
+      debugPrint('❌ Error adding audio clip to track: $e');
+    }
+  }
+
+  // Helper: Add built-in effect to track
+  void _addBuiltInEffectToTrack(int trackId, String effectType) {
+    if (_audioEngine == null) return;
+
+    try {
+      final effectId = _audioEngine!.addEffectToTrack(trackId, effectType);
+      if (effectId >= 0) {
+        setState(() {
+          _statusMessage = 'Added $effectType to track';
+        });
+        debugPrint('✅ Added effect $effectType to track $trackId');
+      } else {
+        debugPrint('❌ Failed to add effect $effectType');
+      }
+    } catch (e) {
+      debugPrint('❌ Error adding effect to track: $e');
+    }
+  }
+
+  // Helper: Show snackbar message
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _onInstrumentParameterChanged(InstrumentData instrumentData) {
@@ -2406,6 +2636,9 @@ class _DAWScreenState extends State<DAWScreen> {
                           isCollapsed: _isLibraryPanelCollapsed,
                           onToggle: _toggleLibraryPanel,
                           availableVst3Plugins: _availableVst3Plugins,
+                          libraryService: _libraryService,
+                          onItemDoubleClick: _handleLibraryItemDoubleClick,
+                          onVst3DoubleClick: _handleVst3DoubleClick,
                         ),
                       ),
 
@@ -2529,6 +2762,13 @@ class _DAWScreenState extends State<DAWScreen> {
                           ? _trackInstruments[_selectedTrackId]
                           : null,
                       onVirtualPianoClose: _toggleVirtualPiano,
+                      onClosePanel: () {
+                        setState(() {
+                          _isEditorPanelVisible = false;
+                          _isVirtualPianoVisible = false;
+                          _isVirtualPianoEnabled = false;
+                        });
+                      },
                       currentEditingClip: _currentEditingClip,
                       onMidiClipUpdated: _onMidiClipUpdated,
                       onInstrumentParameterChanged: _onInstrumentParameterChanged,
@@ -2556,56 +2796,85 @@ class _DAWScreenState extends State<DAWScreen> {
 
   Widget _buildStatusBar() {
     return Container(
-      height: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
-        color: Color(0xFF181818),
+        color: Color(0xFF141414), // Darker background
         border: Border(
-          top: BorderSide(color: Color(0xFF363636)),
+          top: BorderSide(color: Color(0xFF2A2A2A)),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            _isAudioGraphInitialized ? Icons.check_circle : Icons.error,
-            size: 12,
-            color: _isAudioGraphInitialized
-                ? const Color(0xFF00BCD4)
-                : const Color(0xFF616161),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            _isAudioGraphInitialized ? 'Audio Engine Ready' : 'Initializing...',
-            style: TextStyle(
+          // Engine status with icon
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
               color: _isAudioGraphInitialized
-                  ? const Color(0xFF9E9E9E)
-                  : const Color(0xFF616161),
-              fontSize: 11,
+                  ? const Color(0xFF00BCD4).withValues(alpha: 0.15)
+                  : const Color(0xFF616161).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isAudioGraphInitialized ? Icons.check_circle : Icons.hourglass_empty,
+                  size: 12,
+                  color: _isAudioGraphInitialized
+                      ? const Color(0xFF00BCD4)
+                      : const Color(0xFF616161),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _isAudioGraphInitialized ? 'Ready' : 'Initializing...',
+                  style: TextStyle(
+                    color: _isAudioGraphInitialized
+                        ? const Color(0xFF00BCD4)
+                        : const Color(0xFF616161),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
           const Spacer(),
-          if (_clipDuration != null)
+          // Duration (if clip selected)
+          if (_clipDuration != null) ...[
+            const Icon(Icons.timelapse, size: 11, color: Color(0xFF707070)),
+            const SizedBox(width: 4),
             Text(
-              'Duration: ${_clipDuration!.toStringAsFixed(3)}s',
+              '${_clipDuration!.toStringAsFixed(2)}s',
               style: const TextStyle(
-                color: Color(0xFF9E9E9E),
-                fontSize: 11,
+                color: Color(0xFF808080),
+                fontSize: 10,
+                fontFamily: 'monospace',
               ),
             ),
-          if (_clipDuration != null) const SizedBox(width: 16),
-          Text(
-            'Sample Rate: 48kHz',
-            style: const TextStyle(
-              color: Color(0xFF9E9E9E),
-              fontSize: 11,
+            const SizedBox(width: 16),
+          ],
+          // Sample rate with icon
+          const Icon(Icons.graphic_eq, size: 11, color: Color(0xFF707070)),
+          const SizedBox(width: 4),
+          const Text(
+            '48kHz',
+            style: TextStyle(
+              color: Color(0xFF808080),
+              fontSize: 10,
+              fontFamily: 'monospace',
             ),
           ),
           const SizedBox(width: 16),
-          Text(
-            'CPU: 0%', // TODO: Get real CPU usage from audio engine
-            style: const TextStyle(
-              color: Color(0xFF9E9E9E),
-              fontSize: 11,
+          // CPU with icon
+          const Icon(Icons.memory, size: 11, color: Color(0xFF707070)),
+          const SizedBox(width: 4),
+          const Text(
+            '0%',
+            style: TextStyle(
+              color: Color(0xFF808080),
+              fontSize: 10,
+              fontFamily: 'monospace',
             ),
           ),
         ],

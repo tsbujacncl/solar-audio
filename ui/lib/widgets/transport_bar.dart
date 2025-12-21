@@ -351,39 +351,52 @@ class TransportBar extends StatelessWidget {
           const VerticalDivider(color: Color(0xFF363636), width: 1),
           const SizedBox(width: 16),
 
-          // Play/Pause button
-          _TransportButton(
-            icon: isPlaying ? Icons.pause : Icons.play_arrow,
-            color: isPlaying ? const Color(0xFFFFC107) : const Color(0xFF4CAF50),
-            onPressed: canPlay ? (isPlaying ? onPause : onPlay) : null,
-            tooltip: isPlaying ? 'Pause' : 'Play',
-            size: 48,
-          ),
+          // Transport buttons group - all same size (40px)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Play/Pause button
+                _TransportButton(
+                  icon: isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: isPlaying ? const Color(0xFFFFC107) : const Color(0xFF4CAF50),
+                  onPressed: canPlay ? (isPlaying ? onPause : onPlay) : null,
+                  tooltip: isPlaying ? 'Pause (Space)' : 'Play (Space)',
+                  size: 40,
+                ),
 
-          const SizedBox(width: 8),
+                const SizedBox(width: 4),
 
-          // Stop button
-          _TransportButton(
-            icon: Icons.stop,
-            color: const Color(0xFFF44336),
-            onPressed: canPlay ? onStop : null,
-            tooltip: 'Stop',
-            size: 40,
-          ),
+                // Stop button
+                _TransportButton(
+                  icon: Icons.stop,
+                  color: const Color(0xFFF44336),
+                  onPressed: canPlay ? onStop : null,
+                  tooltip: 'Stop',
+                  size: 40,
+                ),
 
-          const SizedBox(width: 16),
+                const SizedBox(width: 4),
 
-          // Record button
-          _TransportButton(
-            icon: Icons.fiber_manual_record,
-            color: isRecording || isCountingIn
-                ? const Color(0xFFFF0000)
-                : const Color(0xFFE91E63),
-            onPressed: onRecord,
-            tooltip: isRecording
-                ? 'Stop Recording'
-                : (isCountingIn ? 'Counting In...' : 'Record'),
-            size: 44,
+                // Record button
+                _TransportButton(
+                  icon: Icons.fiber_manual_record,
+                  color: isRecording || isCountingIn
+                      ? const Color(0xFFFF0000)
+                      : const Color(0xFFE91E63),
+                  onPressed: onRecord,
+                  tooltip: isRecording
+                      ? 'Stop Recording (R)'
+                      : (isCountingIn ? 'Counting In...' : 'Record (R)'),
+                  size: 40,
+                ),
+              ],
+            ),
           ),
 
           // Recording indicator with duration

@@ -18,55 +18,35 @@ class HorizontalLevelMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // dB label
-        Text(
-          '${volumeDb.toStringAsFixed(1)} dB',
-          style: const TextStyle(
-            color: Color(0xFFE0E0E0),
-            fontSize: 9,
-            fontWeight: FontWeight.w500,
+    // Simplified meter - dB label shown in parent widget's top row
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GestureDetector(
+          onHorizontalDragUpdate: (details) {
+            if (onVolumeChanged == null) return;
+            final sliderValue = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+            final newVolumeDb = _sliderToVolumeDb(sliderValue);
+            onVolumeChanged!(newVolumeDb);
+          },
+          onTapDown: (details) {
+            if (onVolumeChanged == null) return;
+            final sliderValue = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+            final newVolumeDb = _sliderToVolumeDb(sliderValue);
+            onVolumeChanged!(newVolumeDb);
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: CustomPaint(
+              size: Size(constraints.maxWidth, constraints.maxHeight),
+              painter: _MeterPainter(
+                leftLevel: leftLevel,
+                rightLevel: rightLevel,
+                volumeSliderValue: _volumeDbToSlider(volumeDb),
+              ),
+            ),
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        // Stereo meter with volume slider
-        SizedBox(
-          height: 50,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return GestureDetector(
-                onHorizontalDragUpdate: (details) {
-                  if (onVolumeChanged == null) return;
-                  final sliderValue = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
-                  final newVolumeDb = _sliderToVolumeDb(sliderValue);
-                  onVolumeChanged!(newVolumeDb);
-                },
-                onTapDown: (details) {
-                  if (onVolumeChanged == null) return;
-                  final sliderValue = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
-                  final newVolumeDb = _sliderToVolumeDb(sliderValue);
-                  onVolumeChanged!(newVolumeDb);
-                },
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: CustomPaint(
-                    size: Size(constraints.maxWidth, 50),
-                    painter: _MeterPainter(
-                      leftLevel: leftLevel,
-                      rightLevel: rightLevel,
-                      volumeSliderValue: _volumeDbToSlider(volumeDb),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 

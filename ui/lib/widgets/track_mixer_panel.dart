@@ -538,6 +538,7 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
                 final trackColor = TrackColors.getTrackColor(index);
 
                 return TrackMixerStrip(
+                    key: ValueKey(track.id),
                     trackId: track.id,
                     trackName: track.name,
                     trackType: track.type,

@@ -188,32 +188,56 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
           // Right section: Controls area (dark grey)
           Expanded(
             child: Container(
-              color: const Color(0xFF363636), // Dark grey
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
+              color: const Color(0xFF2D2D2D),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Column(
                 children: [
-                  // M, S, R buttons
-                  _buildControlButtons(),
+                  // Top row: M, S, R buttons + Pan knob
+                  Row(
+                    children: [
+                      // M, S, R buttons
+                      _buildControlButtons(),
 
-                  const SizedBox(width: 12),
+                      const SizedBox(width: 6),
 
-                  // Horizontal level meter with volume slider overlaid
+                      // Pan knob (same size as M/S/R buttons)
+                      PanKnob(
+                        pan: widget.pan,
+                        onChanged: widget.onPanChanged,
+                        size: 22,
+                      ),
+
+                      const Spacer(),
+
+                      // dB value display
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          '${widget.volumeDb.toStringAsFixed(1)} dB',
+                          style: const TextStyle(
+                            color: Color(0xFF9E9E9E),
+                            fontSize: 10,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // Bottom row: Horizontal level meter (taller now)
                   Expanded(
                     child: HorizontalLevelMeter(
                       leftLevel: widget.peakLevel,
-                      rightLevel: widget.peakLevel, // TODO: Add stereo levels from engine
+                      rightLevel: widget.peakLevel,
                       volumeDb: widget.volumeDb,
                       onVolumeChanged: widget.onVolumeChanged,
                     ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  // Rotary pan knob (Ableton-style)
-                  PanKnob(
-                    pan: widget.pan,
-                    onChanged: widget.onPanChanged,
-                    size: 36,
                   ),
                 ],
               ),
@@ -350,11 +374,11 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
   }
 
   Widget _buildInstrumentSelector() {
+    final hasInstrument = widget.instrumentData != null;
     return Builder(
       builder: (context) => GestureDetector(
         onTap: widget.onInstrumentSelect != null
             ? () async {
-                // Open instrument browser
                 final selectedInstrument = await showInstrumentBrowser(context);
                 if (selectedInstrument != null) {
                   widget.onInstrumentSelect?.call(selectedInstrument.id);
@@ -362,102 +386,113 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
               }
             : null,
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.15), // Subtle dark overlay
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(
-            color: Colors.black.withOpacity(0.3),
-            width: 1,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: hasInstrument
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasInstrument) ...[
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00BCD4),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  widget.instrumentData!.type.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ] else ...[
+                Icon(
+                  Icons.add,
+                  size: 10,
+                  color: Colors.black.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  'Instrument',
+                  style: TextStyle(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    fontSize: 8,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              widget.instrumentData != null
-                  ? Icons.music_note
-                  : Icons.add_circle_outline,
-              size: 10,
-              color: widget.instrumentData != null
-                  ? Colors.black
-                  : Colors.black.withOpacity(0.5),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                widget.instrumentData != null
-                    ? widget.instrumentData!.type.toUpperCase()
-                    : 'No Instrument',
-                style: TextStyle(
-                  color: widget.instrumentData != null
-                      ? Colors.black
-                      : Colors.black.withOpacity(0.6),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
       ),
-    ),
     );
   }
 
   Widget _buildFxButton() {
+    final hasPlugins = widget.vst3PluginCount > 0;
     return GestureDetector(
-      onLongPress: widget.vst3PluginCount > 0 ? widget.onEditPluginsPressed : null,
+      onLongPress: hasPlugins ? widget.onEditPluginsPressed : null,
       onTap: widget.onFxButtonPressed,
       child: Tooltip(
-        message: widget.vst3PluginCount > 0
+        message: hasPlugins
             ? 'Click to browse plugins, long-press to edit'
             : 'Click to add plugins',
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        decoration: BoxDecoration(
-          color: widget.vst3PluginCount > 0
-              ? const Color(0xFF4CAF50).withOpacity(0.3) // Green tint when plugins loaded
-              : Colors.black.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(
-            color: widget.vst3PluginCount > 0
-                ? const Color(0xFF4CAF50)
-                : Colors.black.withOpacity(0.3),
-            width: 1,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: hasPlugins
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              widget.vst3PluginCount > 0 ? Icons.extension : Icons.add_circle_outline,
-              size: 10,
-              color: widget.vst3PluginCount > 0
-                  ? const Color(0xFF4CAF50)
-                  : Colors.black.withOpacity(0.5),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                widget.vst3PluginCount > 0
-                    ? 'FX (${widget.vst3PluginCount})'
-                    : 'Add FX',
-                style: TextStyle(
-                  color: widget.vst3PluginCount > 0
-                      ? const Color(0xFF4CAF50)
-                      : Colors.black.withOpacity(0.6),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w500,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasPlugins) ...[
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF4CAF50),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+                const SizedBox(width: 4),
+                Text(
+                  'FX ×${widget.vst3PluginCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ] else ...[
+                Icon(
+                  Icons.add,
+                  size: 10,
+                  color: Colors.black.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  'FX',
+                  style: TextStyle(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    fontSize: 8,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -549,9 +584,9 @@ class MasterTrackMixerStrip extends StatelessWidget {
     return Container(
       width: 380,
       height: 100,
-      margin: const EdgeInsets.only(bottom: 4), // Match timeline track spacing
+      margin: const EdgeInsets.only(bottom: 4),
       decoration: const BoxDecoration(
-        color: Color(0xFF242424), // Dark grey like other tracks
+        color: Color(0xFF242424),
         border: Border(
           left: BorderSide(color: Color(0xFF4CAF50), width: 4),
           top: BorderSide(color: Color(0xFF4CAF50), width: 2),
@@ -559,82 +594,114 @@ class MasterTrackMixerStrip extends StatelessWidget {
           bottom: BorderSide(color: Color(0xFF4CAF50), width: 2),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            // Master label
-            const SizedBox(
-              width: 90,
-              child: Row(
-                children: [
-                  Text('🎚️', style: TextStyle(fontSize: 16)),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
+      child: Row(
+        children: [
+          // Left section: Master label
+          Container(
+            width: 120,
+            color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Row(
+                  children: [
+                    Text('🎚️', style: TextStyle(fontSize: 16)),
+                    SizedBox(width: 6),
+                    Text(
                       'MASTER',
                       style: TextStyle(
-                        color: Color(0xFFE0E0E0), // Light text on dark background
+                        color: Color(0xFFE0E0E0),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Limiter indicator chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF363636),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF4CAF50)),
                   ),
-                ],
-              ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.security, size: 10, color: Color(0xFF4CAF50)),
+                      SizedBox(width: 4),
+                      Text(
+                        'LIMITER',
+                        style: TextStyle(
+                          color: Color(0xFF4CAF50),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ),
 
-            const SizedBox(width: 8),
-
-            // Limiter indicator (where M/S/R buttons would be)
-            Container(
-              width: 74,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF363636), // Dark grey
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const Color(0xFF4CAF50)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+          // Right section: Controls
+          Expanded(
+            child: Container(
+              color: const Color(0xFF2D2D2D),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Column(
                 children: [
-                  Icon(Icons.security, size: 12, color: Color(0xFF4CAF50)),
-                  SizedBox(width: 4),
-                  Text(
-                    'LIMITER',
-                    style: TextStyle(
-                      color: Color(0xFF4CAF50),
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
+                  // Top row: Pan knob + dB display
+                  Row(
+                    children: [
+                      PanKnob(
+                        pan: pan,
+                        onChanged: onPanChanged,
+                        size: 22,
+                      ),
+
+                      const Spacer(),
+
+                      // dB value display
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          '${volumeDb.toStringAsFixed(1)} dB',
+                          style: const TextStyle(
+                            color: Color(0xFF9E9E9E),
+                            fontSize: 10,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // Bottom row: Horizontal level meter (taller)
+                  Expanded(
+                    child: HorizontalLevelMeter(
+                      leftLevel: peakLevel,
+                      rightLevel: peakLevel,
+                      volumeDb: volumeDb,
+                      onVolumeChanged: onVolumeChanged,
                     ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            // Horizontal level meter with volume slider overlaid
-            Expanded(
-              child: HorizontalLevelMeter(
-                leftLevel: peakLevel,
-                rightLevel: peakLevel,
-                volumeDb: volumeDb,
-                onVolumeChanged: onVolumeChanged,
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // Rotary pan knob (Ableton-style)
-            PanKnob(
-              pan: pan,
-              onChanged: onPanChanged,
-              size: 36,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

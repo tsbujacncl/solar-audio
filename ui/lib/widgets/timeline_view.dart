@@ -207,6 +207,11 @@ class TimelineViewState extends State<TimelineView> {
     });
   }
 
+  /// Check if a track has any audio clips
+  bool hasClipsOnTrack(int trackId) {
+    return _clips.any((clip) => clip.trackId == trackId);
+  }
+
   /// Load tracks from audio engine
   Future<void> _loadTracksAsync() async {
     if (widget.audioEngine == null) return;

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 
 /// Track color utilities for assigning colors to tracks
 class TrackColors {
-  /// Available track colors (Ableton-style pastels)
+  /// Available track colors (Ableton-style pastels with cooler tones)
   static const List<Color> palette = [
-    Color(0xFF7DB3D9), // Light blue (Ableton Track 4)
-    Color(0xFFE87368), // Coral red (Ableton Track 5)
-    Color(0xFF8B7355), // Brown/tan (Ableton Track 6)
-    Color(0xFFE89EB3), // Pink (Ableton Track 7)
+    Color(0xFF7DB3D9), // Light blue
+    Color(0xFF6BA3A3), // Teal/cyan (cooler replacement for coral)
+    Color(0xFF8B9B85), // Sage grey-green (cooler replacement for brown)
+    Color(0xFFA898C4), // Muted lavender (cooler replacement for pink)
     Color(0xFF7FA894), // Sage green
-    Color(0xFFD4A574), // Light gold/amber
+    Color(0xFF9BB0C4), // Steel blue
     Color(0xFF9B8DC4), // Light purple/lavender
-    Color(0xFFB8A890), // Beige/tan
+    Color(0xFFA0A8B0), // Cool grey
   ];
 
   /// Master track color
@@ -24,7 +24,9 @@ class TrackColors {
   }
 
   /// Get formatted track name with type and number
-  /// Examples: "Audio 1 - Drums", "MIDI 2 - Bass", "Master"
+  /// Examples: "Audio 1", "MIDI 2 - Bass", "Master"
+  /// If track name is the default (same as type), only show "MIDI 1" or "Audio 1"
+  /// If user has set a custom name, show "MIDI 1 - Custom Name"
   static String getFormattedTrackName({
     required String trackType,
     required String trackName,
@@ -32,12 +34,23 @@ class TrackColors {
     required int midiCount,
   }) {
     final lowerType = trackType.toLowerCase();
+    final lowerName = trackName.toLowerCase();
 
     if (lowerType == 'master') {
       return trackName; // Just "Master", no number
     } else if (lowerType == 'audio') {
+      // If name is just "Audio" or empty, show only "Audio 1"
+      // Otherwise show "Audio 1 - Custom Name"
+      if (lowerName == 'audio' || trackName.isEmpty) {
+        return 'Audio $audioCount';
+      }
       return 'Audio $audioCount - $trackName';
     } else if (lowerType == 'midi') {
+      // If name is just "MIDI" or empty, show only "MIDI 1"
+      // Otherwise show "MIDI 1 - Custom Name"
+      if (lowerName == 'midi' || trackName.isEmpty) {
+        return 'MIDI $midiCount';
+      }
       return 'MIDI $midiCount - $trackName';
     } else {
       return trackName; // Fallback

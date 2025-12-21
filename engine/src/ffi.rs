@@ -53,19 +53,41 @@ pub extern "C" fn init_audio_graph_ffi() -> *mut c_char {
     }
 }
 
-/// Load an audio file and return clip ID
+/// Load an audio file to a specific track and return clip ID
 #[no_mangle]
-pub extern "C" fn load_audio_file_ffi(path: *const c_char) -> i64 {
+pub extern "C" fn load_audio_file_to_track_ffi(path: *const c_char, track_id: u64, start_time: f64) -> i64 {
     if path.is_null() {
         return -1;
     }
-    
+
     let c_str = unsafe { std::ffi::CStr::from_ptr(path) };
     let path_str = match c_str.to_str() {
         Ok(s) => s,
         Err(_) => return -1,
     };
-    
+
+    match api::load_audio_file_to_track_api(path_str.to_string(), track_id, start_time) {
+        Ok(id) => id as i64,
+        Err(e) => {
+            eprintln!("❌ [FFI] load_audio_file_to_track_ffi error: {}", e);
+            -1
+        }
+    }
+}
+
+/// Load an audio file and return clip ID (legacy - adds to first available track)
+#[no_mangle]
+pub extern "C" fn load_audio_file_ffi(path: *const c_char) -> i64 {
+    if path.is_null() {
+        return -1;
+    }
+
+    let c_str = unsafe { std::ffi::CStr::from_ptr(path) };
+    let path_str = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
     match api::load_audio_file_api(path_str.to_string()) {
         Ok(id) => id as i64,
         Err(_) => -1,

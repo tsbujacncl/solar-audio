@@ -131,7 +131,29 @@ pub fn init_audio_graph() -> Result<String, String> {
     Ok("Audio graph initialized".to_string())
 }
 
-/// Load an audio file and return a clip ID
+/// Load an audio file to a specific track and return a clip ID
+pub fn load_audio_file_to_track_api(path: String, track_id: u64, start_time: f64) -> Result<u64, String> {
+    let clip = load_audio_file(&path).map_err(|e| e.to_string())?;
+    let clip_arc = Arc::new(clip);
+
+    let clips_mutex = AUDIO_CLIPS.get()
+        .ok_or("Audio graph not initialized")?;
+    let mut clips_map = clips_mutex.lock().map_err(|e| e.to_string())?;
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Add clip to the specified track
+    let clip_id = graph.add_clip_to_track(track_id, clip_arc.clone(), start_time)
+        .ok_or(format!("Failed to add clip to track {}", track_id))?;
+
+    clips_map.insert(clip_id, clip_arc);
+
+    Ok(clip_id)
+}
+
+/// Load an audio file and return a clip ID (legacy - adds to first available track)
 pub fn load_audio_file_api(path: String) -> Result<u64, String> {
     let clip = load_audio_file(&path).map_err(|e| e.to_string())?;
     let clip_arc = Arc::new(clip);
@@ -183,20 +205,6 @@ pub fn load_audio_file_api(path: String) -> Result<u64, String> {
         .ok_or(format!("Failed to add clip to track {}", target_track_id))?;
 
     clips_map.insert(clip_id, clip_arc);
-
-    // Debug: Check how many clips are on this track now
-    let clip_count = {
-        let tm = graph.track_manager.lock().map_err(|e| e.to_string())?;
-        if let Some(track_arc) = tm.get_track(target_track_id) {
-            let track = track_arc.lock().map_err(|e| e.to_string())?;
-            track.audio_clips.len()
-        } else {
-            0
-        }
-    };
-
-    eprintln!("✅ [API] Imported clip stored with ID: {}, added to track {} at position 0.0", clip_id, target_track_id);
-    eprintln!("📊 [API] Track {} now has {} audio clips", target_track_id, clip_count);
 
     Ok(clip_id)
 }

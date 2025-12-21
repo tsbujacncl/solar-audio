@@ -16,6 +16,7 @@ class EditorPanel extends StatefulWidget {
   final int? selectedTrackId; // Unified track selection
   final InstrumentData? currentInstrumentData;
   final VoidCallback? onVirtualPianoClose;
+  final VoidCallback? onClosePanel; // Close the entire editor panel
   final MidiClipData? currentEditingClip;
   final Function(MidiClipData)? onMidiClipUpdated;
   final Function(InstrumentData)? onInstrumentParameterChanged;
@@ -32,6 +33,7 @@ class EditorPanel extends StatefulWidget {
     this.selectedTrackId,
     this.currentInstrumentData,
     this.onVirtualPianoClose,
+    this.onClosePanel,
     this.currentEditingClip,
     this.onMidiClipUpdated,
     this.onInstrumentParameterChanged,
@@ -46,11 +48,17 @@ class EditorPanel extends StatefulWidget {
 
 class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // M10: Plugin params merged into Instrument tab
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedTabIndex = _tabController.index;
+      });
+    });
   }
 
   @override
@@ -95,32 +103,52 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
       decoration: const BoxDecoration(
         color: Color(0xFF242424),
         border: Border(
-          top: BorderSide(color: Color(0xFF363636)),
+          top: BorderSide(color: Color(0xFF444444)),
         ),
       ),
       child: Column(
         children: [
-          // Tab bar
+          // Custom tab bar with icons and pill-style active indicator
           Container(
+            height: 40,
             decoration: const BoxDecoration(
-              color: Color(0xFF363636),
+              color: Color(0xFF2A2A2A),
               border: Border(
-                bottom: BorderSide(color: Color(0xFF363636)),
+                bottom: BorderSide(color: Color(0xFF3A3A3A)),
               ),
             ),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: const Color(0xFF00BCD4),
-              labelColor: const Color(0xFFE0E0E0),
-              unselectedLabelColor: const Color(0xFF9E9E9E),
-              labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              tabs: const [
-                Tab(text: 'Piano Roll'),
-                Tab(text: 'FX Chain'),
-                Tab(text: 'Instrument'), // M10: Now includes VST3 Plugin parameters
+            child: Row(
+              children: [
+                const SizedBox(width: 8),
+                // Tab buttons
+                _buildTabButton(0, Icons.piano_outlined, 'Piano Roll'),
+                const SizedBox(width: 4),
+                _buildTabButton(1, Icons.equalizer, 'FX Chain'),
+                const SizedBox(width: 4),
+                _buildTabButton(2, Icons.music_note, 'Instrument'),
+                const Spacer(),
+                // Close button
+                Tooltip(
+                  message: 'Close Panel',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onClosePanel,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
               ],
             ),
           ),
@@ -132,7 +160,7 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               children: [
                 _buildPianoRollTab(),
                 _buildFXChainTab(),
-                _buildInstrumentTab(), // M10: Now includes VST3 Plugin parameters
+                _buildInstrumentTab(),
               ],
             ),
           ),
@@ -146,6 +174,49 @@ class _EditorPanelState extends State<EditorPanel> with SingleTickerProviderStat
               selectedTrackId: widget.selectedTrackId,
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(int index, IconData icon, String label) {
+    final isSelected = _selectedTabIndex == index;
+    return Tooltip(
+      message: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _tabController.index = index;
+          },
+          borderRadius: BorderRadius.circular(6),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF00BCD4) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF9E9E9E),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? Colors.white : const Color(0xFF9E9E9E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

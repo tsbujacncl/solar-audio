@@ -14,6 +14,7 @@ class AudioEngine {
   // M1 functions
   late final _InitAudioGraphFfi _initAudioGraph;
   late final _LoadAudioFileFfi _loadAudioFile;
+  late final _LoadAudioFileToTrackFfi _loadAudioFileToTrack;
   late final _TransportPlayFfi _transportPlay;
   late final _TransportPauseFfi _transportPause;
   late final _TransportStopFfi _transportStop;
@@ -200,7 +201,13 @@ class AudioEngine {
               'load_audio_file_ffi')
           .asFunction();
       print('  ✅ load_audio_file_ffi bound');
-      
+
+      _loadAudioFileToTrack = _lib
+          .lookup<ffi.NativeFunction<_LoadAudioFileToTrackFfiNative>>(
+              'load_audio_file_to_track_ffi')
+          .asFunction();
+      print('  ✅ load_audio_file_to_track_ffi bound');
+
       _transportPlay = _lib
           .lookup<ffi.NativeFunction<_TransportPlayFfiNative>>(
               'transport_play_ffi')
@@ -751,22 +758,44 @@ class AudioEngine {
   }
 
   /// Load an audio file and return clip ID (-1 on error)
+  /// Legacy method - adds clip to first available audio track
   int loadAudioFile(String path) {
     print('📂 [AudioEngine] Loading audio file: $path');
     try {
       final pathPtr = path.toNativeUtf8();
       final clipId = _loadAudioFile(pathPtr.cast());
       malloc.free(pathPtr);
-      
+
       if (clipId < 0) {
         print('❌ [AudioEngine] Failed to load audio file');
         return -1;
       }
-      
+
       print('✅ [AudioEngine] Audio file loaded, clip ID: $clipId');
       return clipId;
     } catch (e) {
       print('❌ [AudioEngine] Load audio file failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Load an audio file to a specific track and return clip ID (-1 on error)
+  int loadAudioFileToTrack(String path, int trackId, {double startTime = 0.0}) {
+    print('📂 [AudioEngine] Loading audio file to track $trackId: $path');
+    try {
+      final pathPtr = path.toNativeUtf8();
+      final clipId = _loadAudioFileToTrack(pathPtr.cast(), trackId, startTime);
+      malloc.free(pathPtr);
+
+      if (clipId < 0) {
+        print('❌ [AudioEngine] Failed to load audio file to track $trackId');
+        return -1;
+      }
+
+      print('✅ [AudioEngine] Audio file loaded to track $trackId, clip ID: $clipId');
+      return clipId;
+    } catch (e) {
+      print('❌ [AudioEngine] Load audio file to track failed: $e');
       rethrow;
     }
   }
@@ -2113,6 +2142,9 @@ typedef _InitAudioGraphFfi = ffi.Pointer<Utf8> Function();
 
 typedef _LoadAudioFileFfiNative = ffi.Int64 Function(ffi.Pointer<ffi.Char>);
 typedef _LoadAudioFileFfi = int Function(ffi.Pointer<ffi.Char>);
+
+typedef _LoadAudioFileToTrackFfiNative = ffi.Int64 Function(ffi.Pointer<ffi.Char>, ffi.Uint64, ffi.Double);
+typedef _LoadAudioFileToTrackFfi = int Function(ffi.Pointer<ffi.Char>, int, double);
 
 typedef _TransportPlayFfiNative = ffi.Pointer<Utf8> Function();
 typedef _TransportPlayFfi = ffi.Pointer<Utf8> Function();
