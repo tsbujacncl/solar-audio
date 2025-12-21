@@ -1,0 +1,243 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import '../audio_engine.dart';
+import '../models/midi_note_data.dart';
+
+/// Manages MIDI clip playback, scheduling, and editing state.
+///
+/// Extracted from daw_screen.dart to improve maintainability.
+class MidiPlaybackManager extends ChangeNotifier {
+  final AudioEngine _audioEngine;
+
+  // MIDI editing state
+  int? _selectedMidiClipId;
+  MidiClipData? _currentEditingClip;
+  final List<MidiClipData> _midiClips = [];
+  final Map<int, int> _dartToRustClipIds = {}; // Maps Dart clip ID -> Rust clip ID
+
+  MidiPlaybackManager(this._audioEngine);
+
+  // Getters
+  int? get selectedClipId => _selectedMidiClipId;
+  MidiClipData? get currentEditingClip => _currentEditingClip;
+  List<MidiClipData> get midiClips => List.unmodifiable(_midiClips);
+  Map<int, int> get dartToRustClipIds => Map.unmodifiable(_dartToRustClipIds);
+
+  /// Select a MIDI clip for editing
+  ///
+  /// Returns the track ID of the selected clip (for UI to update track selection)
+  int? selectClip(int? clipId, MidiClipData? clipData) {
+    _selectedMidiClipId = clipId;
+    _currentEditingClip = clipData;
+    notifyListeners();
+
+    // Return the track ID so UI can update track selection
+    return clipData?.trackId;
+  }
+
+  /// Update a MIDI clip with new note data
+  ///
+  /// Handles clip creation, duration calculation, and scheduling.
+  void updateClip(MidiClipData updatedClip, double tempo, double playheadPosition) {
+    // Calculate clip duration based on notes (convert from beats to seconds)
+    double durationInSeconds;
+
+    if (updatedClip.notes.isEmpty) {
+      // Default to 4 bars (16 beats) if no notes
+      const defaultBeats = 16.0;
+      durationInSeconds = (defaultBeats / tempo) * 60.0;
+    } else {
+      // Find the furthest note end time (in beats)
+      final furthestBeat = updatedClip.notes
+          .map((note) => note.startTime + note.duration)
+          .reduce((a, b) => a > b ? a : b);
+
+      // Snap to bar boundary (4 beats per bar)
+      // If exactly on a bar, keep it; otherwise round up to next bar
+      final barsNeeded = (furthestBeat / 4.0).ceil();
+      final totalBeats = barsNeeded * 4.0;
+
+      // Convert beats to seconds: seconds = (beats / BPM) * 60
+      durationInSeconds = (totalBeats / tempo) * 60.0;
+    }
+
+    // Check if we're editing an existing clip or need to create a new one
+    if (updatedClip.clipId == -1) {
+      // No clip ID provided - check if we're editing an existing clip
+      if (_currentEditingClip != null && _currentEditingClip!.clipId != -1) {
+        // Reuse the existing clip we're editing
+        _currentEditingClip = updatedClip.copyWith(
+          clipId: _currentEditingClip!.clipId,
+          startTime: _currentEditingClip!.startTime,
+          duration: durationInSeconds,
+        );
+
+        // Update in clips list
+        final index = _midiClips.indexWhere((c) => c.clipId == _currentEditingClip!.clipId);
+        if (index != -1) {
+          _midiClips[index] = _currentEditingClip!;
+        }
+      } else if (updatedClip.notes.isNotEmpty) {
+        // Create a brand new clip only if we have notes and no clip is being edited
+        final newClipId = DateTime.now().millisecondsSinceEpoch;
+
+        _currentEditingClip = updatedClip.copyWith(
+          clipId: newClipId,
+          startTime: playheadPosition,
+          duration: durationInSeconds,
+        );
+        _selectedMidiClipId = newClipId;
+
+        // Add to clips list for timeline visualization
+        _midiClips.add(_currentEditingClip!);
+      } else {
+        // No notes and no existing clip - just update current editing clip
+        _currentEditingClip = updatedClip.copyWith(
+          duration: durationInSeconds,
+        );
+      }
+    } else {
+      // Clip ID provided - update existing clip with new duration
+      _currentEditingClip = updatedClip.copyWith(
+        duration: durationInSeconds,
+      );
+
+      // Update in clips list
+      final index = _midiClips.indexWhere((c) => c.clipId == updatedClip.clipId);
+      if (index != -1) {
+        _midiClips[index] = _currentEditingClip!;
+      }
+    }
+
+    notifyListeners();
+
+    // Schedule MIDI clip for playback
+    if (_currentEditingClip != null) {
+      _scheduleMidiClipPlayback(_currentEditingClip!, tempo);
+    }
+  }
+
+  /// Schedule MIDI clip notes for playback during transport
+  void _scheduleMidiClipPlayback(MidiClipData clip, double tempo) {
+    // Check if this Dart clip already has a Rust clip
+    int rustClipId;
+    bool isNewClip = false;
+
+    if (_dartToRustClipIds.containsKey(clip.clipId)) {
+      // Existing clip - reuse the Rust clip ID
+      rustClipId = _dartToRustClipIds[clip.clipId]!;
+
+      // Clear existing notes (we'll re-add all of them)
+      _audioEngine.clearMidiClip(rustClipId);
+    } else {
+      // New clip - create in Rust
+      rustClipId = _audioEngine.createMidiClip();
+      if (rustClipId < 0) {
+        debugPrint('❌ Failed to create Rust MIDI clip');
+        return;
+      }
+      _dartToRustClipIds[clip.clipId] = rustClipId;
+      isNewClip = true;
+    }
+
+    // Add all notes to the Rust clip
+    // Note: clip.startTime is the clip's position on the timeline (in seconds)
+    // Note timestamps within the clip must be RELATIVE to the clip start
+    final clipStartTimeSeconds = clip.startTime;
+
+    for (final note in clip.notes) {
+      // Convert beats to seconds using current tempo
+      final absoluteStartTimeSeconds = note.startTimeInSeconds(tempo);
+      final durationSeconds = note.durationInSeconds(tempo);
+
+      // Make note time relative to clip start
+      final relativeStartTimeSeconds = absoluteStartTimeSeconds - clipStartTimeSeconds;
+
+      _audioEngine.addMidiNoteToClip(
+        rustClipId,
+        note.note,
+        note.velocity,
+        relativeStartTimeSeconds,
+        durationSeconds,
+      );
+    }
+
+    // Only add to timeline if this is a new clip
+    if (isNewClip) {
+      final result = _audioEngine.addMidiClipToTrack(
+        clip.trackId,
+        rustClipId,
+        clip.startTime,
+      );
+
+      if (result != 0) {
+        debugPrint('❌ Failed to add MIDI clip to track timeline (result: $result)');
+      }
+    }
+  }
+
+  /// Play MIDI clip immediately (for testing/preview)
+  void playClipImmediately(MidiClipData clip, double tempo) {
+    for (final note in clip.notes) {
+      // Trigger note on
+      _audioEngine.sendMidiNoteOn(note.note, note.velocity);
+
+      // Schedule note off after duration
+      final durationMs = (note.durationInSeconds(tempo) * 1000).toInt();
+      Future.delayed(Duration(milliseconds: durationMs), () {
+        _audioEngine.sendMidiNoteOff(note.note, 0);
+      });
+    }
+  }
+
+  /// Add a recorded MIDI clip to the manager
+  void addRecordedClip(MidiClipData clip) {
+    _midiClips.add(clip);
+    notifyListeners();
+  }
+
+  /// Remove a MIDI clip by ID
+  void removeClip(int clipId) {
+    _midiClips.removeWhere((c) => c.clipId == clipId);
+    _dartToRustClipIds.remove(clipId);
+
+    if (_selectedMidiClipId == clipId) {
+      _selectedMidiClipId = null;
+      _currentEditingClip = null;
+    }
+
+    notifyListeners();
+  }
+
+  /// Remove all clips for a specific track
+  void removeClipsForTrack(int trackId) {
+    final clipsToRemove = _midiClips.where((c) => c.trackId == trackId).toList();
+    for (final clip in clipsToRemove) {
+      _dartToRustClipIds.remove(clip.clipId);
+    }
+
+    _midiClips.removeWhere((c) => c.trackId == trackId);
+
+    // Clear current editing clip if it was on this track
+    if (_currentEditingClip != null && _currentEditingClip!.trackId == trackId) {
+      _currentEditingClip = null;
+      _selectedMidiClipId = null;
+    }
+
+    notifyListeners();
+  }
+
+  /// Clear Dart-to-Rust clip ID mappings (e.g., when loading a new project)
+  void clearClipIdMappings() {
+    _dartToRustClipIds.clear();
+  }
+
+  /// Clear all MIDI state (for new project)
+  void clear() {
+    _midiClips.clear();
+    _dartToRustClipIds.clear();
+    _selectedMidiClipId = null;
+    _currentEditingClip = null;
+    notifyListeners();
+  }
+}

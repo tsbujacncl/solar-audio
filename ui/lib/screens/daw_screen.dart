@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../audio_engine.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/timeline_view.dart';
@@ -22,6 +20,9 @@ import '../models/library_item.dart';
 import '../services/undo_redo_manager.dart';
 import '../services/commands/track_commands.dart';
 import '../services/library_service.dart';
+import '../services/vst3_plugin_manager.dart';
+import '../services/project_manager.dart';
+import '../services/midi_playback_manager.dart';
 
 /// Main DAW screen with timeline, transport controls, and file import
 class DAWScreen extends StatefulWidget {
@@ -41,6 +42,15 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // Library service
   final LibraryService _libraryService = LibraryService();
+
+  // M10: VST3 Plugin manager (lazy initialized when audio engine is ready)
+  Vst3PluginManager? _vst3PluginManager;
+
+  // M5: Project manager (lazy initialized when audio engine is ready)
+  ProjectManager? _projectManager;
+
+  // M8: MIDI playback manager (lazy initialized when audio engine is ready)
+  MidiPlaybackManager? _midiPlaybackManager;
 
   // State
   double _playheadPosition = 0.0;
@@ -65,9 +75,7 @@ class _DAWScreenState extends State<DAWScreen> {
   // M4: Mixer state
   bool _isMixerVisible = true; // Always visible by default
 
-  // M5: Project state
-  String? _currentProjectPath;
-  String _currentProjectName = 'Untitled Project';
+  // M5: Project state (managed by ProjectManager)
 
   // M6: UI panel state
   bool _isLibraryPanelCollapsed = false;
@@ -84,22 +92,13 @@ class _DAWScreenState extends State<DAWScreen> {
   static const double _editorMinHeight = 100.0;
   static const double _editorMaxHeight = 500.0;
 
-  // M8: MIDI editing state
+  // M8: MIDI editing state (managed by MidiPlaybackManager, except track selection)
   int? _selectedTrackId; // Unified track selection for piano roll, FX, and instrument panels
-  int? _selectedMidiClipId;
-  MidiClipData? _currentEditingClip;
-  List<MidiClipData> _midiClips = []; // All MIDI clips for timeline
-  Map<int, int> _dartToRustClipIds = {}; // Maps Dart clip ID -> Rust clip ID
 
   // M9: Instrument state
   Map<int, InstrumentData> _trackInstruments = {}; // trackId -> InstrumentData
 
-  // M10: VST3 Plugin state
-  List<Map<String, String>> _availableVst3Plugins = []; // Scanned plugin list
-  Map<int, List<int>> _trackVst3Effects = {}; // trackId -> [effectIds]
-  Map<int, Map<String, String>> _vst3PluginCache = {}; // effectId -> plugin metadata
-  bool _isPluginsScanned = false;
-  bool _isScanningVst3Plugins = false;
+  // M10: VST3 Plugin state is now managed by _vst3PluginManager
 
   // MIDI Recording state
   List<Map<String, dynamic>> _midiDevices = [];
@@ -142,10 +141,43 @@ class _DAWScreenState extends State<DAWScreen> {
     }
   }
 
+  void _onVst3ManagerChanged() {
+    if (mounted) {
+      setState(() {
+        // Trigger rebuild when VST3 manager state changes
+      });
+    }
+  }
+
+  void _onProjectManagerChanged() {
+    if (mounted) {
+      setState(() {
+        // Trigger rebuild when project manager state changes
+      });
+    }
+  }
+
+  void _onMidiPlaybackManagerChanged() {
+    if (mounted) {
+      setState(() {
+        // Trigger rebuild when MIDI playback manager state changes
+      });
+    }
+  }
+
   @override
   void dispose() {
     // Remove undo/redo listener
     _undoRedoManager.removeListener(_onUndoRedoChanged);
+
+    // Remove VST3 manager listener
+    _vst3PluginManager?.removeListener(_onVst3ManagerChanged);
+
+    // Remove project manager listener
+    _projectManager?.removeListener(_onProjectManagerChanged);
+
+    // Remove MIDI playback manager listener
+    _midiPlaybackManager?.removeListener(_onMidiPlaybackManagerChanged);
 
     // Clean up timers
     _playheadTimer?.cancel();
@@ -188,8 +220,20 @@ class _DAWScreenState extends State<DAWScreen> {
       // Initialize undo/redo manager with engine
       _undoRedoManager.initialize(_audioEngine!);
 
+      // Initialize VST3 plugin manager
+      _vst3PluginManager = Vst3PluginManager(_audioEngine!);
+      _vst3PluginManager!.addListener(_onVst3ManagerChanged);
+
+      // Initialize project manager
+      _projectManager = ProjectManager(_audioEngine!);
+      _projectManager!.addListener(_onProjectManagerChanged);
+
+      // Initialize MIDI playback manager
+      _midiPlaybackManager = MidiPlaybackManager(_audioEngine!);
+      _midiPlaybackManager!.addListener(_onMidiPlaybackManagerChanged);
+
       // Scan VST3 plugins after audio graph is ready
-      if (!_isPluginsScanned && mounted) {
+      if (!_vst3PluginManager!.isScanned && mounted) {
         _scanVst3Plugins();
       }
 
@@ -455,9 +499,7 @@ class _DAWScreenState extends State<DAWScreen> {
                 notes: [], // Notes are managed by the engine
               );
 
-              setState(() {
-                _midiClips.add(clipData);
-              });
+              _midiPlaybackManager?.addRecordedClip(clipData);
 
               recordedItems.add('MIDI ($noteCount notes)');
             }
@@ -688,11 +730,10 @@ class _DAWScreenState extends State<DAWScreen> {
     setState(() {
       _selectedTrackId = trackId;
       _isEditorPanelVisible = true;
-
-      // Clear clip selection when selecting just a track
-      _selectedMidiClipId = null;
-      _currentEditingClip = null;
     });
+
+    // Clear clip selection when selecting just a track
+    _midiPlaybackManager?.selectClip(null, null);
   }
 
   // M9: Instrument methods
@@ -712,22 +753,10 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _onTrackDeleted(int trackId) {
+    // Remove all MIDI clips for this track via manager
+    _midiPlaybackManager?.removeClipsForTrack(trackId);
+
     setState(() {
-      // Find all MIDI clips on this track and remove their mappings
-      final clipsToRemove = _midiClips.where((clip) => clip.trackId == trackId).toList();
-      for (final clip in clipsToRemove) {
-        _dartToRustClipIds.remove(clip.clipId);
-      }
-
-      // Remove all MIDI clips associated with this track
-      _midiClips.removeWhere((clip) => clip.trackId == trackId);
-
-      // Clear current editing clip if it was on this track
-      if (_currentEditingClip != null && _currentEditingClip!.trackId == trackId) {
-        _currentEditingClip = null;
-        _selectedMidiClipId = null;
-      }
-
       // Remove instrument mapping
       _trackInstruments.remove(trackId);
     });
@@ -1126,205 +1155,66 @@ class _DAWScreenState extends State<DAWScreen> {
     });
   }
 
-  // M10: VST3 Plugin methods
-  Future<void> _loadCachedVst3Plugins() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cachedVersion = prefs.getInt('vst3_cache_version') ?? 0;
-      const currentVersion = 8; // Incremented - default to INSTRUMENT instead of EFFECT
-
-      // Invalidate cache if version doesn't match
-      if (cachedVersion != currentVersion) {
-        await prefs.remove('vst3_plugins_cache');
-        await prefs.remove('vst3_plugins_cache');
-        await prefs.remove('vst3_scan_timestamp');
-        await prefs.setInt('vst3_cache_version', currentVersion);
-        return;
-      }
-
-      final cachedJson = prefs.getString('vst3_plugins_cache');
-
-      if (cachedJson != null) {
-        final List<dynamic> decoded = jsonDecode(cachedJson);
-        final plugins = decoded.map((item) => Map<String, String>.from(item as Map)).toList();
-
-        // Verify that plugins have type information
-        bool hasTypeInfo = plugins.every((plugin) =>
-          plugin.containsKey('is_instrument') && plugin.containsKey('is_effect')
-        );
-
-        if (!hasTypeInfo) {
-          await prefs.remove('vst3_plugins_cache');
-          return;
-        }
-
-        setState(() {
-          _availableVst3Plugins = plugins;
-          _isPluginsScanned = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ Failed to load VST3 cache: $e');
-    }
-  }
-
-  Future<void> _saveVst3PluginsCache(List<Map<String, String>> plugins) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final json = jsonEncode(plugins);
-      await prefs.setString('vst3_plugins_cache', json);
-      await prefs.setInt('vst3_scan_timestamp', DateTime.now().millisecondsSinceEpoch);
-      await prefs.setInt('vst3_cache_version', 8); // Save cache version
-    } catch (e) {
-      debugPrint('❌ Failed to save VST3 cache: $e');
-    }
-  }
+  // M10: VST3 Plugin methods - delegating to Vst3PluginManager
 
   void _scanVst3Plugins({bool forceRescan = false}) async {
-    if (_audioEngine == null || _isScanningVst3Plugins) return;
-
-    // Load from cache if not forcing rescan
-    if (!forceRescan && !_isPluginsScanned) {
-      await _loadCachedVst3Plugins();
-
-      // If cache loaded successfully, we're done
-      if (_availableVst3Plugins.isNotEmpty) {
-        return;
-      }
-    }
+    if (_vst3PluginManager == null) return;
 
     setState(() {
-      _isScanningVst3Plugins = true;
       _statusMessage = forceRescan ? 'Rescanning VST3 plugins...' : 'Scanning VST3 plugins...';
     });
 
-    try {
-      final plugins = _audioEngine!.scanVst3PluginsStandard();
+    final result = await _vst3PluginManager!.scanPlugins(forceRescan: forceRescan);
 
-      // Save to cache
-      await _saveVst3PluginsCache(plugins);
-
+    if (mounted) {
       setState(() {
-        _availableVst3Plugins = plugins;
-        _isPluginsScanned = true;
-        _isScanningVst3Plugins = false;
-        _statusMessage = 'Found ${plugins.length} VST3 plugin${plugins.length == 1 ? '' : 's'}';
+        _statusMessage = result;
       });
-    } catch (e) {
-      setState(() {
-        _isScanningVst3Plugins = false;
-        _statusMessage = 'VST3 scan failed: $e';
-      });
-      debugPrint('❌ VST3 scan failed: $e');
     }
   }
 
   void _addVst3PluginToTrack(int trackId, Map<String, String> plugin) {
-    if (_audioEngine == null) return;
+    if (_vst3PluginManager == null) return;
 
-    try {
-      final pluginPath = plugin['path'] ?? '';
-      final effectId = _audioEngine!.addVst3EffectToTrack(trackId, pluginPath);
+    final result = _vst3PluginManager!.addToTrack(trackId, plugin);
 
-      if (effectId >= 0) {
-        setState(() {
-          _trackVst3Effects[trackId] ??= [];
-          _trackVst3Effects[trackId]!.add(effectId);
-          _vst3PluginCache[effectId] = plugin;
-          _statusMessage = 'Added ${plugin['name']} to track $trackId';
-        });
+    setState(() {
+      _statusMessage = result.message;
+    });
 
-        // Show success snackbar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Added ${plugin['name']} to track'),
-            duration: const Duration(seconds: 2),
-            backgroundColor: const Color(0xFF4CAF50),
-          ),
-        );
-      } else {
-        setState(() {
-          _statusMessage = 'Failed to add VST3 plugin';
-        });
-
-        // Show error snackbar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Failed to load ${plugin['name']}'),
-            duration: const Duration(seconds: 3),
-            backgroundColor: const Color(0xFFFF5722),
-          ),
-        );
-
-        debugPrint('❌ Failed to add VST3 plugin');
-      }
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Error adding plugin: $e';
-      });
-
-      // Show error snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error: $e'),
-          duration: const Duration(seconds: 3),
-          backgroundColor: const Color(0xFFFF5722),
-        ),
-      );
-
-      debugPrint('❌ Error adding VST3 plugin: $e');
-    }
+    // Show snackbar based on result
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.success ? '✅ ${result.message}' : '❌ ${result.message}'),
+        duration: Duration(seconds: result.success ? 2 : 3),
+        backgroundColor: result.success ? const Color(0xFF4CAF50) : const Color(0xFFFF5722),
+      ),
+    );
   }
 
   void _removeVst3Plugin(int effectId) {
-    if (_audioEngine == null) return;
+    if (_vst3PluginManager == null) return;
 
-    // Find which track this effect is on
-    int? trackId;
-    for (final entry in _trackVst3Effects.entries) {
-      if (entry.value.contains(effectId)) {
-        trackId = entry.key;
-        break;
-      }
-    }
+    final result = _vst3PluginManager!.removeFromTrack(effectId);
 
-    if (trackId == null) {
-      debugPrint('❌ Could not find track for effect $effectId');
-      return;
-    }
-
-    try {
-      // Remove via audio engine (uses existing removeEffectFromTrack)
-      _audioEngine!.removeEffectFromTrack(trackId, effectId);
-
-      setState(() {
-        _trackVst3Effects[trackId]?.remove(effectId);
-        _vst3PluginCache.remove(effectId);
-        _statusMessage = 'Removed VST3 plugin';
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Error removing plugin: $e';
-      });
-      debugPrint('❌ Error removing VST3 plugin: $e');
-    }
+    setState(() {
+      _statusMessage = result.message;
+    });
   }
 
   void _showVst3PluginBrowser(int trackId) async {
-    if (_audioEngine == null) return;
+    if (_vst3PluginManager == null) return;
 
-    // Import the browser
     final vst3Browser = await showVst3PluginBrowser(
       context,
-      availablePlugins: _availableVst3Plugins,
-      isScanning: _isScanningVst3Plugins,
+      availablePlugins: _vst3PluginManager!.availablePlugins,
+      isScanning: _vst3PluginManager!.isScanning,
       onRescanRequested: () {
         _scanVst3Plugins(forceRescan: true);
       },
     );
 
     if (vst3Browser != null) {
-      // User selected a plugin - add it to the track
       _addVst3PluginToTrack(trackId, {
         'name': vst3Browser.name,
         'path': vst3Browser.path,
@@ -1334,80 +1224,26 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _onVst3PluginDropped(int trackId, Vst3Plugin plugin) {
-    // Add the plugin to the track
-    _addVst3PluginToTrack(trackId, {
-      'name': plugin.name,
-      'path': plugin.path,
-      'vendor': plugin.vendor ?? '',
-    });
+    if (_vst3PluginManager == null) return;
+    _vst3PluginManager!.addPluginToTrack(trackId, plugin);
   }
 
   Map<int, int> _getTrackVst3PluginCounts() {
-    final counts = <int, int>{};
-    for (final entry in _trackVst3Effects.entries) {
-      counts[entry.key] = entry.value.length;
-    }
-    return counts;
+    return _vst3PluginManager?.getTrackPluginCounts() ?? {};
   }
 
   List<Vst3PluginInstance> _getTrackVst3Plugins(int trackId) {
-    final effectIds = _trackVst3Effects[trackId] ?? [];
-    final plugins = <Vst3PluginInstance>[];
-
-    for (final effectId in effectIds) {
-      final pluginInfo = _vst3PluginCache[effectId];
-      if (pluginInfo != null && _audioEngine != null) {
-        try {
-          // Fetch parameter count and info
-          final paramCount = _audioEngine!.getVst3ParameterCount(effectId);
-          final parameters = <int, Vst3ParameterInfo>{};
-          final parameterValues = <int, double>{};
-
-          for (int i = 0; i < paramCount; i++) {
-            final info = _audioEngine!.getVst3ParameterInfo(effectId, i);
-            if (info != null) {
-              parameters[i] = Vst3ParameterInfo(
-                index: i,
-                name: info['name'] as String? ?? 'Parameter $i',
-                min: (info['min'] as num?)?.toDouble() ?? 0.0,
-                max: (info['max'] as num?)?.toDouble() ?? 1.0,
-                defaultValue: (info['default'] as num?)?.toDouble() ?? 0.5,
-                unit: '',
-              );
-
-              // Fetch current value
-              parameterValues[i] = _audioEngine!.getVst3ParameterValue(effectId, i);
-            }
-          }
-
-          plugins.add(Vst3PluginInstance(
-            effectId: effectId,
-            pluginName: pluginInfo['name'] ?? 'Unknown',
-            pluginPath: pluginInfo['path'] ?? '',
-            parameters: parameters,
-            parameterValues: parameterValues,
-          ));
-        } catch (e) {
-          debugPrint('❌ Error fetching VST3 plugin info for effect $effectId: $e');
-        }
-      }
-    }
-
-    return plugins;
+    return _vst3PluginManager?.getTrackPlugins(trackId) ?? [];
   }
 
   void _onVst3ParameterChanged(int effectId, int paramIndex, double value) {
-    if (_audioEngine == null) return;
-
-    try {
-      _audioEngine!.setVst3ParameterValue(effectId, paramIndex, value);
-    } catch (e) {
-      debugPrint('❌ Error setting VST3 parameter: $e');
-    }
+    _vst3PluginManager?.updateParameter(effectId, paramIndex, value);
   }
 
   void _showVst3PluginEditor(int trackId) {
-    final effectIds = _trackVst3Effects[trackId] ?? [];
+    if (_vst3PluginManager == null) return;
+
+    final effectIds = _vst3PluginManager!.getTrackEffectIds(trackId);
     if (effectIds.isEmpty) return;
 
     showDialog(
@@ -1420,7 +1256,7 @@ class _DAWScreenState extends State<DAWScreen> {
             itemCount: effectIds.length,
             itemBuilder: (context, index) {
               final effectId = effectIds[index];
-              final pluginInfo = _vst3PluginCache[effectId];
+              final pluginInfo = _vst3PluginManager!.getPluginInfo(effectId);
               final pluginName = pluginInfo?['name'] ?? 'Unknown Plugin';
 
               return ListTile(
@@ -1519,7 +1355,6 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   List<Widget> _buildParameterSliders(int effectId) {
-    // Show first 8 parameters or however many are available
     List<Widget> sliders = [];
 
     for (int i = 0; i < 8; i++) {
@@ -1536,9 +1371,9 @@ class _DAWScreenState extends State<DAWScreen> {
                     'Parameter ${i + 1}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                   ),
-                  Text(
+                  const Text(
                     '0.50',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                 ],
               ),
@@ -1594,173 +1429,20 @@ class _DAWScreenState extends State<DAWScreen> {
     );
   }
 
-  // M8: MIDI clip selection methods
+  // M8: MIDI clip selection methods - delegating to MidiPlaybackManager
   void _onMidiClipSelected(int? clipId, MidiClipData? clipData) {
-    setState(() {
-      _selectedMidiClipId = clipId;
-      _currentEditingClip = clipData;
-      if (clipId != null && clipData != null) {
+    final trackId = _midiPlaybackManager?.selectClip(clipId, clipData);
+    if (clipId != null && clipData != null) {
+      setState(() {
         // Open piano roll and set the selected track
         _isEditorPanelVisible = true;
-        _selectedTrackId = clipData.trackId;
-      }
-    });
+        _selectedTrackId = trackId ?? clipData.trackId;
+      });
+    }
   }
 
   void _onMidiClipUpdated(MidiClipData updatedClip) {
-    setState(() {
-      // Calculate clip duration based on notes (convert from beats to seconds)
-      double durationInSeconds;
-
-      if (updatedClip.notes.isEmpty) {
-        // Default to 4 bars (16 beats) if no notes
-        final defaultBeats = 16.0;
-        durationInSeconds = (defaultBeats / _tempo) * 60.0;
-      } else {
-        // Find the furthest note end time (in beats)
-        final furthestBeat = updatedClip.notes
-            .map((note) => note.startTime + note.duration)
-            .reduce((a, b) => a > b ? a : b);
-
-        // Snap to bar boundary (4 beats per bar)
-        // If exactly on a bar, keep it; otherwise round up to next bar
-        final barsNeeded = (furthestBeat / 4.0).ceil();
-        final totalBeats = barsNeeded * 4.0;
-
-        // Convert beats to seconds: seconds = (beats / BPM) * 60
-        durationInSeconds = (totalBeats / _tempo) * 60.0;
-      }
-
-      // Check if we're editing an existing clip or need to create a new one
-      if (updatedClip.clipId == -1) {
-        // No clip ID provided - check if we're editing an existing clip
-        if (_currentEditingClip != null && _currentEditingClip!.clipId != -1) {
-          // Reuse the existing clip we're editing
-          _currentEditingClip = updatedClip.copyWith(
-            clipId: _currentEditingClip!.clipId,
-            startTime: _currentEditingClip!.startTime,
-            duration: durationInSeconds,
-          );
-
-          // Update in clips list
-          final index = _midiClips.indexWhere((c) => c.clipId == _currentEditingClip!.clipId);
-          if (index != -1) {
-            _midiClips[index] = _currentEditingClip!;
-          }
-
-        } else if (updatedClip.notes.isNotEmpty) {
-          // Create a brand new clip only if we have notes and no clip is being edited
-          final newClipId = DateTime.now().millisecondsSinceEpoch;
-
-          _currentEditingClip = updatedClip.copyWith(
-            clipId: newClipId,
-            startTime: _playheadPosition,
-            duration: durationInSeconds,
-          );
-          _selectedMidiClipId = newClipId;
-
-          // Add to clips list for timeline visualization
-          _midiClips.add(_currentEditingClip!);
-        } else {
-          // No notes and no existing clip - just update current editing clip
-          _currentEditingClip = updatedClip.copyWith(
-            duration: durationInSeconds,
-          );
-        }
-      } else {
-        // Clip ID provided - update existing clip with new duration
-        _currentEditingClip = updatedClip.copyWith(
-          duration: durationInSeconds,
-        );
-
-        // Update in clips list
-        final index = _midiClips.indexWhere((c) => c.clipId == updatedClip.clipId);
-        if (index != -1) {
-          _midiClips[index] = _currentEditingClip!;
-        }
-      }
-    });
-
-    // Schedule MIDI clip for playback
-    if (_audioEngine != null && _currentEditingClip != null) {
-      _scheduleMidiClipPlayback(_currentEditingClip!);
-    }
-  }
-
-  /// Schedule MIDI clip notes for playback during transport
-  void _scheduleMidiClipPlayback(MidiClipData clip) {
-    if (_audioEngine == null) return;
-
-    // Check if this Dart clip already has a Rust clip
-    int rustClipId;
-    bool isNewClip = false;
-
-    if (_dartToRustClipIds.containsKey(clip.clipId)) {
-      // Existing clip - reuse the Rust clip ID
-      rustClipId = _dartToRustClipIds[clip.clipId]!;
-
-      // Clear existing notes (we'll re-add all of them)
-      _audioEngine!.clearMidiClip(rustClipId);
-    } else {
-      // New clip - create in Rust
-      rustClipId = _audioEngine!.createMidiClip();
-      if (rustClipId < 0) {
-        debugPrint('❌ Failed to create Rust MIDI clip');
-        return;
-      }
-      _dartToRustClipIds[clip.clipId] = rustClipId;
-      isNewClip = true;
-    }
-
-    // Add all notes to the Rust clip
-    // Note: clip.startTime is the clip's position on the timeline (in seconds)
-    // Note timestamps within the clip must be RELATIVE to the clip start
-    final clipStartTimeSeconds = clip.startTime;
-
-    for (final note in clip.notes) {
-      // Convert beats to seconds using current tempo
-      final absoluteStartTimeSeconds = note.startTimeInSeconds(_tempo);
-      final durationSeconds = note.durationInSeconds(_tempo);
-
-      // Make note time relative to clip start
-      final relativeStartTimeSeconds = absoluteStartTimeSeconds - clipStartTimeSeconds;
-
-      _audioEngine!.addMidiNoteToClip(
-        rustClipId,
-        note.note,
-        note.velocity,
-        relativeStartTimeSeconds,
-        durationSeconds,
-      );
-    }
-
-    // Only add to timeline if this is a new clip
-    if (isNewClip) {
-      final result = _audioEngine!.addMidiClipToTrack(
-        clip.trackId,
-        rustClipId,
-        clip.startTime,
-      );
-
-      if (result != 0) {
-        debugPrint('❌ Failed to add MIDI clip to track timeline (result: $result)');
-      }
-    }
-  }
-
-  /// Play MIDI clip immediately (for testing/preview)
-  void _playMidiClipImmediately(MidiClipData clip) {
-    for (final note in clip.notes) {
-      // Trigger note on
-      _audioEngine?.sendMidiNoteOn(note.note, note.velocity);
-
-      // Schedule note off after duration
-      final tempo = _tempo;
-      final durationMs = (note.durationInSeconds(tempo) * 1000).toInt();
-      Future.delayed(Duration(milliseconds: durationMs), () {
-        _audioEngine?.sendMidiNoteOff(note.note, 0);
-      });
-    }
+    _midiPlaybackManager?.updateClip(updatedClip, _tempo, _playheadPosition);
   }
 
   // ========================================================================
@@ -1803,18 +1485,12 @@ class _DAWScreenState extends State<DAWScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              _projectManager?.newProject();
+              _midiPlaybackManager?.clear();
               setState(() {
-                _currentProjectPath = null;
-                _currentProjectName = 'Untitled Project';
                 _loadedClipId = null;
                 _waveformPeaks = [];
                 _statusMessage = 'New project created';
-
-                // Clear MIDI state
-                _midiClips.clear();
-                _dartToRustClipIds.clear();
-                _selectedMidiClipId = null;
-                _currentEditingClip = null;
               });
             },
             child: const Text('Create'),
@@ -1845,50 +1521,45 @@ class _DAWScreenState extends State<DAWScreen> {
 
         if (!path.endsWith('.audio')) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Please select a .audio folder')),
+            const SnackBar(content: Text('Please select a .audio folder')),
           );
           return;
         }
 
         setState(() => _isLoading = true);
 
-        try {
-          final loadResult = _audioEngine!.loadProject(path);
+        // Load via project manager
+        final loadResult = await _projectManager!.loadProject(path);
 
-          // Clear MIDI clip ID mappings since Rust side has reset
-          _dartToRustClipIds.clear();
+        // Clear MIDI clip ID mappings since Rust side has reset
+        _midiPlaybackManager?.clearClipIdMappings();
 
-          // Load UI layout data
-          _loadUILayout(path);
-
-          setState(() {
-            _currentProjectPath = path;
-            _currentProjectName = path.split('/').last.replaceAll('.audio', '');
-            _statusMessage = 'Project loaded: $_currentProjectName';
-            _isLoading = false;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(loadResult)),
-          );
-        } catch (e) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to load project: $e')),
-          );
+        // Apply UI layout if available
+        if (loadResult.uiLayout != null) {
+          _applyUILayout(loadResult.uiLayout!);
         }
+
+        setState(() {
+          _statusMessage = 'Project loaded: ${_projectManager!.currentName}';
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(loadResult.result.message)),
+        );
       }
     } catch (e) {
-      debugPrint('❌ Open project failed: $e');
+      setState(() => _isLoading = false);
+      debugPrint('Open project failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to open project: $e')),
       );
     }
   }
 
-  void _saveProject() {
-    if (_currentProjectPath != null) {
-      _saveProjectToPath(_currentProjectPath!);
+  void _saveProject() async {
+    if (_projectManager?.currentPath != null) {
+      _saveProjectToPath(_projectManager!.currentPath!);
     } else {
       _saveProjectAs();
     }
@@ -1896,7 +1567,7 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _saveProjectAs() async {
     // Show dialog to enter project name
-    final nameController = TextEditingController(text: _currentProjectName);
+    final nameController = TextEditingController(text: _projectManager?.currentName ?? 'Untitled Project');
 
     final projectName = await showDialog<String>(
       context: context,
@@ -1924,6 +1595,9 @@ class _DAWScreenState extends State<DAWScreen> {
 
     if (projectName == null || projectName.isEmpty) return;
 
+    // Update project name in manager
+    _projectManager?.setProjectName(projectName);
+
     try {
       // Use macOS native file picker for save location
       final result = await Process.run('osascript', [
@@ -1939,105 +1613,57 @@ class _DAWScreenState extends State<DAWScreen> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Save As failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save project: $e')),
-      );
+      debugPrint('Save As failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save project: $e')),
+        );
+      }
     }
   }
 
-  void _saveProjectToPath(String path) {
+  void _saveProjectToPath(String path) async {
     setState(() => _isLoading = true);
 
-    try {
-      final result = _audioEngine!.saveProject(_currentProjectName, path);
+    final result = await _projectManager!.saveProjectToPath(path, _getCurrentUILayout());
 
-      // Save UI layout data
-      _saveUILayout(path);
+    setState(() {
+      _statusMessage = result.success ? 'Project saved' : result.message;
+      _isLoading = false;
+    });
 
-      setState(() {
-        _currentProjectPath = path;
-        _statusMessage = 'Project saved';
-        _isLoading = false;
-      });
-
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result)),
-      );
-    } catch (e) {
-      setState(() => _isLoading = false);
-      debugPrint('❌ Save project failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save project: $e')),
+        SnackBar(content: Text(result.message)),
       );
     }
   }
 
-  /// Save UI layout state to JSON file
-  void _saveUILayout(String projectPath) {
-    try {
-      final uiLayoutData = {
-        'version': '1.0',
-        'panel_sizes': {
-          'library_width': _libraryPanelWidth,
-          'mixer_width': _mixerPanelWidth,
-          'bottom_height': _editorPanelHeight,
-        },
-        'panel_collapsed': {
-          'library': _isLibraryPanelCollapsed,
-          'mixer': !_isMixerVisible,
-          'bottom': !(_isEditorPanelVisible || _isVirtualPianoVisible),
-        },
-      };
+  /// Apply UI layout from loaded project
+  void _applyUILayout(UILayoutData layout) {
+    setState(() {
+      // Apply panel sizes with clamping
+      _libraryPanelWidth = layout.libraryWidth.clamp(_libraryMinWidth, _libraryMaxWidth);
+      _mixerPanelWidth = layout.mixerWidth.clamp(_mixerMinWidth, _mixerMaxWidth);
+      _editorPanelHeight = layout.bottomHeight.clamp(_editorMinHeight, _editorMaxHeight);
 
-      final jsonString = const JsonEncoder.withIndent('  ').convert(uiLayoutData);
-      final uiLayoutFile = File('$projectPath/ui_layout.json');
-      uiLayoutFile.writeAsStringSync(jsonString);
-    } catch (e) {
-      debugPrint('❌ Failed to save UI layout: $e');
-    }
+      // Apply collapsed states
+      _isLibraryPanelCollapsed = layout.libraryCollapsed;
+      _isMixerVisible = !layout.mixerCollapsed;
+      // Don't auto-open bottom panel on load
+    });
   }
 
-  /// Load UI layout state from JSON file
-  void _loadUILayout(String projectPath) {
-    try {
-      final uiLayoutFile = File('$projectPath/ui_layout.json');
-      if (!uiLayoutFile.existsSync()) {
-        return;
-      }
-
-      final jsonString = uiLayoutFile.readAsStringSync();
-      final Map<String, dynamic> data = jsonDecode(jsonString);
-
-      setState(() {
-        // Load panel sizes
-        final panelSizes = data['panel_sizes'] as Map<String, dynamic>?;
-        if (panelSizes != null) {
-          _libraryPanelWidth = (panelSizes['library_width'] as num?)?.toDouble() ?? 200.0;
-          _mixerPanelWidth = (panelSizes['mixer_width'] as num?)?.toDouble() ?? 380.0;
-          _editorPanelHeight = (panelSizes['bottom_height'] as num?)?.toDouble() ?? 250.0;
-
-          // Clamp to min/max values
-          _libraryPanelWidth = _libraryPanelWidth.clamp(_libraryMinWidth, _libraryMaxWidth);
-          _mixerPanelWidth = _mixerPanelWidth.clamp(_mixerMinWidth, _mixerMaxWidth);
-          _editorPanelHeight = _editorPanelHeight.clamp(_editorMinHeight, _editorMaxHeight);
-        }
-
-        // Load collapsed states
-        final panelCollapsed = data['panel_collapsed'] as Map<String, dynamic>?;
-        if (panelCollapsed != null) {
-          _isLibraryPanelCollapsed = panelCollapsed['library'] as bool? ?? false;
-          _isMixerVisible = !(panelCollapsed['mixer'] as bool? ?? false);
-          final bottomCollapsed = panelCollapsed['bottom'] as bool? ?? false;
-          if (!bottomCollapsed) {
-            // Only restore if it was expanded before
-            // Don't auto-open bottom panel on load
-          }
-        }
-      });
-    } catch (e) {
-      debugPrint('❌ Failed to load UI layout: $e');
-    }
+  /// Get current UI layout for saving
+  UILayoutData _getCurrentUILayout() {
+    return UILayoutData(
+      libraryWidth: _libraryPanelWidth,
+      mixerWidth: _mixerPanelWidth,
+      bottomHeight: _editorPanelHeight,
+      libraryCollapsed: _isLibraryPanelCollapsed,
+      mixerCollapsed: !_isMixerVisible,
+      bottomCollapsed: !(_isEditorPanelVisible || _isVirtualPianoVisible),
+    );
   }
 
   void _exportAudio() {
@@ -2069,7 +1695,7 @@ class _DAWScreenState extends State<DAWScreen> {
               try {
                 final result = await Process.run('osascript', [
                   '-e',
-                  'POSIX path of (choose file name with prompt "Export as" default name "${_currentProjectName}.wav")'
+                  'POSIX path of (choose file name with prompt "Export as" default name "${_projectManager?.currentName ?? 'Untitled'}.wav")'
                 ]);
 
                 if (result.exitCode == 0) {
@@ -2128,15 +1754,17 @@ class _DAWScreenState extends State<DAWScreen> {
   }
 
   void _makeCopy() async {
-    if (_currentProjectPath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No project to copy')),
-      );
+    if (_projectManager?.currentPath == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No project to copy')),
+        );
+      }
       return;
     }
 
     // Show dialog to enter copy name
-    final nameController = TextEditingController(text: '$_currentProjectName Copy');
+    final nameController = TextEditingController(text: '${_projectManager!.currentName} Copy');
 
     final copyName = await showDialog<String>(
       context: context,
@@ -2174,35 +1802,31 @@ class _DAWScreenState extends State<DAWScreen> {
       if (result.exitCode == 0) {
         final parentPath = result.stdout.toString().trim();
         if (parentPath.isNotEmpty) {
-          final copyPath = '$parentPath/$copyName.audio';
-
-          // Save current project state to the new location
           setState(() => _isLoading = true);
 
-          try {
-            final saveResult = _audioEngine!.saveProject(copyName, copyPath);
+          final copyResult = await _projectManager!.makeCopy(
+            copyName,
+            parentPath,
+            _getCurrentUILayout(),
+          );
 
-            // Save UI layout data for the copy
-            _saveUILayout(copyPath);
+          setState(() => _isLoading = false);
 
-            setState(() => _isLoading = false);
-
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Copy created: $copyName')),
-            );
-          } catch (e) {
-            setState(() => _isLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to create copy: $e')),
+              SnackBar(content: Text(copyResult.message)),
             );
           }
         }
       }
     } catch (e) {
-      debugPrint('❌ Make Copy failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create copy: $e')),
-      );
+      setState(() => _isLoading = false);
+      debugPrint('Make Copy failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create copy: $e')),
+        );
+      }
     }
   }
 
@@ -2375,10 +1999,9 @@ class _DAWScreenState extends State<DAWScreen> {
                 _stopPlayback();
               }
 
-              // Clear project state
+              // Clear project state via manager
+              _projectManager?.closeProject();
               setState(() {
-                _currentProjectPath = null;
-                _currentProjectName = 'Untitled';
                 _statusMessage = 'No project loaded';
               });
 
@@ -2642,7 +2265,7 @@ class _DAWScreenState extends State<DAWScreen> {
                         child: LibraryPanel(
                           isCollapsed: _isLibraryPanelCollapsed,
                           onToggle: _toggleLibraryPanel,
-                          availableVst3Plugins: _availableVst3Plugins,
+                          availableVst3Plugins: _vst3PluginManager?.availablePlugins ?? [],
                           libraryService: _libraryService,
                           onItemDoubleClick: _handleLibraryItemDoubleClick,
                           onVst3DoubleClick: _handleVst3DoubleClick,
@@ -2676,9 +2299,9 @@ class _DAWScreenState extends State<DAWScreen> {
                           audioEngine: _audioEngine,
                           tempo: _tempo,
                           selectedMidiTrackId: _selectedTrackId,
-                          selectedMidiClipId: _selectedMidiClipId,
-                          currentEditingClip: _currentEditingClip,
-                          midiClips: _midiClips, // Pass all MIDI clips for visualization
+                          selectedMidiClipId: _midiPlaybackManager?.selectedClipId,
+                          currentEditingClip: _midiPlaybackManager?.currentEditingClip,
+                          midiClips: _midiPlaybackManager?.midiClips ?? [], // Pass all MIDI clips for visualization
                           onMidiTrackSelected: _onTrackSelected,
                           onMidiClipSelected: _onMidiClipSelected,
                           onMidiClipUpdated: _onMidiClipUpdated,
@@ -2777,7 +2400,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           _isVirtualPianoEnabled = false;
                         });
                       },
-                      currentEditingClip: _currentEditingClip,
+                      currentEditingClip: _midiPlaybackManager?.currentEditingClip,
                       onMidiClipUpdated: _onMidiClipUpdated,
                       onInstrumentParameterChanged: _onInstrumentParameterChanged,
                       currentTrackPlugins: _selectedTrackId != null // M10
