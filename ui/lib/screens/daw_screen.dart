@@ -2667,6 +2667,7 @@ class _DAWScreenState extends State<DAWScreen> {
                           clipDuration: _clipDuration,
                           waveformPeaks: _waveformPeaks,
                           audioEngine: _audioEngine,
+                          tempo: _tempo,
                           selectedMidiTrackId: _selectedTrackId,
                           selectedMidiClipId: _selectedMidiClipId,
                           currentEditingClip: _currentEditingClip,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/gestures.dart' show PointerScrollEvent;
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:desktop_drop/desktop_drop.dart';
@@ -45,6 +47,7 @@ class TimelineView extends StatefulWidget {
   final List<double> waveformPeaks; // waveform data
   final AudioEngine? audioEngine;
   final Function(double)? onSeek; // callback when user drags playhead (passes position in seconds)
+  final double tempo; // BPM for beat-based grid
 
   // MIDI editing state
   final int? selectedMidiTrackId;
@@ -73,6 +76,7 @@ class TimelineView extends StatefulWidget {
     this.waveformPeaks = const [],
     this.audioEngine,
     this.onSeek,
+    this.tempo = 120.0,
     this.selectedMidiTrackId,
     this.selectedMidiClipId,
     this.currentEditingClip,
@@ -247,40 +251,94 @@ class TimelineViewState extends State<TimelineView> {
   @override
   Widget build(BuildContext context) {
     final viewWidth = MediaQuery.of(context).size.width;
-    final duration = widget.clipDuration ?? 10.0; // Default 10s if no clip
-    final totalWidth = math.max(duration * _pixelsPerSecond, viewWidth);
+
+    // Calculate beat-based width
+    final beatsPerSecond = widget.tempo / 60.0;
+    final pixelsPerBeat = _pixelsPerSecond / beatsPerSecond;
+
+    // Minimum 16 bars (64 beats), or extend based on clip duration
+    const minBars = 16;
+    const beatsPerBar = 4;
+    final minBeats = minBars * beatsPerBar;
+
+    // Calculate beats needed for clip duration (if any)
+    final clipDurationBeats = widget.clipDuration != null
+        ? (widget.clipDuration! * beatsPerSecond).ceil() + 4 // Add padding
+        : 0;
+
+    // Use the larger of minimum bars or clip duration
+    final totalBeats = math.max(minBeats, clipDurationBeats);
+    final totalWidth = math.max(totalBeats * pixelsPerBeat, viewWidth);
+
+    // Duration in seconds for backward compatibility with painters
+    final duration = totalBeats / beatsPerSecond;
 
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF242424),
         border: Border.all(color: const Color(0xFF363636)),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          // Time ruler with zoom controls
-          _buildTimeRulerWithZoom(totalWidth, duration),
+          // Main scrollable area (time ruler + tracks)
+          Listener(
+            onPointerSignal: (pointerSignal) {
+              if (pointerSignal is PointerScrollEvent) {
+                // Check for Cmd (Mac) or Ctrl (Windows/Linux) modifier
+                final isModifierPressed =
+                    HardwareKeyboard.instance.isMetaPressed ||
+                    HardwareKeyboard.instance.isControlPressed;
 
-          // Timeline tracks scrollable area
-          Expanded(
+                if (isModifierPressed) {
+                  final scrollDelta = pointerSignal.scrollDelta.dy;
+                  setState(() {
+                    if (scrollDelta < 0) {
+                      // Scroll up = zoom in
+                      _pixelsPerSecond = (_pixelsPerSecond * 1.1).clamp(20.0, 200.0);
+                    } else {
+                      // Scroll down = zoom out
+                      _pixelsPerSecond = (_pixelsPerSecond / 1.1).clamp(20.0, 200.0);
+                    }
+                  });
+                }
+              }
+            },
             child: SingleChildScrollView(
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               child: SizedBox(
                 width: totalWidth,
-                child: Stack(
+                child: Column(
                   children: [
-                    // Grid lines
-                    _buildGrid(totalWidth, duration),
+                    // Time ruler (scrolls with content)
+                    _buildTimeRuler(totalWidth, duration),
 
-                    // Tracks
-                    _buildTracks(totalWidth),
+                    // Timeline tracks area
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          // Grid lines
+                          _buildGrid(totalWidth, duration),
 
-                    // Playhead
-                    _buildPlayhead(),
+                          // Tracks
+                          _buildTracks(totalWidth),
+
+                          // Playhead
+                          _buildPlayhead(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
+          ),
+
+          // Zoom controls (fixed position, top-right)
+          Positioned(
+            right: 8,
+            top: 4,
+            child: _buildZoomControls(),
           ),
         ],
       ),
@@ -460,79 +518,69 @@ class TimelineViewState extends State<TimelineView> {
     );
   }
 
-  Widget _buildTimeRulerWithZoom(double width, double duration) {
+  Widget _buildTimeRuler(double width, double duration) {
     return Container(
       height: 30,
+      width: width,
       decoration: const BoxDecoration(
         color: Color(0xFF363636),
         border: Border(
           bottom: BorderSide(color: Color(0xFF363636)),
         ),
       ),
-      child: Stack(
+      child: CustomPaint(
+        painter: _TimeRulerPainter(
+          duration: duration,
+          pixelsPerSecond: _pixelsPerSecond,
+          tempo: widget.tempo,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoomControls() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF363636).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Time ruler (full width)
-          SizedBox(
-            width: width,
-            child: CustomPaint(
-              painter: _TimeRulerPainter(
-                duration: duration,
-                pixelsPerSecond: _pixelsPerSecond,
-              ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _pixelsPerSecond = math.max(20, _pixelsPerSecond - 20);
+              });
+            },
+            icon: const Icon(Icons.remove, size: 14),
+            iconSize: 14,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            color: const Color(0xFF9E9E9E),
+            tooltip: 'Zoom out (Cmd -)',
+          ),
+          Text(
+            '${_pixelsPerSecond.toInt()}',
+            style: const TextStyle(
+              color: Color(0xFF9E9E9E),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
             ),
           ),
-
-          // Zoom controls (top-right, fixed position)
-          Positioned(
-            right: 8,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF363636).withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _pixelsPerSecond = math.max(20, _pixelsPerSecond - 20);
-                      });
-                    },
-                    icon: const Icon(Icons.remove, size: 14),
-                    iconSize: 14,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                    color: const Color(0xFF9E9E9E),
-                    tooltip: 'Zoom out (Cmd -)',
-                  ),
-                  Text(
-                    '${_pixelsPerSecond.toInt()}',
-                    style: const TextStyle(
-                      color: Color(0xFF9E9E9E),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _pixelsPerSecond = math.min(200, _pixelsPerSecond + 20);
-                      });
-                    },
-                    icon: const Icon(Icons.add, size: 14),
-                    iconSize: 14,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                    color: const Color(0xFF9E9E9E),
-                    tooltip: 'Zoom in (Cmd +)',
-                  ),
-                ],
-              ),
-            ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _pixelsPerSecond = math.min(200, _pixelsPerSecond + 20);
+              });
+            },
+            icon: const Icon(Icons.add, size: 14),
+            iconSize: 14,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            color: const Color(0xFF9E9E9E),
+            tooltip: 'Zoom in (Cmd +)',
           ),
         ],
       ),
@@ -545,6 +593,7 @@ class TimelineViewState extends State<TimelineView> {
       painter: _GridPainter(
         duration: duration,
         pixelsPerSecond: _pixelsPerSecond,
+        tempo: widget.tempo,
       ),
     );
   }
@@ -641,10 +690,10 @@ class TimelineViewState extends State<TimelineView> {
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: isHovered
-              ? const Color(0xFF363636) // Lighter when hovered
+              ? const Color(0xFF363636).withValues(alpha: 0.3)
               : (isSelected
-                  ? const Color(0xFF363636) // Slightly lighter when selected
-                  : const Color(0xFF1e1e1e)),
+                  ? const Color(0xFF363636).withValues(alpha: 0.3)
+                  : Colors.transparent),
           border: Border.all(
             color: isInstrumentHovering
                 ? const Color(0xFF00BCD4) // Cyan when valid instrument drag
@@ -661,10 +710,10 @@ class TimelineViewState extends State<TimelineView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Track header bar
+            // Track header bar (fully opaque)
             Container(
               height: 20,
-              color: trackColor.withOpacity(0.3),
+              color: trackColor,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
@@ -720,16 +769,16 @@ class TimelineViewState extends State<TimelineView> {
       height: 100,
       margin: const EdgeInsets.only(bottom: 4), // Match other tracks
       decoration: BoxDecoration(
-        color: const Color(0xFF1e1e1e),
+        color: Colors.transparent,
         border: Border.all(color: TrackColors.masterColor, width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Track header bar
+          // Track header bar (fully opaque)
           Container(
             height: 20,
-            color: TrackColors.masterColor.withOpacity(0.3),
+            color: TrackColors.masterColor,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: const Row(
               children: [
@@ -801,7 +850,7 @@ class TimelineViewState extends State<TimelineView> {
             width: clipWidth,
             height: 72,
             decoration: BoxDecoration(
-              color: const Color(0xFF363636),
+              color: const Color(0xFF363636).withValues(alpha: 0.3),
               border: Border.all(
                 color: _draggingClipId == clip.clipId
                     ? const Color(0xFF81C784)
@@ -896,7 +945,7 @@ class TimelineViewState extends State<TimelineView> {
             width: clipWidth,
             height: 72,
             decoration: BoxDecoration(
-              color: const Color(0xFF363636),
+              color: const Color(0xFF363636).withValues(alpha: 0.3),
               border: Border.all(
                 color: isDragging
                     ? trackColor
@@ -958,26 +1007,6 @@ class TimelineViewState extends State<TimelineView> {
                 ),
               ),
 
-              // Show note count
-              if (midiClip.notes.isNotEmpty)
-                Positioned(
-                  bottom: 2,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: Text(
-                      '${midiClip.notes.length} notes',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 9,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -1077,18 +1106,36 @@ class TimelineViewState extends State<TimelineView> {
 
 }
 
-/// Painter for the time ruler
+/// Painter for the time ruler (bar numbers with beat subdivisions)
 class _TimeRulerPainter extends CustomPainter {
   final double duration;
   final double pixelsPerSecond;
+  final double tempo;
 
   _TimeRulerPainter({
     required this.duration,
     required this.pixelsPerSecond,
+    required this.tempo,
   });
+
+  /// Get the smallest grid subdivision to show based on zoom level
+  double _getGridDivision(double pixelsPerBeat) {
+    if (pixelsPerBeat < 10) return 4.0;     // Only bars
+    if (pixelsPerBeat < 20) return 1.0;     // Bars + beats
+    if (pixelsPerBeat < 40) return 0.5;     // + half beats
+    return 0.25;                             // + quarter beats
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Calculate beat-based measurements
+    final beatsPerSecond = tempo / 60.0;
+    final pixelsPerBeat = pixelsPerSecond / beatsPerSecond;
+    final gridDivision = _getGridDivision(pixelsPerBeat);
+
+    // Calculate total beats to draw
+    final totalBeats = (size.width / pixelsPerBeat).ceil() + 4;
+
     final paint = Paint()
       ..color = const Color(0xFF3a3a3a)
       ..strokeWidth = 1;
@@ -1098,15 +1145,26 @@ class _TimeRulerPainter extends CustomPainter {
       textAlign: TextAlign.center,
     );
 
-    // Draw markers every second
-    for (double sec = 0; sec <= duration; sec += 1.0) {
-      final x = sec * pixelsPerSecond;
-
+    // Draw markers based on beat subdivisions
+    for (double beat = 0; beat <= totalBeats; beat += gridDivision) {
+      final x = beat * pixelsPerBeat;
       if (x > size.width) break;
 
-      // Major tick every 5 seconds
-      final isMajor = sec % 5 == 0;
-      final tickHeight = isMajor ? 15.0 : 8.0;
+      // Determine tick style based on beat position
+      final isBar = (beat % 4.0).abs() < 0.001;
+      final isBeat = (beat % 1.0).abs() < 0.001;
+
+      double tickHeight;
+      if (isBar) {
+        tickHeight = 15.0;
+        paint.strokeWidth = 1.5;
+      } else if (isBeat) {
+        tickHeight = 10.0;
+        paint.strokeWidth = 1.0;
+      } else {
+        tickHeight = 6.0;
+        paint.strokeWidth = 0.5;
+      }
 
       canvas.drawLine(
         Offset(x, size.height - tickHeight),
@@ -1114,17 +1172,16 @@ class _TimeRulerPainter extends CustomPainter {
         paint,
       );
 
-      // Draw time labels for major ticks
-      if (isMajor) {
-        final minutes = (sec / 60).floor();
-        final seconds = (sec % 60).floor();
-        final timeText = '$minutes:${seconds.toString().padLeft(2, '0')}';
+      // Draw bar numbers at bar lines
+      if (isBar) {
+        final barNumber = (beat / 4.0).round() + 1; // Bars are 1-indexed
 
         textPainter.text = TextSpan(
-          text: timeText,
+          text: '$barNumber',
           style: const TextStyle(
             color: Color(0xFF9E9E9E),
             fontSize: 11,
+            fontWeight: FontWeight.w500,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
         );
@@ -1134,6 +1191,27 @@ class _TimeRulerPainter extends CustomPainter {
           canvas,
           Offset(x - textPainter.width / 2, 2),
         );
+      } else if (isBeat && pixelsPerBeat >= 30) {
+        // Show beat subdivisions (1.2, 1.3, 1.4) when zoomed in enough
+        final barNumber = (beat / 4.0).floor() + 1;
+        final beatInBar = ((beat % 4.0) + 1).round();
+
+        if (beatInBar > 1) {
+          textPainter.text = TextSpan(
+            text: '$barNumber.$beatInBar',
+            style: const TextStyle(
+              color: Color(0xFF707070),
+              fontSize: 9,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          );
+
+          textPainter.layout();
+          textPainter.paint(
+            canvas,
+            Offset(x - textPainter.width / 2, 4),
+          );
+        }
       }
     }
   }
@@ -1141,37 +1219,70 @@ class _TimeRulerPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TimeRulerPainter oldDelegate) {
     return oldDelegate.duration != duration ||
-           oldDelegate.pixelsPerSecond != pixelsPerSecond;
+           oldDelegate.pixelsPerSecond != pixelsPerSecond ||
+           oldDelegate.tempo != tempo;
   }
 }
 
-/// Painter for the grid lines
+/// Painter for the grid lines (beat-based with zoom-dependent visibility)
 class _GridPainter extends CustomPainter {
   final double duration;
   final double pixelsPerSecond;
+  final double tempo;
 
   _GridPainter({
     required this.duration,
     required this.pixelsPerSecond,
+    required this.tempo,
   });
+
+  /// Get the smallest grid subdivision to show based on zoom level
+  double _getGridDivision(double pixelsPerBeat) {
+    if (pixelsPerBeat < 10) return 4.0;     // Only bars (every 4 beats)
+    if (pixelsPerBeat < 20) return 1.0;     // Bars + beats
+    if (pixelsPerBeat < 40) return 0.5;     // + half beats
+    if (pixelsPerBeat < 80) return 0.25;    // + quarter beats
+    return 0.125;                            // + eighth beats
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF363636)
-      ..strokeWidth = 0.5;
+    // Calculate beat-based measurements
+    final beatsPerSecond = tempo / 60.0;
+    final pixelsPerBeat = pixelsPerSecond / beatsPerSecond;
+    final gridDivision = _getGridDivision(pixelsPerBeat);
 
-    // Vertical grid lines every second
-    for (double sec = 0; sec <= duration; sec += 1.0) {
-      final x = sec * pixelsPerSecond;
+    // Calculate total beats to draw (extend to fill width)
+    final totalBeats = (size.width / pixelsPerBeat).ceil() + 4;
 
+    final paint = Paint()..style = PaintingStyle.stroke;
+
+    // Draw grid lines based on beat subdivisions
+    for (double beat = 0; beat <= totalBeats; beat += gridDivision) {
+      final x = beat * pixelsPerBeat;
       if (x > size.width) break;
 
-      // Major line every 5 seconds
-      if (sec % 5 == 0) {
-        paint.color = const Color(0xFF3a3a3a);
-      } else {
+      // Determine line style based on beat position
+      final isBar = (beat % 4.0).abs() < 0.001;  // Every 4 beats = bar
+      final isBeat = (beat % 1.0).abs() < 0.001; // Whole beats
+      final isHalfBeat = (beat % 0.5).abs() < 0.001; // Half beats
+
+      if (isBar) {
+        // Bar lines - thickest and brightest
+        paint.color = const Color(0xFF505050);
+        paint.strokeWidth = 2.0;
+      } else if (isBeat) {
+        // Beat lines - medium
+        paint.color = const Color(0xFF404040);
+        paint.strokeWidth = 1.0;
+      } else if (isHalfBeat) {
+        // Half beat lines - thin
         paint.color = const Color(0xFF363636);
+        paint.strokeWidth = 0.5;
+      } else {
+        // Subdivision lines - thinnest
+        paint.color = const Color(0xFF303030);
+        paint.strokeWidth = 0.5;
       }
 
       canvas.drawLine(
@@ -1185,7 +1296,8 @@ class _GridPainter extends CustomPainter {
   @override
   bool shouldRepaint(_GridPainter oldDelegate) {
     return oldDelegate.duration != duration ||
-           oldDelegate.pixelsPerSecond != pixelsPerSecond;
+           oldDelegate.pixelsPerSecond != pixelsPerSecond ||
+           oldDelegate.tempo != tempo;
   }
 }
 
@@ -1204,7 +1316,7 @@ class _WaveformPainter extends CustomPainter {
     if (peaks.isEmpty) return;
 
     final paint = Paint()
-      ..color = color.withOpacity(0.7)
+      ..color = color.withOpacity(0.5) // Semi-transparent so grid shows through
       ..style = PaintingStyle.fill;
 
     final path = Path();
@@ -1325,7 +1437,7 @@ class _MidiClipPainter extends CustomPainter {
       final rect = Rect.fromLTWH(x, y, math.max(width, 2.0), height);
 
       final notePaint = Paint()
-        ..color = const Color(0xFFF5F5F5) // Off-white for arrangement view
+        ..color = const Color(0xFFF5F5F5).withOpacity(0.6) // Semi-transparent so grid shows through
         ..style = PaintingStyle.fill;
 
       canvas.drawRect(rect, notePaint);
