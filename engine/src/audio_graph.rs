@@ -565,7 +565,8 @@ impl AudioGraph {
                             let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
 
                             // Check if clip is active at this frame
-                            if playhead_frame >= clip_start_samples && playhead_frame < clip_end_samples {
+                            // Use <= for end boundary to ensure note-offs at exact clip end are triggered
+                            if playhead_frame >= clip_start_samples && playhead_frame <= clip_end_samples {
                                 let frame_in_clip = playhead_frame - clip_start_samples;
 
                                 // Check for MIDI events that should trigger at this exact sample
@@ -1208,7 +1209,8 @@ impl AudioGraph {
                     let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
 
                     // Check if clip is active at this frame
-                    if frame_idx as u64 >= clip_start_samples && (frame_idx as u64) < clip_end_samples {
+                    // Use <= for end boundary to ensure note-offs at exact clip end are triggered
+                    if frame_idx as u64 >= clip_start_samples && (frame_idx as u64) <= clip_end_samples {
                         let frame_in_clip = frame_idx as u64 - clip_start_samples;
 
                         // Check for MIDI events at this exact frame
