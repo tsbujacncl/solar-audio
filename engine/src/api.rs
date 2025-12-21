@@ -557,7 +557,17 @@ pub fn stop_recording() -> Result<Option<u64>, String> {
 
                 if armed_tracks.is_empty() {
                     // No armed tracks, use first track
-                    vec![audio_tracks[0].lock().unwrap().id]
+                    if let Some(first_track) = audio_tracks.first() {
+                        if let Ok(track) = first_track.lock() {
+                            vec![track.id]
+                        } else {
+                            // Mutex poisoned, create new track
+                            vec![tm.create_track(crate::track::TrackType::Audio, "Audio 1".to_string())]
+                        }
+                    } else {
+                        // Should not happen since we checked is_empty, but be safe
+                        vec![tm.create_track(crate::track::TrackType::Audio, "Audio 1".to_string())]
+                    }
                 } else {
                     // Use all armed tracks
                     armed_tracks
@@ -1438,9 +1448,8 @@ pub fn get_all_track_ids() -> Result<String, String> {
     let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
 
     let all_tracks = track_manager.get_all_tracks();
-    let ids: Vec<String> = all_tracks.iter().map(|track_arc| {
-        let track = track_arc.lock().unwrap();
-        track.id.to_string()
+    let ids: Vec<String> = all_tracks.iter().filter_map(|track_arc| {
+        track_arc.lock().ok().map(|track| track.id.to_string())
     }).collect();
 
     Ok(ids.join(","))

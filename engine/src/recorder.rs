@@ -130,27 +130,27 @@ impl Recorder {
 
     /// Get current recording state
     pub fn get_state(&self) -> RecordingState {
-        *self.state.lock().unwrap()
+        *self.state.lock().expect("mutex poisoned")
     }
 
     /// Set count-in duration in bars
     pub fn set_count_in_bars(&self, bars: u32) {
-        *self.count_in_bars.lock().unwrap() = bars;
+        *self.count_in_bars.lock().expect("mutex poisoned") = bars;
     }
 
     /// Get count-in duration in bars
     pub fn get_count_in_bars(&self) -> u32 {
-        *self.count_in_bars.lock().unwrap()
+        *self.count_in_bars.lock().expect("mutex poisoned")
     }
 
     /// Set tempo in BPM
     pub fn set_tempo(&self, bpm: f64) {
-        *self.tempo.lock().unwrap() = bpm.clamp(20.0, 300.0);
+        *self.tempo.lock().expect("mutex poisoned") = bpm.clamp(20.0, 300.0);
     }
 
     /// Get tempo in BPM
     pub fn get_tempo(&self) -> f64 {
-        *self.tempo.lock().unwrap()
+        *self.tempo.lock().expect("mutex poisoned")
     }
 
     /// Enable/disable metronome
@@ -165,7 +165,7 @@ impl Recorder {
 
     /// Get recorded sample count
     pub fn get_recorded_sample_count(&self) -> usize {
-        self.recorded_samples.lock().unwrap().len()
+        self.recorded_samples.lock().expect("mutex poisoned").len()
     }
 
     /// Get recorded duration in seconds
@@ -243,7 +243,7 @@ impl RecorderCallbackRefs {
     ) -> (f32, f32) {
         // Read state once and drop lock immediately to avoid blocking UI thread
         let current_state = {
-            let state = self.state.lock().unwrap();
+            let state = self.state.lock().expect("mutex poisoned");
             *state
         }; // Lock released here
 
@@ -265,8 +265,8 @@ impl RecorderCallbackRefs {
             val
         };
 
-        let tempo = *self.tempo.lock().unwrap();
-        let time_sig = *self.time_signature.lock().unwrap();
+        let tempo = *self.tempo.lock().expect("mutex poisoned");
+        let time_sig = *self.time_signature.lock().expect("mutex poisoned");
         let metronome_enabled = self.metronome_enabled.load(Ordering::SeqCst);
 
         // Calculate beat information
@@ -299,13 +299,13 @@ impl RecorderCallbackRefs {
         // Handle count-in and recording state transitions
         match current_state {
             RecordingState::CountingIn => {
-                let count_in_bars = *self.count_in_bars.lock().unwrap();
+                let count_in_bars = *self.count_in_bars.lock().expect("mutex poisoned");
                 let count_in_samples = samples_per_bar * count_in_bars as u64;
 
                 if sample_idx >= count_in_samples {
                     // Count-in finished, start recording (need to re-acquire lock for state change)
                     eprintln!("✅ [Recorder] Count-in complete! Transitioning to Recording state (sample: {})", sample_idx);
-                    let mut state = self.state.lock().unwrap();
+                    let mut state = self.state.lock().expect("mutex poisoned");
                     *state = RecordingState::Recording;
                     drop(state); // Release immediately
                     self.sample_counter.store(0, Ordering::SeqCst);

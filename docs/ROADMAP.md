@@ -1,7 +1,7 @@
 # Boojy Audio - Development Roadmap
 
-**Last Updated:** October 30, 2025
-**Current Status:** M6.3 Complete (Native Menu Bar & Editor Panel), M7 Ready to Start
+**Last Updated:** December 20, 2025
+**Current Status:** M6.4 Complete (Bug Fixes & Synth Refinements), M7 In Progress
 
 ---
 
@@ -37,8 +37,9 @@ Week 0    Week 10   Week 15   Week 22
 - M6.1: MIDI Playback Fixes (clip playback, track cleanup, stuck notes)
 - M6.2: Toolbar Reorganization (grouped controls, enhanced File menu)
 - M6.3: Native Menu Bar & Editor Panel (macOS menu integration, keyboard shortcuts)
+- M6.4: Bug Fixes & Synth Refinements (virtual piano fix, MIDI bar-snapping, simplified synth)
 
-**📋 Ready to Start:**
+**🚧 In Progress:**
 - M7: VST3 Plugin Support
 
 **📋 Upcoming:**
@@ -59,7 +60,7 @@ Week 0    Week 10   Week 15   Week 22
 - ✅ Virtual piano (bottom panel, polyphonic)
 - ✅ Note editing (draw, move, resize, delete, undo/redo)
 - ✅ Computer keyboard mapping (ASDF keys)
-- ✅ Polyphonic synthesizer (16 voices, ADSR, 3 oscillators, filter, LFO)
+- ✅ Polyphonic synthesizer (8 voices, ADSR, filter)
 - ✅ Instrument browser with drag-and-drop
 - ✅ Ableton-style workflow (drag from library → timeline)
 - ✅ Auto-create MIDI tracks on instrument drop
@@ -108,6 +109,23 @@ Week 0    Week 10   Week 15   Week 22
 - ✅ Reset Panel Layout functionality (restores default sizes and visibility)
 - ✅ All keyboard shortcuts working natively through macOS system
 - ✅ Updated AppDelegate.swift for proper menu bar integration
+
+---
+
+### M6.4: Bug Fixes & Synth Refinements ✅
+
+**Completed:** December 20, 2025
+
+**Implemented:**
+
+- ✅ Virtual piano works during pause/stop (audio stream stays active for live playing)
+- ✅ MIDI clip bar-snapping (Ableton-style: clips align to bar boundaries)
+- ✅ Simplified synthesizer architecture:
+  - Single oscillator (sine, saw, square, triangle)
+  - One-pole lowpass filter with cutoff control
+  - ADSR envelope (attack, decay, sustain, release)
+  - 8-voice polyphony with voice stealing
+- ✅ Synth UI updated to match minimal architecture
 
 ---
 
@@ -304,7 +322,7 @@ Build 5 high-quality instruments:
 
 ## Contributing
 
-Solar Audio is open-source (GPL v3). Contributions welcome!
+Boojy Audio is open-source (GPL v3). Contributions welcome!
 
 **How to help:**
 - Report bugs (GitHub Issues)
@@ -330,22 +348,38 @@ Solar Audio is open-source (GPL v3). Contributions welcome!
 
 ---
 
+## Technical Debt
+
+Items identified for future cleanup (not blocking current development):
+
+**TODO Placeholders:**
+- CPU usage monitoring display
+- Stereo meters (currently mono)
+- Piano roll playhead sync with transport
+
+**Code Organization:**
+- `ui/lib/screens/daw_screen.dart` (2600+ lines) - candidate for refactoring into smaller widget files
+
+---
+
 ## Next Steps
 
-**This Week:**
-- Start M7 (VST3 plugin support)
-- Implement plugin scanning
-- Test with commercial plugins
+**Current Focus (M7):**
 
-**This Month:**
-- Complete M7 (VST3 support)
-- Start M8 (stock instruments)
-- Post monthly dev update (vlog or blog)
+- Complete VST3 native GUI integration
+- Test with commercial plugins (Serum, Vital, etc.)
+- Plugin preset save/load with projects
 
-**By December 1:**
+**Next Up (M8):**
+
+- Stock instruments (Piano, Drums, Sampler, Bass)
+- Expand instrument library
+
+**Beta Target:**
+
 - Complete M8-M9
 - Private beta testing
-- Public beta launch 🚀
+- Public beta launch
 
 ---
 

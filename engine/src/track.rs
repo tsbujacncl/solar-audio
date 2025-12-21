@@ -238,7 +238,7 @@ impl TrackManager {
     /// Get a track by ID
     pub fn get_track(&self, id: TrackId) -> Option<Arc<std::sync::Mutex<Track>>> {
         self.tracks.iter()
-            .find(|t| t.lock().unwrap().id == id)
+            .find(|t| t.lock().expect("mutex poisoned").id == id)
             .cloned()
     }
 
@@ -258,7 +258,7 @@ impl TrackManager {
             return false;
         }
 
-        if let Some(pos) = self.tracks.iter().position(|t| t.lock().unwrap().id == id) {
+        if let Some(pos) = self.tracks.iter().position(|t| t.lock().expect("mutex poisoned").id == id) {
             self.tracks.remove(pos);
             true
         } else {
@@ -269,7 +269,7 @@ impl TrackManager {
     /// Check if any tracks are soloed
     pub fn has_solo(&self) -> bool {
         self.tracks.iter()
-            .any(|t| t.lock().unwrap().solo)
+            .any(|t| t.lock().expect("mutex poisoned").solo)
     }
 }
 

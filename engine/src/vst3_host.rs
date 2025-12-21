@@ -592,7 +592,7 @@ impl VST3Effect {
     /// Initialize the plugin (must be called before processing)
     pub fn initialize(&mut self) -> Result<(), String> {
         if !self.initialized {
-            let plugin = self.plugin.lock().unwrap();
+            let plugin = self.plugin.lock().expect("mutex poisoned");
             plugin.initialize(self.sample_rate, self.block_size)?;
             plugin.activate()?;
             self.initialized = true;
@@ -602,25 +602,25 @@ impl VST3Effect {
 
     /// Get parameter count
     pub fn get_parameter_count(&self) -> i32 {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.get_parameter_count()
     }
 
     /// Get parameter info by index
     pub fn get_parameter_info(&self, index: i32) -> Result<VST3ParameterInfo, String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.get_parameter_info(index)
     }
 
     /// Get parameter value by ID
     pub fn get_parameter_value(&self, param_id: u32) -> f64 {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.get_parameter_value(param_id)
     }
 
     /// Set parameter value by ID
     pub fn set_parameter_value(&mut self, param_id: u32, value: f64) -> Result<(), String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.set_parameter_value(param_id, value)
     }
 
@@ -633,50 +633,50 @@ impl VST3Effect {
         data2: i32,
         sample_offset: i32,
     ) -> Result<(), String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.process_midi_event(event_type, channel, data1, data2, sample_offset)
     }
 
     /// Get plugin state
     pub fn get_state(&self) -> Result<Vec<u8>, String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.get_state()
     }
 
     /// Set plugin state
     pub fn set_state(&mut self, data: &[u8]) -> Result<(), String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.set_state(data)
     }
 
     // M7 Phase 1: Native Editor Support
     /// Check if plugin has an editor GUI
     pub fn has_editor(&self) -> bool {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.has_editor()
     }
 
     /// Open editor view (creates IPlugView)
     pub fn open_editor(&self) -> Result<(), String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.open_editor()
     }
 
     /// Close editor view
     pub fn close_editor(&self) {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.close_editor();
     }
 
     /// Get editor size in pixels
     pub fn get_editor_size(&self) -> Result<(i32, i32), String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.get_editor_size()
     }
 
     /// Attach editor to parent window
     pub fn attach_editor(&self, parent: *mut c_void) -> Result<(), String> {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         plugin.attach_editor(parent)
     }
 }
@@ -684,7 +684,7 @@ impl VST3Effect {
 // Implement the Effect trait for VST3Effect
 impl crate::effects::Effect for VST3Effect {
     fn process_frame(&mut self, left: f32, right: f32) -> (f32, f32) {
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
 
         // For now, create single-sample buffers
         // TODO: Optimize by batching frames
@@ -709,7 +709,7 @@ impl crate::effects::Effect for VST3Effect {
 
     fn reset(&mut self) {
         // Deactivate and reactivate the plugin to reset state
-        let plugin = self.plugin.lock().unwrap();
+        let plugin = self.plugin.lock().expect("mutex poisoned");
         let _ = plugin.deactivate();
         let _ = plugin.initialize(self.sample_rate, self.block_size);
         let _ = plugin.activate();

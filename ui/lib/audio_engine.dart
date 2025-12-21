@@ -118,18 +118,21 @@ class AudioEngine {
   AudioEngine() {
     // Load the native library
     if (Platform.isMacOS) {
-      final libPath = '/Users/tyrbujac/Documents/Developments/2025/Flutter/Boojy Audio/engine/target/release/libengine.dylib';
+      // Use the symlink in macos/Runner/ which points to engine/target/release/libengine.dylib
+      // This makes the path relative and works on any machine
+      final libPath = 'macos/Runner/libengine.dylib';
       print('🔍 [AudioEngine] Attempting to load library from: $libPath');
-      
+
       // Check if file exists
       final file = File(libPath);
       if (file.existsSync()) {
         print('✅ [AudioEngine] Library file exists');
       } else {
-        print('❌ [AudioEngine] Library file NOT found!');
-        throw Exception('Library file not found at: $libPath');
+        print('❌ [AudioEngine] Library file NOT found at: $libPath');
+        print('   Make sure to run: cd engine && cargo build --release');
+        throw Exception('Library file not found at: $libPath. Run: cd engine && cargo build --release');
       }
-      
+
       try {
         _lib = ffi.DynamicLibrary.open(libPath);
         print('✅ [AudioEngine] Library loaded successfully');
@@ -138,9 +141,9 @@ class AudioEngine {
         rethrow;
       }
     } else if (Platform.isWindows) {
-      _lib = ffi.DynamicLibrary.open('../engine/target/release/engine.dll');
+      _lib = ffi.DynamicLibrary.open('engine.dll');
     } else if (Platform.isLinux) {
-      _lib = ffi.DynamicLibrary.open('../engine/target/release/libengine.so');
+      _lib = ffi.DynamicLibrary.open('libengine.so');
     } else {
       throw UnsupportedError('Unsupported platform');
     }

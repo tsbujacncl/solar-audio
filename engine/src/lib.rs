@@ -33,17 +33,21 @@ pub use vst3_host::*;
 // FFI exports are handled by #[no_mangle] in ffi.rs
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use cpal::Stream;
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 
 /// Simple audio engine that outputs silence to default device
 pub struct AudioEngine {
     is_running: Arc<AtomicBool>,
+    // Store stream to prevent it from being dropped (and to allow proper cleanup)
+    stream: Arc<Mutex<Option<Stream>>>,
 }
 
 impl AudioEngine {
     pub fn new() -> Result<Self, anyhow::Error> {
         Ok(Self {
             is_running: Arc::new(AtomicBool::new(false)),
+            stream: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -76,13 +80,24 @@ impl AudioEngine {
         
         stream.play()?;
         self.is_running.store(true, Ordering::SeqCst);
-        
-        // Keep stream alive
-        std::mem::forget(stream);
-        
+
+        // Store stream to keep it alive (and allow cleanup on drop)
+        if let Ok(mut stream_guard) = self.stream.lock() {
+            *stream_guard = Some(stream);
+        }
+
         Ok(())
     }
-    
+
+    /// Stop audio output
+    pub fn stop(&self) {
+        self.is_running.store(false, Ordering::SeqCst);
+        // Drop the stream to release audio resources
+        if let Ok(mut stream_guard) = self.stream.lock() {
+            *stream_guard = None;
+        }
+    }
+
     pub fn is_running(&self) -> bool {
         self.is_running.load(Ordering::SeqCst)
     }

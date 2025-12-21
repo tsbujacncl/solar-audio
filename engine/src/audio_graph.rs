@@ -121,9 +121,9 @@ impl AudioGraph {
 
     /// Add a clip to the timeline
     pub fn add_clip(&self, clip: Arc<AudioClip>, start_time: f64) -> ClipId {
-        let mut clips = self.clips.lock().unwrap();
+        let mut clips = self.clips.lock().expect("mutex poisoned");
         let id = {
-            let mut next_id = self.next_clip_id.lock().unwrap();
+            let mut next_id = self.next_clip_id.lock().expect("mutex poisoned");
             let id = *next_id;
             *next_id += 1;
             id
@@ -142,9 +142,9 @@ impl AudioGraph {
 
     /// Add a MIDI clip to the timeline
     pub fn add_midi_clip(&self, clip: Arc<MidiClip>, start_time: f64) -> ClipId {
-        let mut midi_clips = self.midi_clips.lock().unwrap();
+        let mut midi_clips = self.midi_clips.lock().expect("mutex poisoned");
         let id = {
-            let mut next_id = self.next_clip_id.lock().unwrap();
+            let mut next_id = self.next_clip_id.lock().expect("mutex poisoned");
             let id = *next_id;
             *next_id += 1;
             id
@@ -163,15 +163,15 @@ impl AudioGraph {
     /// Add an audio clip to a specific track (M5.5)
     pub fn add_clip_to_track(&self, track_id: TrackId, clip: Arc<AudioClip>, start_time: f64) -> Option<ClipId> {
         let id = {
-            let mut next_id = self.next_clip_id.lock().unwrap();
+            let mut next_id = self.next_clip_id.lock().expect("mutex poisoned");
             let id = *next_id;
             *next_id += 1;
             id
         };
 
-        let track_manager = self.track_manager.lock().unwrap();
+        let track_manager = self.track_manager.lock().expect("mutex poisoned");
         if let Some(track_arc) = track_manager.get_track(track_id) {
-            let mut track = track_arc.lock().unwrap();
+            let mut track = track_arc.lock().expect("mutex poisoned");
             track.audio_clips.push(TimelineClip {
                 id,
                 clip,
@@ -188,15 +188,15 @@ impl AudioGraph {
     /// Add a MIDI clip to a specific track (M5.5)
     pub fn add_midi_clip_to_track(&self, track_id: TrackId, clip: Arc<MidiClip>, start_time: f64) -> Option<ClipId> {
         let id = {
-            let mut next_id = self.next_clip_id.lock().unwrap();
+            let mut next_id = self.next_clip_id.lock().expect("mutex poisoned");
             let id = *next_id;
             *next_id += 1;
             id
         };
 
-        let track_manager = self.track_manager.lock().unwrap();
+        let track_manager = self.track_manager.lock().expect("mutex poisoned");
         if let Some(track_arc) = track_manager.get_track(track_id) {
-            let mut track = track_arc.lock().unwrap();
+            let mut track = track_arc.lock().expect("mutex poisoned");
             track.midi_clips.push(TimelineMidiClip {
                 id,
                 clip,
@@ -213,7 +213,7 @@ impl AudioGraph {
     pub fn remove_clip(&self, clip_id: ClipId) -> bool {
         // Try to remove from audio clips
         {
-            let mut clips = self.clips.lock().unwrap();
+            let mut clips = self.clips.lock().expect("mutex poisoned");
             if let Some(pos) = clips.iter().position(|c| c.id == clip_id) {
                 clips.remove(pos);
                 return true;
@@ -222,7 +222,7 @@ impl AudioGraph {
 
         // Try to remove from MIDI clips
         {
-            let mut midi_clips = self.midi_clips.lock().unwrap();
+            let mut midi_clips = self.midi_clips.lock().expect("mutex poisoned");
             if let Some(pos) = midi_clips.iter().position(|c| c.id == clip_id) {
                 midi_clips.remove(pos);
                 return true;
@@ -234,7 +234,7 @@ impl AudioGraph {
 
     /// Remove all MIDI clips belonging to a specific track
     pub fn remove_midi_clips_for_track(&self, track_id: TrackId) -> usize {
-        let mut midi_clips = self.midi_clips.lock().unwrap();
+        let mut midi_clips = self.midi_clips.lock().expect("mutex poisoned");
         let initial_count = midi_clips.len();
         midi_clips.retain(|clip| clip.track_id != Some(track_id));
         let removed_count = initial_count - midi_clips.len();
@@ -417,18 +417,18 @@ impl AudioGraph {
 
                 // Get clips (lock briefly) - keeping for potential future use
                 let _clips_snapshot = {
-                    let clips_lock = clips.lock().unwrap();
+                    let clips_lock = clips.lock().expect("mutex poisoned");
                     clips_lock.clone()
                 };
 
                 // Get MIDI clips (lock briefly)
                 let midi_clips_snapshot = {
-                    let midi_clips_lock = midi_clips.lock().unwrap();
+                    let midi_clips_lock = midi_clips.lock().expect("mutex poisoned");
                     midi_clips_lock.clone()
                 };
 
                 // Get current tempo for MIDI playback scaling
-                let current_tempo = *recorder_refs.tempo.lock().unwrap();
+                let current_tempo = *recorder_refs.tempo.lock().expect("mutex poisoned");
                 let tempo_ratio = current_tempo / 120.0;
 
                 // NOTE: Legacy MIDI clip processing removed - all MIDI now handled per-track
@@ -757,12 +757,12 @@ impl AudioGraph {
 
     /// Get number of audio clips
     pub fn clip_count(&self) -> usize {
-        self.clips.lock().unwrap().len()
+        self.clips.lock().expect("mutex poisoned").len()
     }
 
     /// Get number of MIDI clips
     pub fn midi_clip_count(&self) -> usize {
-        self.midi_clips.lock().unwrap().len()
+        self.midi_clips.lock().expect("mutex poisoned").len()
     }
 
     /// Get access to audio clips (for editing in API)
@@ -791,18 +791,18 @@ impl AudioGraph {
         use std::collections::HashMap;
 
         // Get all tracks
-        let track_manager = self.track_manager.lock().unwrap();
-        let effect_manager = self.effect_manager.lock().unwrap();
+        let track_manager = self.track_manager.lock().expect("mutex poisoned");
+        let effect_manager = self.effect_manager.lock().expect("mutex poisoned");
 
         let all_tracks = track_manager.get_all_tracks();
         let tracks_data: Vec<TrackData> = all_tracks.iter().map(|track_arc| {
-            let track = track_arc.lock().unwrap();
+            let track = track_arc.lock().expect("mutex poisoned");
 
             // Get effect chain for this track
             let fx_chain: Vec<EffectData> = track.fx_chain.iter().filter_map(|effect_id| {
                 // Get effect from effect manager
                 if let Some(effect_arc) = effect_manager.get_effect(*effect_id) {
-                    let effect = effect_arc.lock().unwrap();
+                    let effect = effect_arc.lock().expect("mutex poisoned");
                     let mut parameters = HashMap::new();
                     let effect_type_str;
 
@@ -898,7 +898,7 @@ impl AudioGraph {
         }).collect();
 
         // Collect audio files (simplified - get from global timeline for now)
-        let clips_lock = self.clips.lock().unwrap();
+        let clips_lock = self.clips.lock().expect("mutex poisoned");
         let audio_files: Vec<AudioFileData> = clips_lock.iter().map(|timeline_clip| {
             AudioFileData {
                 id: timeline_clip.id,
@@ -935,14 +935,14 @@ impl AudioGraph {
 
         // Clear existing tracks (except master will be kept and updated)
         {
-            let mut track_manager = self.track_manager.lock().unwrap();
-            let _effect_manager = self.effect_manager.lock().unwrap();
+            let mut track_manager = self.track_manager.lock().expect("mutex poisoned");
+            let _effect_manager = self.effect_manager.lock().expect("mutex poisoned");
 
             // Get all track IDs except master (ID 0)
             let all_tracks = track_manager.get_all_tracks();
             let track_ids_to_remove: Vec<u64> = all_tracks.iter()
                 .filter_map(|track_arc| {
-                    let track = track_arc.lock().unwrap();
+                    let track = track_arc.lock().expect("mutex poisoned");
                     if track.id != 0 { Some(track.id) } else { None }
                 })
                 .collect();
@@ -961,8 +961,8 @@ impl AudioGraph {
 
         // Recreate tracks and effects
         for track_data in project_data.tracks {
-            let track_manager = self.track_manager.lock().unwrap();
-            let mut effect_manager = self.effect_manager.lock().unwrap();
+            let track_manager = self.track_manager.lock().expect("mutex poisoned");
+            let mut effect_manager = self.effect_manager.lock().expect("mutex poisoned");
 
             // Parse track type
             let track_type = match track_data.track_type.as_str() {
@@ -980,7 +980,7 @@ impl AudioGraph {
             // Handle master track specially (update existing)
             if track_type == TrackType::Master {
                 if let Some(master_track_arc) = track_manager.get_track(0) {
-                    let mut master = master_track_arc.lock().unwrap();
+                    let mut master = master_track_arc.lock().expect("mutex poisoned");
                     master.volume_db = track_data.volume_db;
                     master.pan = track_data.pan;
                     master.mute = track_data.mute;
@@ -993,15 +993,15 @@ impl AudioGraph {
             // Create new track
             drop(track_manager); // Release lock before creating track
             let track_id = {
-                let mut tm = self.track_manager.lock().unwrap();
+                let mut tm = self.track_manager.lock().expect("mutex poisoned");
                 tm.create_track(track_type, track_data.name.clone())
             };
 
             // Update track properties
             {
-                let tm = self.track_manager.lock().unwrap();
+                let tm = self.track_manager.lock().expect("mutex poisoned");
                 if let Some(track_arc) = tm.get_track(track_id) {
-                    let mut track = track_arc.lock().unwrap();
+                    let mut track = track_arc.lock().expect("mutex poisoned");
                     track.volume_db = track_data.volume_db;
                     track.pan = track_data.pan;
                     track.mute = track_data.mute;
@@ -1070,9 +1070,9 @@ impl AudioGraph {
                 let effect_id = effect_manager.create_effect(effect);
 
                 // Add to track's FX chain
-                let tm = self.track_manager.lock().unwrap();
+                let tm = self.track_manager.lock().expect("mutex poisoned");
                 if let Some(track_arc) = tm.get_track(track_id) {
-                    let mut track = track_arc.lock().unwrap();
+                    let mut track = track_arc.lock().expect("mutex poisoned");
                     track.fx_chain.push(effect_id);
                 }
             }
@@ -1113,7 +1113,7 @@ impl AudioGraph {
         }
 
         let (track_snapshots, has_solo, master_snapshot) = {
-            let tm = self.track_manager.lock().unwrap();
+            let tm = self.track_manager.lock().expect("mutex poisoned");
             let has_solo_flag = tm.has_solo();
             let all_tracks = tm.get_all_tracks();
             let mut snapshots = Vec::new();

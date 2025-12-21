@@ -4,13 +4,20 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use crate::api;
 
+/// Safely create a CString, replacing null bytes with spaces
+fn safe_cstring(s: String) -> CString {
+    // Replace any null bytes to prevent panic
+    let safe_string = s.replace('\0', " ");
+    CString::new(safe_string).unwrap_or_else(|_| CString::new("Error creating string").unwrap())
+}
+
 /// Play a sine wave - C-compatible wrapper
 /// Returns a success message as a C string
 #[no_mangle]
 pub extern "C" fn play_sine_wave_ffi(frequency: f32, duration_ms: u32) -> *mut c_char {
     match api::play_sine_wave(frequency, duration_ms) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -18,8 +25,8 @@ pub extern "C" fn play_sine_wave_ffi(frequency: f32, duration_ms: u32) -> *mut c
 #[no_mangle]
 pub extern "C" fn init_audio_engine_ffi() -> *mut c_char {
     match api::init_audio_engine() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -41,8 +48,8 @@ pub extern "C" fn free_rust_string(ptr: *mut c_char) {
 #[no_mangle]
 pub extern "C" fn init_audio_graph_ffi() -> *mut c_char {
     match api::init_audio_graph() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -69,8 +76,8 @@ pub extern "C" fn load_audio_file_ffi(path: *const c_char) -> i64 {
 #[no_mangle]
 pub extern "C" fn transport_play_ffi() -> *mut c_char {
     match api::transport_play() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -78,8 +85,8 @@ pub extern "C" fn transport_play_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn transport_pause_ffi() -> *mut c_char {
     match api::transport_pause() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -88,8 +95,8 @@ pub extern "C" fn transport_pause_ffi() -> *mut c_char {
 pub extern "C" fn transport_stop_ffi() -> *mut c_char {
     eprintln!("🔴 [FFI] transport_stop_ffi() called from Flutter");
     match api::transport_stop() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -97,8 +104,8 @@ pub extern "C" fn transport_stop_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn transport_seek_ffi(position_seconds: f64) -> *mut c_char {
     match api::transport_seek(position_seconds) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -125,8 +132,8 @@ pub extern "C" fn get_clip_duration_ffi(clip_id: u64) -> f64 {
 #[no_mangle]
 pub extern "C" fn set_clip_start_time_ffi(track_id: u64, clip_id: u64, start_time: f64) -> *mut c_char {
     match api::set_clip_start_time(track_id, clip_id, start_time) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -182,8 +189,8 @@ pub extern "C" fn free_waveform_peaks_ffi(ptr: *mut f32, length: usize) {
 #[no_mangle]
 pub extern "C" fn start_recording_ffi() -> *mut c_char {
     match api::start_recording() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -224,8 +231,8 @@ pub extern "C" fn get_recorded_duration_ffi() -> f64 {
 #[no_mangle]
 pub extern "C" fn get_recording_waveform_ffi(num_peaks: u32) -> *mut c_char {
     match api::get_recording_waveform(num_peaks as usize) {
-        Ok(csv) => CString::new(csv).unwrap().into_raw(),
-        Err(_) => CString::new("").unwrap().into_raw(),
+        Ok(csv) => safe_cstring(csv).into_raw(),
+        Err(_) => safe_cstring(String::new()).into_raw(),
     }
 }
 
@@ -233,8 +240,8 @@ pub extern "C" fn get_recording_waveform_ffi(num_peaks: u32) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_count_in_bars_ffi(bars: u32) -> *mut c_char {
     match api::set_count_in_bars(bars) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -248,8 +255,8 @@ pub extern "C" fn get_count_in_bars_ffi() -> u32 {
 #[no_mangle]
 pub extern "C" fn set_tempo_ffi(bpm: f64) -> *mut c_char {
     match api::set_tempo(bpm) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -263,8 +270,8 @@ pub extern "C" fn get_tempo_ffi() -> f64 {
 #[no_mangle]
 pub extern "C" fn set_metronome_enabled_ffi(enabled: i32) -> *mut c_char {
     match api::set_metronome_enabled(enabled != 0) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -282,8 +289,8 @@ pub extern "C" fn is_metronome_enabled_ffi() -> i32 {
 #[no_mangle]
 pub extern "C" fn start_midi_input_ffi() -> *mut c_char {
     match api::start_midi_input() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -291,8 +298,8 @@ pub extern "C" fn start_midi_input_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn stop_midi_input_ffi() -> *mut c_char {
     match api::stop_midi_input() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -300,8 +307,8 @@ pub extern "C" fn stop_midi_input_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_synth_oscillator_type_ffi(osc_type: i32) -> *mut c_char {
     match api::set_synth_oscillator_type(osc_type) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -309,8 +316,8 @@ pub extern "C" fn set_synth_oscillator_type_ffi(osc_type: i32) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_synth_volume_ffi(volume: f32) -> *mut c_char {
     match api::set_synth_volume(volume) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -318,8 +325,8 @@ pub extern "C" fn set_synth_volume_ffi(volume: f32) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn send_midi_note_on_ffi(note: u8, velocity: u8) -> *mut c_char {
     match api::send_midi_note_on(note, velocity) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -327,8 +334,8 @@ pub extern "C" fn send_midi_note_on_ffi(note: u8, velocity: u8) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn send_midi_note_off_ffi(note: u8, velocity: u8) -> *mut c_char {
     match api::send_midi_note_off(note, velocity) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -340,8 +347,8 @@ pub extern "C" fn send_midi_note_off_ffi(note: u8, velocity: u8) -> *mut c_char 
 #[no_mangle]
 pub extern "C" fn start_midi_recording_ffi() -> *mut c_char {
     match api::start_midi_recording() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -378,9 +385,9 @@ pub extern "C" fn get_midi_input_devices_ffi() -> *mut c_char {
                 .into_iter()
                 .map(|(id, name, is_default)| format!("{}|{}|{}", id, name, if is_default { "1" } else { "0" }))
                 .collect();
-            CString::new(formatted.join("\n")).unwrap().into_raw()
+            safe_cstring(formatted.join("\n")).into_raw()
         }
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -388,8 +395,8 @@ pub extern "C" fn get_midi_input_devices_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn select_midi_input_device_ffi(device_index: i32) -> *mut c_char {
     match api::select_midi_input_device(device_index) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -397,8 +404,8 @@ pub extern "C" fn select_midi_input_device_ffi(device_index: i32) -> *mut c_char
 #[no_mangle]
 pub extern "C" fn refresh_midi_devices_ffi() -> *mut c_char {
     match api::refresh_midi_devices() {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -416,9 +423,9 @@ pub extern "C" fn get_audio_input_devices_ffi() -> *mut c_char {
                 .into_iter()
                 .map(|(id, name, is_default)| format!("{}|{}|{}", id, name, if is_default { "1" } else { "0" }))
                 .collect();
-            CString::new(formatted.join("\n")).unwrap().into_raw()
+            safe_cstring(formatted.join("\n")).into_raw()
         }
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -432,9 +439,9 @@ pub extern "C" fn get_audio_output_devices_ffi() -> *mut c_char {
                 .into_iter()
                 .map(|(id, name, is_default)| format!("{}|{}|{}", id, name, if is_default { "1" } else { "0" }))
                 .collect();
-            CString::new(formatted.join("\n")).unwrap().into_raw()
+            safe_cstring(formatted.join("\n")).into_raw()
         }
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -442,8 +449,8 @@ pub extern "C" fn get_audio_output_devices_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_audio_input_device_ffi(device_index: i32) -> *mut c_char {
     match api::set_audio_input_device(device_index) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -485,8 +492,8 @@ pub extern "C" fn add_midi_note_to_clip_ffi(
     duration: f64,
 ) -> *mut c_char {
     match api::add_midi_note_to_clip(clip_id, note, velocity, start_time, duration) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -494,8 +501,8 @@ pub extern "C" fn add_midi_note_to_clip_ffi(
 #[no_mangle]
 pub extern "C" fn clear_midi_clip_ffi(clip_id: u64) -> *mut c_char {
     match api::clear_midi_clip(clip_id) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -503,8 +510,8 @@ pub extern "C" fn clear_midi_clip_ffi(clip_id: u64) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn quantize_midi_clip_ffi(clip_id: u64, grid_division: u32) -> *mut c_char {
     match api::quantize_midi_clip(clip_id, grid_division) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -519,13 +526,8 @@ pub extern "C" fn get_midi_clip_count_ffi() -> usize {
 #[no_mangle]
 pub extern "C" fn get_midi_clip_info_ffi(clip_id: u64) -> *mut c_char {
     match api::get_midi_clip_info(clip_id) {
-        Ok(info) => {
-            CString::new(info).unwrap_or_default().into_raw()
-        }
-        Err(e) => {
-            let error_msg = format!("Error: {}", e);
-            CString::new(error_msg).unwrap_or_default().into_raw()
-        }
+        Ok(info) => safe_cstring(info).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -572,8 +574,8 @@ pub extern "C" fn create_track_ffi(
 #[no_mangle]
 pub extern "C" fn set_track_volume_ffi(track_id: u64, volume_db: f32) -> *mut c_char {
     match api::set_track_volume(track_id, volume_db) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -581,8 +583,8 @@ pub extern "C" fn set_track_volume_ffi(track_id: u64, volume_db: f32) -> *mut c_
 #[no_mangle]
 pub extern "C" fn set_track_pan_ffi(track_id: u64, pan: f32) -> *mut c_char {
     match api::set_track_pan(track_id, pan) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -590,8 +592,8 @@ pub extern "C" fn set_track_pan_ffi(track_id: u64, pan: f32) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_track_mute_ffi(track_id: u64, mute: bool) -> *mut c_char {
     match api::set_track_mute(track_id, mute) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -599,8 +601,8 @@ pub extern "C" fn set_track_mute_ffi(track_id: u64, mute: bool) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_track_solo_ffi(track_id: u64, solo: bool) -> *mut c_char {
     match api::set_track_solo(track_id, solo) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -608,8 +610,8 @@ pub extern "C" fn set_track_solo_ffi(track_id: u64, solo: bool) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn set_track_armed_ffi(track_id: u64, armed: bool) -> *mut c_char {
     match api::set_track_armed(track_id, armed) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -618,13 +620,13 @@ pub extern "C" fn set_track_armed_ffi(track_id: u64, armed: bool) -> *mut c_char
 pub extern "C" fn set_track_name_ffi(track_id: u64, name: *const c_char) -> *mut c_char {
     let name_str = unsafe {
         if name.is_null() {
-            return CString::new("Error: name is null").unwrap().into_raw();
+            return safe_cstring("Error: name is null".to_string()).into_raw();
         }
         CStr::from_ptr(name).to_string_lossy().to_string()
     };
     match api::set_track_name(track_id, name_str) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -638,8 +640,8 @@ pub extern "C" fn get_track_count_ffi() -> usize {
 #[no_mangle]
 pub extern "C" fn get_all_track_ids_ffi() -> *mut c_char {
     match api::get_all_track_ids() {
-        Ok(ids) => CString::new(ids).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(ids) => safe_cstring(ids).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -650,8 +652,8 @@ pub extern "C" fn get_all_track_ids_ffi() -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn get_track_info_ffi(track_id: u64) -> *mut c_char {
     match api::get_track_info(track_id) {
-        Ok(info) => CString::new(info).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(info) => safe_cstring(info).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -661,8 +663,8 @@ pub extern "C" fn get_track_info_ffi(track_id: u64) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn get_track_peak_levels_ffi(track_id: u64) -> *mut c_char {
     match api::get_track_peak_levels(track_id) {
-        Ok(levels) => CString::new(levels).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(levels) => safe_cstring(levels).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -670,8 +672,8 @@ pub extern "C" fn get_track_peak_levels_ffi(track_id: u64) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn move_clip_to_track_ffi(track_id: u64, clip_id: u64) -> *mut c_char {
     match api::move_clip_to_track(track_id, clip_id) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -706,8 +708,8 @@ pub extern "C" fn add_effect_to_track_ffi(
 #[no_mangle]
 pub extern "C" fn remove_effect_from_track_ffi(track_id: u64, effect_id: u64) -> *mut c_char {
     match api::remove_effect_from_track(track_id, effect_id) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -715,8 +717,8 @@ pub extern "C" fn remove_effect_from_track_ffi(track_id: u64, effect_id: u64) ->
 #[no_mangle]
 pub extern "C" fn get_track_effects_ffi(track_id: u64) -> *mut c_char {
     match api::get_track_effects(track_id) {
-        Ok(effects) => CString::new(effects).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(effects) => safe_cstring(effects).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -724,8 +726,8 @@ pub extern "C" fn get_track_effects_ffi(track_id: u64) -> *mut c_char {
 #[no_mangle]
 pub extern "C" fn get_effect_info_ffi(effect_id: u64) -> *mut c_char {
     match api::get_effect_info(effect_id) {
-        Ok(info) => CString::new(info).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(info) => safe_cstring(info).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -739,13 +741,13 @@ pub extern "C" fn set_effect_parameter_ffi(
     let param_name_str = unsafe {
         match CStr::from_ptr(param_name).to_str() {
             Ok(s) => s,
-            Err(_) => return CString::new("Error: Invalid parameter name").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid parameter name".to_string()).into_raw(),
         }
     };
 
     match api::set_effect_parameter(effect_id, param_name_str, value) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -753,8 +755,8 @@ pub extern "C" fn set_effect_parameter_ffi(
 #[no_mangle]
 pub extern "C" fn delete_track_ffi(track_id: u64) -> *mut c_char {
     match api::delete_track(track_id) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -786,20 +788,20 @@ pub extern "C" fn save_project_ffi(
     let project_name_str = unsafe {
         match CStr::from_ptr(project_name).to_str() {
             Ok(s) => s.to_string(),
-            Err(_) => return CString::new("Error: Invalid project name").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid project name".to_string()).into_raw(),
         }
     };
 
     let project_path_str = unsafe {
         match CStr::from_ptr(project_path).to_str() {
             Ok(s) => s.to_string(),
-            Err(_) => return CString::new("Error: Invalid project path").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid project path".to_string()).into_raw(),
         }
     };
 
     match api::save_project(project_name_str, project_path_str) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -809,13 +811,13 @@ pub extern "C" fn load_project_ffi(project_path: *const c_char) -> *mut c_char {
     let project_path_str = unsafe {
         match CStr::from_ptr(project_path).to_str() {
             Ok(s) => s.to_string(),
-            Err(_) => return CString::new("Error: Invalid project path").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid project path".to_string()).into_raw(),
         }
     };
 
     match api::load_project(project_path_str) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -828,13 +830,13 @@ pub extern "C" fn export_to_wav_ffi(
     let output_path_str = unsafe {
         match CStr::from_ptr(output_path).to_str() {
             Ok(s) => s.to_string(),
-            Err(_) => return CString::new("Error: Invalid output path").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid output path".to_string()).into_raw(),
         }
     };
 
     match api::export_to_wav(output_path_str, normalize) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -874,20 +876,20 @@ pub extern "C" fn set_synth_parameter_ffi(
     let param_name_str = unsafe {
         match CStr::from_ptr(param_name).to_str() {
             Ok(s) => s.to_string(),
-            Err(_) => return CString::new("Error: Invalid parameter name").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid parameter name".to_string()).into_raw(),
         }
     };
 
     let value_str = unsafe {
         match CStr::from_ptr(value).to_str() {
             Ok(s) => s.to_string(),
-            Err(_) => return CString::new("Error: Invalid value").unwrap().into_raw(),
+            Err(_) => return safe_cstring("Error: Invalid value".to_string()).into_raw(),
         }
     };
 
     match api::set_synth_parameter(track_id, param_name_str, value_str) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -897,8 +899,8 @@ pub extern "C" fn get_synth_parameters_ffi(track_id: u64) -> *mut c_char {
     println!("🎹 [FFI] Get synth parameters for track {}", track_id);
 
     match api::get_synth_parameters(track_id) {
-        Ok(json) => CString::new(json).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(json) => safe_cstring(json).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -908,8 +910,8 @@ pub extern "C" fn send_track_midi_note_on_ffi(track_id: u64, note: u8, velocity:
     println!("🎹 [FFI] Track {} Note On: note={}, velocity={}", track_id, note, velocity);
 
     match api::send_track_midi_note_on(track_id, note, velocity) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -919,8 +921,8 @@ pub extern "C" fn send_track_midi_note_off_ffi(track_id: u64, note: u8, velocity
     println!("🎹 [FFI] Track {} Note Off: note={}, velocity={}", track_id, note, velocity);
 
     match api::send_track_midi_note_off(track_id, note, velocity) {
-        Ok(msg) => CString::new(msg).unwrap().into_raw(),
-        Err(e) => CString::new(format!("Error: {}", e)).unwrap().into_raw(),
+        Ok(msg) => safe_cstring(msg).into_raw(),
+        Err(e) => safe_cstring(format!("Error: {}", e)).into_raw(),
     }
 }
 
@@ -937,11 +939,11 @@ pub extern "C" fn scan_vst3_plugins_standard_ffi() -> *mut c_char {
     match api::scan_vst3_plugins_standard() {
         Ok(plugin_list) => {
             println!("✅ [FFI] VST3 scan completed");
-            CString::new(plugin_list).unwrap().into_raw()
+            safe_cstring(plugin_list).into_raw()
         }
         Err(e) => {
             eprintln!("❌ [FFI] VST3 scan failed: {}", e);
-            CString::new("").unwrap().into_raw()
+            safe_cstring(String::new()).into_raw()
         }
     }
 }
@@ -994,10 +996,10 @@ pub extern "C" fn get_vst3_parameter_info_ffi(
     param_index: i32,
 ) -> *mut c_char {
     match api::get_vst3_parameter_info(effect_id as u64, param_index as u32) {
-        Ok(info) => CString::new(info).unwrap().into_raw(),
+        Ok(info) => safe_cstring(info).into_raw(),
         Err(e) => {
             eprintln!("❌ [FFI] Failed to get VST3 parameter info: {}", e);
-            CString::new("").unwrap().into_raw()
+            safe_cstring(String::new()).into_raw()
         }
     }
 }
@@ -1061,14 +1063,14 @@ pub extern "C" fn vst3_open_editor_ffi(effect_id: i64) -> *mut c_char {
         Ok(msg) => {
             if msg.is_empty() {
                 println!("✅ [FFI] VST3 editor opened successfully");
-                CString::new("").unwrap().into_raw()
+                safe_cstring(String::new()).into_raw()
             } else {
-                CString::new(msg).unwrap().into_raw()
+                safe_cstring(msg).into_raw()
             }
         }
         Err(e) => {
             eprintln!("❌ [FFI] Failed to open VST3 editor: {}", e);
-            CString::new(format!("Error: {}", e)).unwrap().into_raw()
+            safe_cstring(format!("Error: {}", e)).into_raw()
         }
     }
 }
@@ -1089,10 +1091,10 @@ pub extern "C" fn vst3_close_editor_ffi(effect_id: i64) {
 #[no_mangle]
 pub extern "C" fn vst3_get_editor_size_ffi(effect_id: i64) -> *mut c_char {
     match api::vst3_get_editor_size(effect_id as u64) {
-        Ok(size) => CString::new(size).unwrap().into_raw(),
+        Ok(size) => safe_cstring(size).into_raw(),
         Err(e) => {
             eprintln!("❌ [FFI] Failed to get VST3 editor size: {}", e);
-            CString::new(format!("Error: {}", e)).unwrap().into_raw()
+            safe_cstring(format!("Error: {}", e)).into_raw()
         }
     }
 }
@@ -1111,14 +1113,14 @@ pub extern "C" fn vst3_attach_editor_ffi(
         Ok(msg) => {
             if msg.is_empty() {
                 println!("✅ [FFI] VST3 editor attached successfully");
-                CString::new("").unwrap().into_raw()
+                safe_cstring(String::new()).into_raw()
             } else {
-                CString::new(msg).unwrap().into_raw()
+                safe_cstring(msg).into_raw()
             }
         }
         Err(e) => {
             eprintln!("❌ [FFI] Failed to attach VST3 editor: {}", e);
-            CString::new(format!("Error: {}", e)).unwrap().into_raw()
+            safe_cstring(format!("Error: {}", e)).into_raw()
         }
     }
 }

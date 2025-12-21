@@ -20,7 +20,7 @@ Boojy Audio combines professional workflows with beginner-friendly UX. Built wit
 - ⌨️ **Keyboard-driven** - Command palette (⌘K) and comprehensive shortcuts
 - 🎨 **Modern UI** - Flat design, clip gain handles, sample preview
 
-## Recent Updates (M7 - October 30, 2025)
+## Recent Updates (M7 - December 2025)
 
 🚧 **VST3 Plugin Support - Native GUI Integration (In Progress):**
 - VST3 plugin scanning and loading infrastructure ✅
@@ -32,6 +32,18 @@ Boojy Audio combines professional workflows with beginner-friendly UX. Built wit
   * "Open GUI" button in plugin parameter panel
   * Both docked and floating window modes planned
 - Context-aware editor placement (instruments in Instrument tab, effects in FX tab)
+
+## Previous Updates (M6.4 - December 2025)
+
+✅ **Bug Fixes & Synth Refinements:**
+
+- Virtual piano now works during pause/stop (audio stream stays active)
+- MIDI clip bar-snapping (Ableton-style: clips align to bar boundaries)
+- Simplified synthesizer architecture:
+  * Single oscillator (sine/saw/square/triangle)
+  * One-pole lowpass filter with cutoff control
+  * ADSR envelope (attack, decay, sustain, release)
+  * 8-voice polyphony with voice stealing
 
 ## Previous Updates (M6.3 - October 30, 2025)
 
@@ -59,7 +71,7 @@ Boojy Audio combines professional workflows with beginner-friendly UX. Built wit
 
 ✅ **MIDI & Instruments Complete:**
 - Piano roll editor with FL Studio-style layout
-- Polyphonic synthesizer (16 voices, ADSR, filter, LFO)
+- Polyphonic synthesizer (8 voices, ADSR, filter)
 - Virtual piano keyboard (computer keyboard mapping)
 - Instrument browser with drag-and-drop workflow
 - MIDI clip playback during transport ✨
@@ -152,7 +164,7 @@ Boojy Audio combines professional workflows with beginner-friendly UX. Built wit
 - **Flutter:** [Install Flutter](https://docs.flutter.dev/get-started/install)
 - **macOS:** Xcode Command Line Tools
 
-### Build & Run (Coming Soon - M0 in progress)
+### Build & Run
 
 ```bash
 # Clone the repository
@@ -186,6 +198,7 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for detailed mi
 | **M6.1**  | MIDI Playback Fixes         | ✅ Complete |
 | **M6.2**  | Toolbar Reorganization      | ✅ Complete |
 | **M6.3**  | Native Menu Bar & Editor    | ✅ Complete |
+| **M6.4**  | Bug Fixes & Synth Refinements | ✅ Complete |
 | **M7**    | VST3 Plugin Support         | 🚧 In Progress |
 | **M8**    | Stock Instruments           | 📋 Planned  |
 | **M9**    | Polish & UX                 | 📋 Planned  |
