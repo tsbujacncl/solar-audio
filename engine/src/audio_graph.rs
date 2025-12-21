@@ -673,12 +673,8 @@ impl AudioGraph {
                         (0.0, 0.0)
                     };
 
-                    // Process recording and get metronome output
+                    // Process recording (metronome handled separately below)
                     let (met_left, met_right) = recorder_refs.process_frame(input_left, input_right, true);
-
-                    // Mix playback + metronome
-                    mix_left += met_left;
-                    mix_right += met_right;
 
                     // Apply master track processing (using snapshot - no locks!)
                     let mut master_left = mix_left;
@@ -690,10 +686,8 @@ impl AudioGraph {
                         master_right *= master_snap.volume_gain;
 
                         // Apply master pan
-                        let temp_l = master_left * master_snap.pan_left + master_right * master_snap.pan_left;
-                        let temp_r = master_left * master_snap.pan_right + master_right * master_snap.pan_right;
-                        master_left = temp_l;
-                        master_right = temp_r;
+                        master_left *= master_snap.pan_left;
+                        master_right *= master_snap.pan_right;
 
                         // Process master FX chain
                         if let Ok(effect_mgr) = effect_manager.lock() {
@@ -716,13 +710,18 @@ impl AudioGraph {
                         (master_left.clamp(-1.0, 1.0), master_right.clamp(-1.0, 1.0))
                     };
 
-                    // Update master peak levels for metering
+                    // Update master peak levels for metering (before metronome is added)
                     master_peak_left = master_peak_left.max(limited_left.abs());
                     master_peak_right = master_peak_right.max(limited_right.abs());
 
+                    // Add metronome AFTER metering so it doesn't affect the master meter
+                    // Metronome goes directly to output, bypassing master volume/effects
+                    let output_left = limited_left + met_left;
+                    let output_right = limited_right + met_right;
+
                     // Write to output buffer (interleaved stereo)
-                    data[frame_idx * 2] = limited_left;
-                    data[frame_idx * 2 + 1] = limited_right;
+                    data[frame_idx * 2] = output_left;
+                    data[frame_idx * 2 + 1] = output_right;
                 }
 
                 // Update track peak levels in track manager (brief lock after buffer processing)

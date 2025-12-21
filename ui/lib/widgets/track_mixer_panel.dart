@@ -100,7 +100,7 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
   List<TrackData> _tracks = [];
   Timer? _refreshTimer;
   Timer? _levelTimer;
-  Map<int, double> _peakLevels = {};
+  Map<int, (double, double)> _peakLevels = {}; // (left, right) stereo peaks
   bool _isAudioFileDragging = false;
 
   @override
@@ -130,7 +130,7 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
   void _updatePeakLevels() {
     if (widget.audioEngine == null || !mounted) return;
 
-    final newLevels = <int, double>{};
+    final newLevels = <int, (double, double)>{};
 
     for (final track in _tracks) {
       try {
@@ -140,11 +140,10 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
         if (parts.length >= 2) {
           final leftDb = double.tryParse(parts[0]) ?? -96.0;
           final rightDb = double.tryParse(parts[1]) ?? -96.0;
-          // Use max of left/right for display
-          final maxDb = leftDb > rightDb ? leftDb : rightDb;
           // Convert dB to 0.0-1.0 range: -60dB = 0.0, 0dB = 1.0
-          final normalized = ((maxDb + 60.0) / 60.0).clamp(0.0, 1.0);
-          newLevels[track.id] = normalized;
+          final normalizedLeft = ((leftDb + 60.0) / 60.0).clamp(0.0, 1.0);
+          final normalizedRight = ((rightDb + 60.0) / 60.0).clamp(0.0, 1.0);
+          newLevels[track.id] = (normalizedLeft, normalizedRight);
         }
       } catch (e) {
         // Silently fail for level polling
@@ -546,7 +545,8 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
                     pan: track.pan,
                     isMuted: track.mute,
                     isSoloed: track.solo,
-                    peakLevel: _peakLevels[track.id] ?? 0.0,
+                    peakLevelLeft: _peakLevels[track.id]?.$1 ?? 0.0,
+                    peakLevelRight: _peakLevels[track.id]?.$2 ?? 0.0,
                     trackColor: trackColor,
                     audioEngine: widget.audioEngine,
                     isSelected: widget.selectedTrackId == track.id,
@@ -604,7 +604,8 @@ class TrackMixerPanelState extends State<TrackMixerPanel> {
           MasterTrackMixerStrip(
             volumeDb: masterTrack.volumeDb,
             pan: masterTrack.pan,
-            peakLevel: _peakLevels[masterTrack.id] ?? 0.0,
+            peakLevelLeft: _peakLevels[masterTrack.id]?.$1 ?? 0.0,
+            peakLevelRight: _peakLevels[masterTrack.id]?.$2 ?? 0.0,
             onVolumeChanged: (volumeDb) {
               setState(() {
                 masterTrack.volumeDb = volumeDb;

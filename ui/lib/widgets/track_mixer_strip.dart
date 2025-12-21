@@ -16,7 +16,8 @@ class TrackMixerStrip extends StatefulWidget {
   final double pan;
   final bool isMuted;
   final bool isSoloed;
-  final double peakLevel; // 0.0 to 1.0
+  final double peakLevelLeft; // 0.0 to 1.0
+  final double peakLevelRight; // 0.0 to 1.0
   final Color? trackColor; // Optional track color for left border
   final AudioEngine? audioEngine;
 
@@ -52,7 +53,8 @@ class TrackMixerStrip extends StatefulWidget {
     required this.pan,
     required this.isMuted,
     required this.isSoloed,
-    this.peakLevel = 0.0,
+    this.peakLevelLeft = 0.0,
+    this.peakLevelRight = 0.0,
     this.trackColor,
     this.audioEngine,
     this.onVolumeChanged,
@@ -233,8 +235,8 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
                   // Bottom row: Horizontal level meter (taller now)
                   Expanded(
                     child: HorizontalLevelMeter(
-                      leftLevel: widget.peakLevel,
-                      rightLevel: widget.peakLevel,
+                      leftLevel: widget.peakLevelLeft,
+                      rightLevel: widget.peakLevelRight,
                       volumeDb: widget.volumeDb,
                       onVolumeChanged: widget.onVolumeChanged,
                     ),
@@ -566,7 +568,8 @@ class _TrackMixerStripState extends State<TrackMixerStrip> {
 class MasterTrackMixerStrip extends StatelessWidget {
   final double volumeDb;
   final double pan;
-  final double peakLevel;
+  final double peakLevelLeft;
+  final double peakLevelRight;
   final Function(double)? onVolumeChanged;
   final Function(double)? onPanChanged;
 
@@ -574,7 +577,8 @@ class MasterTrackMixerStrip extends StatelessWidget {
     super.key,
     required this.volumeDb,
     required this.pan,
-    this.peakLevel = 0.0,
+    this.peakLevelLeft = 0.0,
+    this.peakLevelRight = 0.0,
     this.onVolumeChanged,
     this.onPanChanged,
   });
@@ -691,8 +695,8 @@ class MasterTrackMixerStrip extends StatelessWidget {
                   // Bottom row: Horizontal level meter (taller)
                   Expanded(
                     child: HorizontalLevelMeter(
-                      leftLevel: peakLevel,
-                      rightLevel: peakLevel,
+                      leftLevel: peakLevelLeft,
+                      rightLevel: peakLevelRight,
                       volumeDb: volumeDb,
                       onVolumeChanged: onVolumeChanged,
                     ),
