@@ -148,8 +148,11 @@ class MidiClipData {
   /// Start time on timeline (in seconds)
   final double startTime;
 
-  /// Duration of clip (in seconds)
+  /// Duration of a single iteration (in seconds)
   final double duration;
+
+  /// Number of times this clip loops (1 = no loop, 2 = plays twice, etc.)
+  final int loopCount;
 
   /// List of MIDI notes in this clip
   final List<MidiNoteData> notes;
@@ -165,13 +168,17 @@ class MidiClipData {
     required this.trackId,
     required this.startTime,
     required this.duration,
+    this.loopCount = 1,
     this.notes = const [],
     this.name = 'MIDI Clip',
     this.color,
   });
 
-  /// Get end time on timeline
-  double get endTime => startTime + duration;
+  /// Total duration including all loop iterations
+  double get totalDuration => duration * loopCount;
+
+  /// Get end time on timeline (including loops)
+  double get endTime => startTime + totalDuration;
 
   /// Add a note to this clip
   MidiClipData addNote(MidiNoteData note) {
@@ -180,6 +187,7 @@ class MidiClipData {
       trackId: trackId,
       startTime: startTime,
       duration: duration,
+      loopCount: loopCount,
       notes: [...notes, note],
       name: name,
       color: color,
@@ -193,6 +201,7 @@ class MidiClipData {
       trackId: trackId,
       startTime: startTime,
       duration: duration,
+      loopCount: loopCount,
       notes: notes.where((n) => n.id != noteId).toList(),
       name: name,
       color: color,
@@ -206,6 +215,7 @@ class MidiClipData {
       trackId: trackId,
       startTime: startTime,
       duration: duration,
+      loopCount: loopCount,
       notes: notes.map((n) => n.id == noteId ? updatedNote : n).toList(),
       name: name,
       color: color,
@@ -222,6 +232,7 @@ class MidiClipData {
       trackId: trackId,
       startTime: startTime,
       duration: duration,
+      loopCount: loopCount,
       notes: notes.map((note) {
         final inTimeRange = note.startTime >= startBeat && note.endTime <= endBeat;
         final inPitchRange = note.note >= minNote && note.note <= maxNote;
@@ -239,6 +250,7 @@ class MidiClipData {
       trackId: trackId,
       startTime: startTime,
       duration: duration,
+      loopCount: loopCount,
       notes: notes.map((n) => n.copyWith(isSelected: false)).toList(),
       name: name,
       color: color,
@@ -251,6 +263,7 @@ class MidiClipData {
     int? trackId,
     double? startTime,
     double? duration,
+    int? loopCount,
     List<MidiNoteData>? notes,
     String? name,
     Color? color,
@@ -260,6 +273,7 @@ class MidiClipData {
       trackId: trackId ?? this.trackId,
       startTime: startTime ?? this.startTime,
       duration: duration ?? this.duration,
+      loopCount: loopCount ?? this.loopCount,
       notes: notes ?? this.notes,
       name: name ?? this.name,
       color: color ?? this.color,

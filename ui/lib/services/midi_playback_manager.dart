@@ -140,26 +140,27 @@ class MidiPlaybackManager extends ChangeNotifier {
       isNewClip = true;
     }
 
-    // Add all notes to the Rust clip
-    // Note: clip.startTime is the clip's position on the timeline (in seconds)
-    // Note timestamps within the clip must be RELATIVE to the clip start
-    final clipStartTimeSeconds = clip.startTime;
+    // Add all notes to the Rust clip for each loop iteration
+    // Note: note.startTime is in beats RELATIVE to clip start (0 = first beat of clip)
+    final singleIterationDuration = clip.duration; // Already in seconds
 
-    for (final note in clip.notes) {
-      // Convert beats to seconds using current tempo
-      final absoluteStartTimeSeconds = note.startTimeInSeconds(tempo);
-      final durationSeconds = note.durationInSeconds(tempo);
+    for (int loop = 0; loop < clip.loopCount; loop++) {
+      final loopOffsetSeconds = loop * singleIterationDuration;
 
-      // Make note time relative to clip start
-      final relativeStartTimeSeconds = absoluteStartTimeSeconds - clipStartTimeSeconds;
+      for (final note in clip.notes) {
+        // Convert beats to seconds using current tempo
+        // note.startTime is already relative to clip start (0-based)
+        final noteStartSeconds = note.startTimeInSeconds(tempo) + loopOffsetSeconds;
+        final durationSeconds = note.durationInSeconds(tempo);
 
-      _audioEngine.addMidiNoteToClip(
-        rustClipId,
-        note.note,
-        note.velocity,
-        relativeStartTimeSeconds,
-        durationSeconds,
-      );
+        _audioEngine.addMidiNoteToClip(
+          rustClipId,
+          note.note,
+          note.velocity,
+          noteStartSeconds,
+          durationSeconds,
+        );
+      }
     }
 
     // Only add to timeline if this is a new clip
@@ -193,6 +194,32 @@ class MidiPlaybackManager extends ChangeNotifier {
   /// Add a recorded MIDI clip to the manager
   void addRecordedClip(MidiClipData clip) {
     _midiClips.add(clip);
+    notifyListeners();
+  }
+
+  /// Copy a MIDI clip to a new position
+  ///
+  /// Creates a duplicate of the source clip at the specified start time.
+  /// The new clip gets a unique ID and is scheduled for playback.
+  void copyClip(MidiClipData sourceClip, double newStartTime, double tempo) {
+    final newClipId = DateTime.now().millisecondsSinceEpoch;
+
+    // Create a copy with new ID and position
+    final copiedClip = sourceClip.copyWith(
+      clipId: newClipId,
+      startTime: newStartTime,
+    );
+
+    // Add to clips list
+    _midiClips.add(copiedClip);
+
+    // Schedule for playback (this will create a new Rust clip)
+    _scheduleMidiClipPlayback(copiedClip, tempo);
+
+    // Select the new clip
+    _selectedMidiClipId = newClipId;
+    _currentEditingClip = copiedClip;
+
     notifyListeners();
   }
 

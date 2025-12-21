@@ -504,6 +504,15 @@ pub extern "C" fn add_midi_clip_to_track_ffi(
     }
 }
 
+/// Remove a MIDI clip from a track and global storage
+#[no_mangle]
+pub extern "C" fn remove_midi_clip_ffi(track_id: u64, clip_id: u64) -> i64 {
+    match api::remove_midi_clip(track_id, clip_id) {
+        Ok(removed) => if removed { 0 } else { 1 },
+        Err(_) => -1,
+    }
+}
+
 /// Add a MIDI note to a clip
 #[no_mangle]
 pub extern "C" fn add_midi_note_to_clip_ffi(

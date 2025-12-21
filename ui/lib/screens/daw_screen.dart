@@ -1445,6 +1445,39 @@ class _DAWScreenState extends State<DAWScreen> {
     _midiPlaybackManager?.updateClip(updatedClip, _tempo, _playheadPosition);
   }
 
+  void _onMidiClipCopied(MidiClipData sourceClip, double newStartTime) {
+    _midiPlaybackManager?.copyClip(sourceClip, newStartTime, _tempo);
+    setState(() {});
+  }
+
+  /// Duplicate the currently selected clip in place (Cmd+D)
+  /// Places the duplicate immediately after the original clip
+  void _duplicateSelectedClip() {
+    final clip = _midiPlaybackManager?.currentEditingClip;
+    if (clip == null) return;
+
+    // Place duplicate immediately after original
+    final newStartTime = clip.startTime + clip.duration;
+    _midiPlaybackManager?.copyClip(clip, newStartTime, _tempo);
+    setState(() {});
+  }
+
+  /// Delete a MIDI clip by ID
+  void _deleteMidiClip(int clipId, int trackId) {
+    // Get Rust clip ID before removing from Dart side
+    final rustClipId = _midiPlaybackManager?.dartToRustClipIds[clipId];
+
+    // Remove from Dart side (MidiPlaybackManager)
+    _midiPlaybackManager?.removeClip(clipId);
+
+    // Remove from Rust engine
+    if (rustClipId != null) {
+      _audioEngine?.removeMidiClip(trackId, rustClipId);
+    }
+
+    setState(() {});
+  }
+
   // ========================================================================
   // Undo/Redo methods
   // ========================================================================
@@ -2146,7 +2179,20 @@ class _DAWScreenState extends State<DAWScreen> {
             PlatformMenuItem(
               label: 'Delete',
               shortcut: const SingleActivator(LogicalKeyboardKey.delete),
-              onSelected: null, // Disabled - future feature
+              onSelected: _midiPlaybackManager?.selectedClipId != null
+                  ? () {
+                      final clipId = _midiPlaybackManager!.selectedClipId!;
+                      final clip = _midiPlaybackManager!.currentEditingClip;
+                      if (clip != null) {
+                        _deleteMidiClip(clipId, clip.trackId);
+                      }
+                    }
+                  : null,
+            ),
+            PlatformMenuItem(
+              label: 'Duplicate',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyD, meta: true),
+              onSelected: _duplicateSelectedClip,
             ),
             PlatformMenuItem(
               label: 'Select All',
@@ -2305,6 +2351,9 @@ class _DAWScreenState extends State<DAWScreen> {
                           onMidiTrackSelected: _onTrackSelected,
                           onMidiClipSelected: _onMidiClipSelected,
                           onMidiClipUpdated: _onMidiClipUpdated,
+                          onMidiClipCopied: _onMidiClipCopied,
+                          getRustClipId: (dartClipId) => _midiPlaybackManager?.dartToRustClipIds[dartClipId] ?? dartClipId,
+                          onMidiClipDeleted: _deleteMidiClip,
                           onInstrumentDropped: _onInstrumentDropped,
                           onInstrumentDroppedOnEmpty: _onInstrumentDroppedOnEmpty,
                           onVst3InstrumentDropped: _onVst3InstrumentDropped,

@@ -1298,6 +1298,29 @@ pub fn add_midi_clip_to_track(track_id: u64, clip_id: u64, start_time_seconds: f
     Ok(())
 }
 
+/// Remove a MIDI clip from a track and global storage
+///
+/// # Arguments
+/// * `track_id` - The track containing the clip
+/// * `clip_id` - The MIDI clip ID to remove
+pub fn remove_midi_clip(track_id: u64, clip_id: u64) -> Result<bool, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    // Remove from track's timeline
+    let track_manager = graph.track_manager.lock().map_err(|e| e.to_string())?;
+    if let Some(track_arc) = track_manager.get_track(track_id) {
+        let mut track = track_arc.lock().map_err(|e| e.to_string())?;
+        track.midi_clips.retain(|c| c.id != clip_id);
+    }
+    drop(track_manager);
+
+    // Remove from global collection
+    let removed = graph.remove_clip(clip_id);
+    Ok(removed)
+}
+
 // ============================================================================
 // M4: TRACK & MIXING API
 // ============================================================================

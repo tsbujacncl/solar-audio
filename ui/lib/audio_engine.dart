@@ -49,6 +49,7 @@ class AudioEngine {
   late final _CreateMidiClipFfi _createMidiClip;
   late final _AddMidiNoteToClipFfi _addMidiNoteToClip;
   late final _AddMidiClipToTrackFfi _addMidiClipToTrack;
+  late final _RemoveMidiClipFfi _removeMidiClip;
   late final _ClearMidiClipFfi _clearMidiClip;
 
   // M6 functions - Per-track Synthesizer
@@ -389,6 +390,12 @@ class AudioEngine {
               'add_midi_clip_to_track_ffi')
           .asFunction();
       print('  ✅ add_midi_clip_to_track_ffi bound');
+
+      _removeMidiClip = _lib
+          .lookup<ffi.NativeFunction<_RemoveMidiClipFfiNative>>(
+              'remove_midi_clip_ffi')
+          .asFunction();
+      print('  ✅ remove_midi_clip_ffi bound');
 
       _clearMidiClip = _lib
           .lookup<ffi.NativeFunction<_ClearMidiClipFfiNative>>(
@@ -1204,6 +1211,17 @@ class AudioEngine {
       return _addMidiClipToTrack(trackId, clipId, startTimeSeconds);
     } catch (e) {
       print('❌ [AudioEngine] Add MIDI clip to track failed: $e');
+      return -1;
+    }
+  }
+
+  /// Remove a MIDI clip from a track and global storage
+  /// Returns 0 if removed, 1 if not found, -1 on error
+  int removeMidiClip(int trackId, int clipId) {
+    try {
+      return _removeMidiClip(trackId, clipId);
+    } catch (e) {
+      print('❌ [AudioEngine] Remove MIDI clip failed: $e');
       return -1;
     }
   }
@@ -2241,6 +2259,9 @@ typedef _AddMidiNoteToClipFfi = ffi.Pointer<Utf8> Function(int, int, int, double
 
 typedef _AddMidiClipToTrackFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Uint64, ffi.Double);
 typedef _AddMidiClipToTrackFfi = int Function(int, int, double);
+
+typedef _RemoveMidiClipFfiNative = ffi.Int64 Function(ffi.Uint64, ffi.Uint64);
+typedef _RemoveMidiClipFfi = int Function(int, int);
 
 typedef _ClearMidiClipFfiNative = ffi.Pointer<Utf8> Function(ffi.Uint64);
 typedef _ClearMidiClipFfi = ffi.Pointer<Utf8> Function(int);
