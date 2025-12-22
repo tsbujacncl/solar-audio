@@ -22,6 +22,12 @@ class AudioEngine {
   late final _GetPlayheadPositionFfi _getPlayheadPosition;
   late final _GetTransportStateFfi _getTransportState;
   late final _GetClipDurationFfi _getClipDuration;
+
+  // Latency Control functions
+  late final _SetBufferSizeFfi _setBufferSize;
+  late final _GetBufferSizePresetFfi _getBufferSizePreset;
+  late final _GetActualBufferSizeFfi _getActualBufferSize;
+  late final _GetLatencyInfoFfi _getLatencyInfo;
   late final _SetClipStartTimeFfi _setClipStartTime;
   late final _GetWaveformPeaksFfi _getWaveformPeaks;
   late final _FreeWaveformPeaksFfi _freeWaveformPeaks;
@@ -244,7 +250,32 @@ class AudioEngine {
               'get_transport_state_ffi')
           .asFunction();
       print('  ✅ get_transport_state_ffi bound');
-      
+
+      // Latency Control bindings
+      _setBufferSize = _lib
+          .lookup<ffi.NativeFunction<_SetBufferSizeFfiNative>>(
+              'set_buffer_size_ffi')
+          .asFunction();
+      print('  ✅ set_buffer_size_ffi bound');
+
+      _getBufferSizePreset = _lib
+          .lookup<ffi.NativeFunction<_GetBufferSizePresetFfiNative>>(
+              'get_buffer_size_preset_ffi')
+          .asFunction();
+      print('  ✅ get_buffer_size_preset_ffi bound');
+
+      _getActualBufferSize = _lib
+          .lookup<ffi.NativeFunction<_GetActualBufferSizeFfiNative>>(
+              'get_actual_buffer_size_ffi')
+          .asFunction();
+      print('  ✅ get_actual_buffer_size_ffi bound');
+
+      _getLatencyInfo = _lib
+          .lookup<ffi.NativeFunction<_GetLatencyInfoFfiNative>>(
+              'get_latency_info_ffi')
+          .asFunction();
+      print('  ✅ get_latency_info_ffi bound');
+
       _getClipDuration = _lib
           .lookup<ffi.NativeFunction<_GetClipDurationFfiNative>>(
               'get_clip_duration_ffi')
@@ -884,6 +915,86 @@ class AudioEngine {
     } catch (e) {
       print('❌ [AudioEngine] Get transport state failed: $e');
       return 0;
+    }
+  }
+
+  // ============================================================================
+  // Latency Control API
+  // ============================================================================
+
+  /// Buffer size presets for latency control
+  static const Map<int, String> bufferSizePresets = {
+    0: 'Lowest (64 samples, ~1.3ms)',
+    1: 'Low (128 samples, ~2.7ms)',
+    2: 'Balanced (256 samples, ~5.3ms)',
+    3: 'Safe (512 samples, ~10.7ms)',
+    4: 'High Stability (1024 samples, ~21.3ms)',
+  };
+
+  /// Set buffer size preset
+  /// 0=Lowest, 1=Low, 2=Balanced, 3=Safe, 4=HighStability
+  String setBufferSize(int preset) {
+    try {
+      final result = _setBufferSize(preset);
+      final str = result.toDartString();
+      _freeRustString(result);
+      return str;
+    } catch (e) {
+      print('❌ [AudioEngine] Set buffer size failed: $e');
+      return 'Error: $e';
+    }
+  }
+
+  /// Get current buffer size preset (0-4)
+  int getBufferSizePreset() {
+    try {
+      return _getBufferSizePreset();
+    } catch (e) {
+      print('❌ [AudioEngine] Get buffer size preset failed: $e');
+      return 2; // Default to Balanced
+    }
+  }
+
+  /// Get actual buffer size in samples
+  int getActualBufferSize() {
+    try {
+      return _getActualBufferSize();
+    } catch (e) {
+      print('❌ [AudioEngine] Get actual buffer size failed: $e');
+      return 256;
+    }
+  }
+
+  /// Get audio latency info
+  /// Returns: {bufferSize, inputLatencyMs, outputLatencyMs, roundtripMs}
+  Map<String, double> getLatencyInfo() {
+    final bufferSizePtr = calloc<ffi.Uint32>();
+    final inputLatencyPtr = calloc<ffi.Float>();
+    final outputLatencyPtr = calloc<ffi.Float>();
+    final roundtripPtr = calloc<ffi.Float>();
+
+    try {
+      _getLatencyInfo(bufferSizePtr, inputLatencyPtr, outputLatencyPtr, roundtripPtr);
+
+      return {
+        'bufferSize': bufferSizePtr.value.toDouble(),
+        'inputLatencyMs': inputLatencyPtr.value,
+        'outputLatencyMs': outputLatencyPtr.value,
+        'roundtripMs': roundtripPtr.value,
+      };
+    } catch (e) {
+      print('❌ [AudioEngine] Get latency info failed: $e');
+      return {
+        'bufferSize': 256,
+        'inputLatencyMs': 5.3,
+        'outputLatencyMs': 5.3,
+        'roundtripMs': 10.7,
+      };
+    } finally {
+      calloc.free(bufferSizePtr);
+      calloc.free(inputLatencyPtr);
+      calloc.free(outputLatencyPtr);
+      calloc.free(roundtripPtr);
     }
   }
 
@@ -2181,6 +2292,21 @@ typedef _GetPlayheadPositionFfi = double Function();
 
 typedef _GetTransportStateFfiNative = ffi.Int32 Function();
 typedef _GetTransportStateFfi = int Function();
+
+// Latency Control types
+typedef _SetBufferSizeFfiNative = ffi.Pointer<Utf8> Function(ffi.Int32);
+typedef _SetBufferSizeFfi = ffi.Pointer<Utf8> Function(int);
+
+typedef _GetBufferSizePresetFfiNative = ffi.Int32 Function();
+typedef _GetBufferSizePresetFfi = int Function();
+
+typedef _GetActualBufferSizeFfiNative = ffi.Uint32 Function();
+typedef _GetActualBufferSizeFfi = int Function();
+
+typedef _GetLatencyInfoFfiNative = ffi.Void Function(
+    ffi.Pointer<ffi.Uint32>, ffi.Pointer<ffi.Float>, ffi.Pointer<ffi.Float>, ffi.Pointer<ffi.Float>);
+typedef _GetLatencyInfoFfi = void Function(
+    ffi.Pointer<ffi.Uint32>, ffi.Pointer<ffi.Float>, ffi.Pointer<ffi.Float>, ffi.Pointer<ffi.Float>);
 
 typedef _GetClipDurationFfiNative = ffi.Double Function(ffi.Uint64);
 typedef _GetClipDurationFfi = double Function(int);

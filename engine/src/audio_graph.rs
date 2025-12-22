@@ -32,6 +32,44 @@ impl TransportState {
     }
 }
 
+/// Buffer size presets for audio latency control
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferSizePreset {
+    /// 64 samples = ~1.3ms @ 48kHz (lowest latency, highest CPU)
+    Lowest = 64,
+    /// 128 samples = ~2.7ms @ 48kHz (low latency)
+    Low = 128,
+    /// 256 samples = ~5.3ms @ 48kHz (balanced)
+    Balanced = 256,
+    /// 512 samples = ~10.7ms @ 48kHz (safe)
+    Safe = 512,
+    /// 1024 samples = ~21.3ms @ 48kHz (highest stability)
+    HighStability = 1024,
+}
+
+impl BufferSizePreset {
+    /// Get latency in milliseconds at 48kHz
+    pub fn latency_ms(&self) -> f32 {
+        (*self as u32) as f32 / TARGET_SAMPLE_RATE as f32 * 1000.0
+    }
+
+    /// Get buffer size in samples
+    pub fn samples(&self) -> u32 {
+        *self as u32
+    }
+
+    /// Create from sample count (rounds to nearest preset)
+    pub fn from_samples(samples: u32) -> Self {
+        match samples {
+            0..=96 => BufferSizePreset::Lowest,
+            97..=192 => BufferSizePreset::Low,
+            193..=384 => BufferSizePreset::Balanced,
+            385..=768 => BufferSizePreset::Safe,
+            _ => BufferSizePreset::HighStability,
+        }
+    }
+}
+
 /// The main audio graph that manages playback
 pub struct AudioGraph {
     /// All audio clips on the timeline (legacy - will migrate to tracks)
@@ -65,6 +103,12 @@ pub struct AudioGraph {
     // --- M6: Per-Track Synthesizers ---
     /// Per-track synthesizer manager
     pub track_synth_manager: Arc<Mutex<TrackSynthManager>>,
+
+    // --- Latency Control ---
+    /// Preferred buffer size for audio output
+    preferred_buffer_size: Arc<Mutex<BufferSizePreset>>,
+    /// Actual buffer size being used (set by audio callback)
+    actual_buffer_size: Arc<std::sync::atomic::AtomicU32>,
 }
 
 // SAFETY: AudioGraph is only accessed through a Mutex in the API layer,
@@ -106,6 +150,8 @@ impl AudioGraph {
             effect_manager: Arc::new(Mutex::new(effect_manager)),
             master_limiter: Arc::new(Mutex::new(master_limiter)),
             track_synth_manager: Arc::new(Mutex::new(TrackSynthManager::new(TARGET_SAMPLE_RATE as f32))),
+            preferred_buffer_size: Arc::new(Mutex::new(BufferSizePreset::Balanced)),
+            actual_buffer_size: Arc::new(std::sync::atomic::AtomicU32::new(0)),
         };
 
         // Create audio stream immediately (prevents deadlock on first play)
@@ -348,14 +394,122 @@ impl AudioGraph {
         Ok(())
     }
 
+    // --- Latency Control Methods ---
+
+    /// Set the preferred buffer size preset
+    /// Requires restarting the audio stream to take effect
+    pub fn set_buffer_size(&mut self, preset: BufferSizePreset) -> anyhow::Result<()> {
+        {
+            let mut current = self.preferred_buffer_size.lock().expect("mutex poisoned");
+            if *current == preset {
+                return Ok(()); // No change needed
+            }
+            *current = preset;
+        }
+
+        eprintln!("🔊 [AudioGraph] Setting buffer size to {:?} ({} samples, {:.1}ms)",
+            preset, preset.samples(), preset.latency_ms());
+
+        // Restart the audio stream with new buffer size
+        self.restart_audio_stream()?;
+
+        Ok(())
+    }
+
+    /// Get the current buffer size preset
+    pub fn get_buffer_size_preset(&self) -> BufferSizePreset {
+        *self.preferred_buffer_size.lock().expect("mutex poisoned")
+    }
+
+    /// Get the actual buffer size being used (in samples)
+    pub fn get_actual_buffer_size(&self) -> u32 {
+        self.actual_buffer_size.load(Ordering::SeqCst)
+    }
+
+    /// Get current audio latency info
+    /// Returns: (buffer_size_samples, input_latency_ms, output_latency_ms, total_roundtrip_ms)
+    pub fn get_latency_info(&self) -> (u32, f32, f32, f32) {
+        let buffer_samples = self.get_actual_buffer_size();
+        let sample_rate = TARGET_SAMPLE_RATE as f32;
+
+        // Calculate latency based on buffer size
+        // Output latency = buffer size / sample rate
+        let output_latency_ms = buffer_samples as f32 / sample_rate * 1000.0;
+
+        // Input latency is similar (assuming same buffer for input)
+        let input_latency_ms = output_latency_ms;
+
+        // Total roundtrip = input + output
+        let total_roundtrip_ms = input_latency_ms + output_latency_ms;
+
+        (buffer_samples, input_latency_ms, output_latency_ms, total_roundtrip_ms)
+    }
+
+    /// Restart the audio stream (used when changing buffer size)
+    fn restart_audio_stream(&mut self) -> anyhow::Result<()> {
+        // Remember if we were playing
+        let was_playing = self.get_state() == TransportState::Playing;
+
+        // Stop current stream
+        if let Some(stream) = self.stream.take() {
+            let _ = stream.pause();
+            drop(stream);
+        }
+
+        // Create new stream with updated settings
+        eprintln!("🔊 [AudioGraph] Restarting audio stream...");
+        let stream = self.create_audio_stream()?;
+
+        if was_playing {
+            stream.play()?;
+        } else {
+            stream.pause()?;
+        }
+
+        self.stream = Some(stream);
+        eprintln!("✅ [AudioGraph] Audio stream restarted");
+
+        Ok(())
+    }
+
     /// Create the audio output stream
     fn create_audio_stream(&self) -> anyhow::Result<cpal::Stream> {
+        use cpal::SupportedBufferSize;
+
         let host = cpal::default_host();
         let device = host
             .default_output_device()
             .ok_or_else(|| anyhow::anyhow!("No output device available"))?;
 
-        let config = device.default_output_config()?;
+        let supported_config = device.default_output_config()?;
+
+        // Get preferred buffer size
+        let preferred_samples = self.preferred_buffer_size.lock()
+            .expect("mutex poisoned")
+            .samples();
+
+        // Check if device supports our preferred buffer size
+        let buffer_size = match supported_config.buffer_size() {
+            SupportedBufferSize::Range { min, max } => {
+                let clamped = preferred_samples.clamp(*min, *max);
+                eprintln!("🔊 [AudioGraph] Buffer size: requested={}, device range=[{}-{}], using={}",
+                    preferred_samples, min, max, clamped);
+                Some(cpal::BufferSize::Fixed(clamped))
+            }
+            SupportedBufferSize::Unknown => {
+                eprintln!("🔊 [AudioGraph] Buffer size: device doesn't report range, using default");
+                None
+            }
+        };
+
+        // Build stream config with our buffer size preference
+        let mut config: cpal::StreamConfig = supported_config.into();
+        if let Some(buf_size) = buffer_size {
+            config.buffer_size = buf_size;
+        }
+
+        // Clone for tracking actual buffer size in callback
+        let actual_buffer_size = self.actual_buffer_size.clone();
 
         // Clone Arcs for the audio callback
         let clips = self.clips.clone();
@@ -374,16 +528,19 @@ impl AudioGraph {
         let track_synth_manager = self.track_synth_manager.clone();
 
         let stream = device.build_output_stream(
-            &config.into(),
+            &config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                // Track actual buffer size (frames = samples / 2 for stereo)
+                let frames = data.len() / 2;
+                actual_buffer_size.store(frames as u32, Ordering::Relaxed);
+
                 // Check if we should be playing (lock-free atomic read)
                 let is_playing = state.load(Ordering::SeqCst) == TransportState::Playing as u8;
 
                 if !is_playing {
                     // Even when not playing, we might be recording
                     // Process metronome and recording
-                    let frames = data.len() / 2;
-                    
+
                     // Log channel info once
                     static LOGGED_CHANNELS: AtomicBool = AtomicBool::new(false);
 
@@ -429,8 +586,7 @@ impl AudioGraph {
                     return;
                 }
 
-                // Calculate how many frames we need (stereo = 2 samples per frame)
-                let frames = data.len() / 2;
+                // frames already calculated at top of callback
                 let current_playhead = playhead_samples.load(Ordering::SeqCst);
 
                 // Get clips (lock briefly) - keeping for potential future use
@@ -510,7 +666,11 @@ impl AudioGraph {
                 let mut master_peak_left = 0.0f32;
                 let mut master_peak_right = 0.0f32;
 
-                // Process each frame (using snapshots - NO LOCKS!)
+                // OPTIMIZATION: Lock synth manager ONCE before the frame loop
+                // This prevents lock contention that causes audio dropouts
+                let mut synth_guard = track_synth_manager.lock().ok();
+
+                // Process each frame (using snapshots - NO LOCKS in hot path!)
                 for frame_idx in 0..frames {
                     let playhead_frame = current_playhead + frame_idx as u64;
                     let playhead_seconds = playhead_frame as f64 / TARGET_SAMPLE_RATE as f64;
@@ -559,20 +719,20 @@ impl AudioGraph {
                             }
                         }
 
-                        // Process per-track MIDI clips
-                        for timeline_midi_clip in &track_snap.midi_clips {
-                            let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
-                            let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
+                        // Process per-track MIDI clips (using pre-acquired synth lock)
+                        if let Some(ref mut synth_manager) = synth_guard {
+                            for timeline_midi_clip in &track_snap.midi_clips {
+                                let clip_start_samples = (timeline_midi_clip.start_time * TARGET_SAMPLE_RATE as f64) as u64;
+                                let clip_end_samples = clip_start_samples + timeline_midi_clip.clip.duration_samples;
 
-                            // Check if clip is active at this frame
-                            // Use <= for end boundary to ensure note-offs at exact clip end are triggered
-                            if playhead_frame >= clip_start_samples && playhead_frame <= clip_end_samples {
-                                let frame_in_clip = playhead_frame - clip_start_samples;
+                                // Check if clip is active at this frame
+                                // Use <= for end boundary to ensure note-offs at exact clip end are triggered
+                                if playhead_frame >= clip_start_samples && playhead_frame <= clip_end_samples {
+                                    let frame_in_clip = playhead_frame - clip_start_samples;
 
-                                // Check for MIDI events that should trigger at this exact sample
-                                for event in &timeline_midi_clip.clip.events {
-                                    if event.timestamp_samples == frame_in_clip {
-                                        if let Ok(mut synth_manager) = track_synth_manager.lock() {
+                                    // Check for MIDI events that should trigger at this exact sample
+                                    for event in &timeline_midi_clip.clip.events {
+                                        if event.timestamp_samples == frame_in_clip {
                                             match event.event_type {
                                                 crate::midi::MidiEventType::NoteOn { note, velocity } => {
                                                     synth_manager.note_on(track_snap.id, note, velocity);
@@ -585,10 +745,8 @@ impl AudioGraph {
                                     }
                                 }
                             }
-                        }
 
-                        // Add per-track synthesizer output (M6)
-                        if let Ok(mut synth_manager) = track_synth_manager.lock() {
+                            // Add per-track synthesizer output (M6) - no lock needed, already held
                             let synth_sample = synth_manager.process_sample(track_snap.id);
                             track_left += synth_sample;
                             track_right += synth_sample;

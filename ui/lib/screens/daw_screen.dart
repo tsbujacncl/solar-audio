@@ -294,7 +294,9 @@ class _DAWScreenState extends State<DAWScreen> {
 
   void _startPlayheadTimer() {
     _playheadTimer?.cancel();
-    _playheadTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+    // 16ms = ~60fps for smooth visual playhead updates
+    // Previous 50ms caused noticeable visual lag
+    _playheadTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
       if (_audioEngine != null && mounted) {
         final pos = _audioEngine!.getPlayheadPosition();
         if (mounted) {
@@ -2516,6 +2518,129 @@ class _DAWScreenState extends State<DAWScreen> {
 
   // Removed _buildTimelineView - now built inline in build method
 
+  Widget _buildLatencyDisplay() {
+    if (_audioEngine == null || !_isAudioGraphInitialized) {
+      return const Text(
+        '--ms',
+        style: TextStyle(
+          color: Color(0xFF808080),
+          fontSize: 10,
+          fontFamily: 'monospace',
+        ),
+      );
+    }
+
+    final latencyInfo = _audioEngine!.getLatencyInfo();
+    final roundtripMs = latencyInfo['roundtripMs'] ?? 0.0;
+
+    // Color based on latency quality
+    Color latencyColor;
+    if (roundtripMs < 10) {
+      latencyColor = const Color(0xFF4CAF50); // Green - excellent
+    } else if (roundtripMs < 20) {
+      latencyColor = const Color(0xFF8BC34A); // Light green - good
+    } else if (roundtripMs < 30) {
+      latencyColor = const Color(0xFFFFC107); // Yellow - acceptable
+    } else {
+      latencyColor = const Color(0xFFFF9800); // Orange - high
+    }
+
+    return GestureDetector(
+      onTap: _showLatencySettings,
+      child: Text(
+        '${roundtripMs.toStringAsFixed(1)}ms',
+        style: TextStyle(
+          color: latencyColor,
+          fontSize: 10,
+          fontFamily: 'monospace',
+        ),
+      ),
+    );
+  }
+
+  void _showLatencySettings() {
+    if (_audioEngine == null) return;
+
+    final currentPreset = _audioEngine!.getBufferSizePreset();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text(
+          'Audio Latency Settings',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Buffer Size',
+              style: TextStyle(color: Color(0xFF909090), fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            ...AudioEngine.bufferSizePresets.entries.map((entry) {
+              final isSelected = entry.key == currentPreset;
+              return InkWell(
+                onTap: () {
+                  _audioEngine!.setBufferSize(entry.key);
+                  Navigator.of(context).pop();
+                  setState(() {}); // Refresh display
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF00BCD4).withValues(alpha: 0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF00BCD4)
+                          : const Color(0xFF404040),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (isSelected)
+                        const Icon(Icons.check, size: 16, color: Color(0xFF00BCD4))
+                      else
+                        const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(
+                            color: isSelected ? const Color(0xFF00BCD4) : Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+            const Text(
+              'Lower latency = more responsive but higher CPU usage.\n'
+              'If you hear audio glitches, try a higher buffer size.',
+              style: TextStyle(color: Color(0xFF707070), fontSize: 11),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusBar() {
     return Container(
       height: 26,
@@ -2587,6 +2712,11 @@ class _DAWScreenState extends State<DAWScreen> {
               fontFamily: 'monospace',
             ),
           ),
+          const SizedBox(width: 16),
+          // Latency display with icon
+          const Icon(Icons.speed, size: 11, color: Color(0xFF707070)),
+          const SizedBox(width: 4),
+          _buildLatencyDisplay(),
           const SizedBox(width: 16),
           // CPU with icon
           const Icon(Icons.memory, size: 11, color: Color(0xFF707070)),

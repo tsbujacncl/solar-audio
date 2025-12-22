@@ -308,14 +308,81 @@ pub fn get_transport_state() -> Result<i32, String> {
     let graph_mutex = AUDIO_GRAPH.get()
         .ok_or("Audio graph not initialized")?;
     let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
-    
+
     let state = match graph.get_state() {
         TransportState::Stopped => 0,
         TransportState::Playing => 1,
         TransportState::Paused => 2,
     };
-    
+
     Ok(state)
+}
+
+// ============================================================================
+// Latency Control API
+// ============================================================================
+
+/// Set buffer size preset
+/// 0=Lowest (64), 1=Low (128), 2=Balanced (256), 3=Safe (512), 4=HighStability (1024)
+pub fn set_buffer_size(preset: i32) -> Result<String, String> {
+    use crate::audio_graph::BufferSizePreset;
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let mut graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let buffer_preset = match preset {
+        0 => BufferSizePreset::Lowest,
+        1 => BufferSizePreset::Low,
+        2 => BufferSizePreset::Balanced,
+        3 => BufferSizePreset::Safe,
+        4 => BufferSizePreset::HighStability,
+        _ => return Err(format!("Invalid buffer size preset: {}", preset)),
+    };
+
+    graph.set_buffer_size(buffer_preset)
+        .map_err(|e| e.to_string())?;
+
+    Ok(format!("Buffer size set to {:?} ({} samples, {:.1}ms)",
+        buffer_preset, buffer_preset.samples(), buffer_preset.latency_ms()))
+}
+
+/// Get current buffer size preset (0-4)
+pub fn get_buffer_size_preset() -> Result<i32, String> {
+    use crate::audio_graph::BufferSizePreset;
+
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    let preset = graph.get_buffer_size_preset();
+    let value = match preset {
+        BufferSizePreset::Lowest => 0,
+        BufferSizePreset::Low => 1,
+        BufferSizePreset::Balanced => 2,
+        BufferSizePreset::Safe => 3,
+        BufferSizePreset::HighStability => 4,
+    };
+
+    Ok(value)
+}
+
+/// Get actual buffer size in samples
+pub fn get_actual_buffer_size() -> Result<u32, String> {
+    let graph_mutex = AUDIO_GRAPH.get()
+        .ok_or("Audio graph not initialized")?;
+    let graph = graph_mutex.lock().map_err(|e| e.to_string())?;
+
+    Ok(graph.get_actual_buffer_size())
+}
+
+/// Get audio latency info
+/// Returns: (buffer_size_samples, input_latency_ms, output_latency_ms, total_roundtrip_ms)
+pub fn get_latency_info() -> Option<(u32, f32, f32, f32)> {
+    let graph_mutex = AUDIO_GRAPH.get()?;
+    let graph = graph_mutex.lock().ok()?;
+
+    Some(graph.get_latency_info())
 }
 
 /// Get waveform peaks for visualization
