@@ -129,11 +129,11 @@ class TimelineViewState extends State<TimelineView> {
   bool _snapBypassActive = false; // True when Alt/Option held during drag
   bool _isCopyDrag = false; // True when Shift held at drag start
 
-  // Loop handle drag state
+  // Resize handle drag state (free-form resize)
   int? _loopDraggingClipId;
   double _loopDragStartX = 0.0;
   double _loopDragCurrentX = 0.0;
-  int _loopDragStartCount = 1;
+  double _resizeDragStartDuration = 0.0;
 
   @override
   void initState() {
@@ -160,6 +160,19 @@ class TimelineViewState extends State<TimelineView> {
     return totalX / _pixelsPerSecond;
   }
 
+  /// Get grid snap resolution in beats based on zoom level
+  /// Matches _GridPainter._getGridDivision for consistent snapping
+  double _getGridSnapResolution() {
+    final beatsPerSecond = widget.tempo / 60.0;
+    final pixelsPerBeat = _pixelsPerSecond / beatsPerSecond;
+
+    if (pixelsPerBeat < 10) return 4.0;     // Snap to bars (every 4 beats)
+    if (pixelsPerBeat < 20) return 1.0;     // Snap to beats
+    if (pixelsPerBeat < 40) return 0.5;     // Snap to half beats (1/8th notes)
+    if (pixelsPerBeat < 80) return 0.25;    // Snap to quarter beats (1/16th notes)
+    return 0.125;                            // Snap to eighth beats (1/32nd notes)
+  }
+
   /// Snap a time value to the beat grid
   /// Returns the snapped time in seconds
   double _snapToGrid(double seconds) {
@@ -168,8 +181,8 @@ class TimelineViewState extends State<TimelineView> {
     final beatsPerSecond = widget.tempo / 60.0;
     final beats = seconds * beatsPerSecond;
 
-    // Snap to quarter notes (1 beat) - adaptive snapping could be added later
-    const snapResolution = 1.0;
+    // Use zoom-dependent snap resolution
+    final snapResolution = _getGridSnapResolution();
     final snappedBeats = (beats / snapResolution).round() * snapResolution;
 
     return snappedBeats / beatsPerSecond;
@@ -748,65 +761,71 @@ class TimelineViewState extends State<TimelineView> {
               : (isSelected
                   ? const Color(0xFF363636).withValues(alpha: 0.3)
                   : Colors.transparent),
-          border: Border.all(
-            color: isInstrumentHovering
-                ? const Color(0xFF00BCD4) // Cyan when valid instrument drag
-                : (isInstrumentRejected
-                    ? Colors.red.withValues(alpha: 0.8) // Red when invalid drop
-                    : (isSelected
-                        ? trackColor.withValues(alpha: 1.0)
-                        : (isHovered ? trackColor.withValues(alpha: 0.8) : trackColor))),
-            width: (isInstrumentHovering || isInstrumentRejected)
-                ? 3
-                : (isSelected ? 3 : (isHovered ? 3 : 2)),
+          border: Border(
+            left: BorderSide(
+              color: isInstrumentHovering
+                  ? const Color(0xFF00BCD4)
+                  : (isInstrumentRejected
+                      ? Colors.red.withValues(alpha: 0.8)
+                      : (isSelected
+                          ? trackColor.withValues(alpha: 1.0)
+                          : (isHovered ? trackColor.withValues(alpha: 0.8) : trackColor))),
+              width: (isInstrumentHovering || isInstrumentRejected)
+                  ? 3
+                  : (isSelected ? 3 : (isHovered ? 3 : 2)),
+            ),
+            top: BorderSide(
+              color: isInstrumentHovering
+                  ? const Color(0xFF00BCD4)
+                  : (isInstrumentRejected
+                      ? Colors.red.withValues(alpha: 0.8)
+                      : (isSelected
+                          ? trackColor.withValues(alpha: 1.0)
+                          : (isHovered ? trackColor.withValues(alpha: 0.8) : trackColor))),
+              width: (isInstrumentHovering || isInstrumentRejected)
+                  ? 3
+                  : (isSelected ? 3 : (isHovered ? 3 : 2)),
+            ),
+            right: BorderSide(
+              color: isInstrumentHovering
+                  ? const Color(0xFF00BCD4)
+                  : (isInstrumentRejected
+                      ? Colors.red.withValues(alpha: 0.8)
+                      : (isSelected
+                          ? trackColor.withValues(alpha: 1.0)
+                          : (isHovered ? trackColor.withValues(alpha: 0.8) : trackColor))),
+              width: (isInstrumentHovering || isInstrumentRejected)
+                  ? 3
+                  : (isSelected ? 3 : (isHovered ? 3 : 2)),
+            ),
+            // Bottom separator line between tracks
+            bottom: const BorderSide(
+              color: Color(0xFF606060),
+              width: 2,
+            ),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
           children: [
-            // Track header bar (fully opaque)
-            Container(
-              height: 20,
-              color: trackColor,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  Text(
-                    '$emoji $formattedName',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+            // Grid pattern
+            CustomPaint(
+              painter: _GridPatternPainter(),
             ),
 
-            // Content area (for clips/waveforms/MIDI)
-            Expanded(
-              child: Stack(
-                children: [
-                  // Grid pattern
-                  CustomPaint(
-                    painter: _GridPatternPainter(),
-                  ),
+            // Render audio clips for this track
+            ...trackClips.map((clip) => _buildClip(clip)),
 
-                  // Render audio clips for this track
-                  ...trackClips.map((clip) => _buildClip(clip)),
+            // Render MIDI clips for this track
+            ...trackMidiClips.map((midiClip) => _buildMidiClip(
+                  midiClip,
+                  trackColor,
+                )),
 
-                  // Render MIDI clips for this track
-                  ...trackMidiClips.map((midiClip) => _buildMidiClip(
-                        midiClip,
-                        trackColor,
-                      )),
-
-                  // Show preview clip if hovering over this track
-                  if (_previewClip != null && _previewClip!.trackId == track.id)
-                    _buildPreviewClip(_previewClip!),
-                ],
-              ),
-            ),
+            // Show preview clip if hovering over this track
+            if (_previewClip != null && _previewClip!.trackId == track.id)
+              _buildPreviewClip(_previewClip!),
           ],
         ),
       ),
@@ -951,19 +970,35 @@ class TimelineViewState extends State<TimelineView> {
   }
 
   Widget _buildMidiClip(MidiClipData midiClip, Color trackColor) {
-    final singleIterationWidth = midiClip.duration * _pixelsPerSecond;
-
-    // Calculate display loop count (during loop drag, show preview)
-    int displayLoopCount;
-    if (_loopDraggingClipId == midiClip.clipId) {
-      final dragDelta = _loopDragCurrentX - _loopDragStartX;
-      final additionalLoops = (dragDelta / singleIterationWidth).round();
-      displayLoopCount = (_loopDragStartCount + additionalLoops).clamp(1, 32);
+    // Calculate the content duration (extent of all notes)
+    double contentDuration;
+    if (midiClip.notes.isEmpty) {
+      contentDuration = midiClip.duration; // Use clip duration if no notes
     } else {
-      displayLoopCount = midiClip.loopCount;
+      // Find the furthest note end time (in seconds at current tempo)
+      final furthestBeat = midiClip.notes
+          .map((note) => note.startTime + note.duration)
+          .reduce((a, b) => a > b ? a : b);
+      // Convert beats to seconds: seconds = (beats / BPM) * 60
+      contentDuration = (furthestBeat / widget.tempo) * 60.0;
     }
 
-    final clipWidth = singleIterationWidth * displayLoopCount;
+    // Calculate display width (during resize drag, show preview with snap)
+    double displayDuration;
+    if (_loopDraggingClipId == midiClip.clipId) {
+      // Free-form resize: calculate new duration from drag delta (with snap preview)
+      final dragDelta = _loopDragCurrentX - _loopDragStartX;
+      final durationDelta = dragDelta / _pixelsPerSecond;
+      final rawDuration = (_resizeDragStartDuration + durationDelta).clamp(0.5, double.infinity);
+      displayDuration = _snapToGrid(rawDuration);
+    } else {
+      displayDuration = midiClip.duration;
+    }
+
+    final clipWidth = displayDuration * _pixelsPerSecond;
+
+    // Calculate how many times content repeats within the clip
+    final repeatCount = contentDuration > 0 ? (displayDuration / contentDuration).ceil() : 1;
 
     // Use dragged position if this clip is being dragged (with snap preview)
     double displayStartTime;
@@ -977,20 +1012,24 @@ class TimelineViewState extends State<TimelineView> {
     final clipX = displayStartTime * _pixelsPerSecond;
     final isSelected = widget.selectedMidiClipId == midiClip.clipId;
     final isDragging = _draggingMidiClipId == midiClip.clipId;
-    final isLoopDragging = _loopDraggingClipId == midiClip.clipId;
+    final isResizing = _loopDraggingClipId == midiClip.clipId;
+
+    const headerHeight = 18.0;
+    const contentHeight = 54.0;
+    const totalHeight = headerHeight + contentHeight;
 
     return Positioned(
       left: clipX,
       top: 4,
       child: SizedBox(
         width: clipWidth,
-        height: 72,
+        height: totalHeight,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             // Main clip body (handles move/copy drag)
             Positioned.fill(
-              right: 8, // Leave space for loop handle
+              right: 8, // Leave space for resize handle
               child: GestureDetector(
                 onDoubleTap: () {
                   // Double-click to open in piano roll
@@ -1043,80 +1082,101 @@ class TimelineViewState extends State<TimelineView> {
                   cursor: SystemMouseCursors.grab,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF363636).withValues(alpha: 0.3),
                       border: Border.all(
-                        color: isDragging || isLoopDragging
+                        color: isDragging || isResizing
                             ? trackColor
                             : isSelected
                                 ? trackColor.withValues(alpha: 1.0)
                                 : trackColor.withValues(alpha: 0.7),
-                        width: isDragging || isSelected || isLoopDragging ? 3 : 2,
+                        width: isDragging || isSelected || isResizing ? 2 : 1,
                       ),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Stack(
+                    child: Column(
                       children: [
-                        // Mini piano roll preview (repeated for each loop)
-                        if (midiClip.notes.isNotEmpty)
-                          SizedBox.expand(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: CustomPaint(
-                                painter: _MidiClipPainter(
-                                  notes: midiClip.notes,
-                                  clipDuration: midiClip.duration,
-                                  color: trackColor,
-                                  loopCount: displayLoopCount,
-                                ),
-                              ),
+                        // FL Studio style HEADER
+                        Container(
+                          height: headerHeight,
+                          decoration: BoxDecoration(
+                            color: trackColor,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(3),
                             ),
                           ),
-
-                        // Loop divider lines
-                        if (displayLoopCount > 1)
-                          for (int i = 1; i < displayLoopCount; i++)
-                            Positioned(
-                              left: singleIterationWidth * i - 1,
-                              top: 0,
-                              bottom: 0,
-                              child: Container(
-                                width: 2,
-                                color: trackColor.withValues(alpha: 0.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.piano,
+                                size: 10,
+                                color: Colors.white,
                               ),
-                            ),
-
-                        // Clip name label
-                        Positioned(
-                          top: 2,
-                          left: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.piano,
-                                  size: 10,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  displayLoopCount > 1
-                                      ? '${midiClip.name} ×$displayLoopCount'
-                                      : midiClip.name,
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  midiClip.name,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
+                              ),
+                              if (repeatCount > 1)
+                                Text(
+                                  '×$repeatCount',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        // CONTENT area with notes
+                        Expanded(
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.vertical(
+                                bottom: Radius.circular(3),
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                bottom: Radius.circular(3),
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Mini piano roll preview with looping
+                                  if (midiClip.notes.isNotEmpty)
+                                    CustomPaint(
+                                      size: Size(clipWidth - 8, contentHeight),
+                                      painter: _MidiClipPainter(
+                                        notes: midiClip.notes,
+                                        clipDuration: displayDuration,
+                                        contentDuration: contentDuration,
+                                        color: trackColor,
+                                        loopCount: repeatCount,
+                                      ),
+                                    ),
+                                  // Loop divider lines
+                                  if (repeatCount > 1 && contentDuration > 0)
+                                    for (int i = 1; i < repeatCount; i++)
+                                      Positioned(
+                                        left: (contentDuration * i * _pixelsPerSecond) - 1,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          width: 1,
+                                          color: trackColor.withValues(alpha: 0.4),
+                                        ),
+                                      ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1127,7 +1187,7 @@ class TimelineViewState extends State<TimelineView> {
               ),
             ),
 
-            // Loop handle on right edge
+            // Resize handle on right edge (free-form resize)
             Positioned(
               right: 0,
               top: 0,
@@ -1138,7 +1198,7 @@ class TimelineViewState extends State<TimelineView> {
                     _loopDraggingClipId = midiClip.clipId;
                     _loopDragStartX = details.globalPosition.dx;
                     _loopDragCurrentX = details.globalPosition.dx;
-                    _loopDragStartCount = midiClip.loopCount;
+                    _resizeDragStartDuration = midiClip.duration;
                   });
                 },
                 onHorizontalDragUpdate: (details) {
@@ -1147,13 +1207,16 @@ class TimelineViewState extends State<TimelineView> {
                   });
                 },
                 onHorizontalDragEnd: (details) {
-                  // Calculate final loop count
+                  // Calculate final duration from drag
                   final dragDelta = _loopDragCurrentX - _loopDragStartX;
-                  final additionalLoops = (dragDelta / singleIterationWidth).round();
-                  final newLoopCount = (_loopDragStartCount + additionalLoops).clamp(1, 32);
+                  final durationDelta = dragDelta / _pixelsPerSecond;
+                  final rawDuration = (_resizeDragStartDuration + durationDelta).clamp(0.5, double.infinity);
 
-                  if (newLoopCount != midiClip.loopCount) {
-                    final updatedClip = midiClip.copyWith(loopCount: newLoopCount);
+                  // Snap duration to grid (zoom-dependent resolution)
+                  final newDuration = _snapToGrid(rawDuration);
+
+                  if ((newDuration - midiClip.duration).abs() > 0.01) {
+                    final updatedClip = midiClip.copyWith(duration: newDuration);
                     widget.onMidiClipUpdated?.call(updatedClip);
                   }
 
@@ -1166,7 +1229,7 @@ class TimelineViewState extends State<TimelineView> {
                   child: Container(
                     width: 8,
                     decoration: BoxDecoration(
-                      color: isLoopDragging
+                      color: isResizing
                           ? trackColor.withValues(alpha: 0.8)
                           : trackColor.withValues(alpha: 0.3),
                       borderRadius: const BorderRadius.horizontal(
@@ -1567,23 +1630,25 @@ class _GridPatternPainter extends CustomPainter {
   bool shouldRepaint(_GridPatternPainter oldDelegate) => false;
 }
 
-/// Painter for mini MIDI clip preview
+/// Painter for mini MIDI clip preview with content looping
 class _MidiClipPainter extends CustomPainter {
   final List<MidiNoteData> notes;
-  final double clipDuration;
+  final double clipDuration; // Total clip duration in seconds
+  final double contentDuration; // Duration of one content iteration in seconds
   final Color color;
-  final int loopCount;
+  final int loopCount; // How many times content repeats
 
   _MidiClipPainter({
     required this.notes,
     required this.clipDuration,
+    required this.contentDuration,
     required this.color,
     this.loopCount = 1,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (notes.isEmpty || clipDuration == 0) return;
+    if (notes.isEmpty || clipDuration == 0 || contentDuration == 0) return;
 
     // Find note range for vertical scaling
     final minNote = notes.map((n) => n.note).reduce(math.min);
@@ -1591,14 +1656,17 @@ class _MidiClipPainter extends CustomPainter {
     final noteRange = (maxNote - minNote).toDouble();
     final effectiveRange = noteRange == 0 ? 12.0 : noteRange; // At least one octave
 
-    // Calculate scaling factors for single iteration
-    final singleIterationWidth = size.width / loopCount;
-    final secondsPerPixel = clipDuration / singleIterationWidth;
+    // Calculate pixels per second for the entire clip
+    final pixelsPerSecond = size.width / clipDuration;
+    final singleIterationWidth = contentDuration * pixelsPerSecond;
     final pixelsPerNote = size.height / (effectiveRange + 4); // Add padding
 
     // Draw notes for each loop iteration
     for (int loop = 0; loop < loopCount; loop++) {
       final loopOffsetX = loop * singleIterationWidth;
+
+      // Skip if this loop starts beyond the clip width
+      if (loopOffsetX >= size.width) break;
 
       for (final note in notes) {
         // Calculate note position in beats, then convert to seconds
@@ -1612,13 +1680,18 @@ class _MidiClipPainter extends CustomPainter {
         final noteDurationInSeconds = (noteDurationInBeats / tempo) * 60.0;
 
         // Calculate pixel coordinates
-        final x = loopOffsetX + (noteStartInSeconds / secondsPerPixel);
-        final width = noteDurationInSeconds / secondsPerPixel;
+        final x = loopOffsetX + (noteStartInSeconds * pixelsPerSecond);
+        var width = noteDurationInSeconds * pixelsPerSecond;
         final y = size.height - ((note.note - minNote + 2) * pixelsPerNote);
         final height = pixelsPerNote * 0.8; // Slight gap between notes
 
-        // Skip notes that would be drawn outside this iteration
-        if (x >= loopOffsetX + singleIterationWidth) continue;
+        // Skip notes that would start beyond the clip
+        if (x >= size.width) continue;
+
+        // Clip width to not exceed the clip boundary
+        if (x + width > size.width) {
+          width = size.width - x;
+        }
 
         // Draw note rectangle (FL Studio style: white bars with sharp corners)
         final rect = Rect.fromLTWH(x, y, math.max(width, 2.0), height);
@@ -1634,9 +1707,9 @@ class _MidiClipPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MidiClipPainter oldDelegate) {
-    // Use listEquals for proper list content comparison instead of reference equality
     return !listEquals(notes, oldDelegate.notes) ||
            clipDuration != oldDelegate.clipDuration ||
+           contentDuration != oldDelegate.contentDuration ||
            color != oldDelegate.color ||
            loopCount != oldDelegate.loopCount;
   }

@@ -52,13 +52,9 @@ class MidiPlaybackManager extends ChangeNotifier {
           .map((note) => note.startTime + note.duration)
           .reduce((a, b) => a > b ? a : b);
 
-      // Snap to bar boundary (4 beats per bar)
-      // If exactly on a bar, keep it; otherwise round up to next bar
-      final barsNeeded = (furthestBeat / 4.0).ceil();
-      final totalBeats = barsNeeded * 4.0;
-
+      // Use exact note extent (no bar boundary snapping for free-form resize)
       // Convert beats to seconds: seconds = (beats / BPM) * 60
-      durationInSeconds = (totalBeats / tempo) * 60.0;
+      durationInSeconds = (furthestBeat / tempo) * 60.0;
     }
 
     // Check if we're editing an existing clip or need to create a new one

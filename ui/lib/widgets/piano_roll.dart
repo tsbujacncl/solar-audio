@@ -110,6 +110,17 @@ class _PianoRollState extends State<PianoRoll> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(PianoRoll oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update local clip state when parent passes new clip data
+    if (widget.clipData != oldWidget.clipData) {
+      setState(() {
+        _currentClip = widget.clipData;
+      });
+    }
+  }
+
   /// Called when global undo/redo state changes
   void _onUndoRedoChanged() {
     // Force rebuild to reflect any state changes
@@ -119,6 +130,9 @@ class _PianoRollState extends State<PianoRoll> {
   }
 
   void _scrollToDefaultView() {
+    // Safety check: only scroll if controller is attached
+    if (!_verticalScroll.hasClients) return;
+
     // Scroll to show C2-C6 range by default
     final scrollOffset = _calculateNoteY(_defaultViewEndNote);
     _verticalScroll.jumpTo(scrollOffset);

@@ -732,8 +732,20 @@ class _DAWScreenState extends State<DAWScreen> {
       _isEditorPanelVisible = true;
     });
 
-    // Clear clip selection when selecting just a track
-    _midiPlaybackManager?.selectClip(null, null);
+    // Try to find an existing clip for this track and select it
+    // instead of clearing the clip selection
+    final clipsForTrack = _midiPlaybackManager?.midiClips
+        .where((c) => c.trackId == trackId)
+        .toList();
+
+    if (clipsForTrack != null && clipsForTrack.isNotEmpty) {
+      // Select the first clip for this track
+      final clip = clipsForTrack.first;
+      _midiPlaybackManager?.selectClip(clip.clipId, clip);
+    } else {
+      // No clips for this track - clear selection
+      _midiPlaybackManager?.selectClip(null, null);
+    }
   }
 
   // M9: Instrument methods
@@ -782,6 +794,24 @@ class _DAWScreenState extends State<DAWScreen> {
     _onInstrumentSelected(trackId, instrument.id);
   }
 
+  /// Create a default 4-bar empty MIDI clip for a new track
+  void _createDefaultMidiClip(int trackId) {
+    // 4 bars = 16 beats at any tempo
+    // Duration in seconds = (beats / BPM) * 60
+    final durationSeconds = (16.0 / _tempo) * 60.0;
+
+    final defaultClip = MidiClipData(
+      clipId: DateTime.now().millisecondsSinceEpoch,
+      trackId: trackId,
+      startTime: 0.0,
+      duration: durationSeconds,
+      name: 'New MIDI Clip',
+      notes: [],
+    );
+
+    _midiPlaybackManager?.addRecordedClip(defaultClip);
+  }
+
   void _onInstrumentDroppedOnEmpty(Instrument instrument) async {
     if (_audioEngine == null) return;
 
@@ -799,8 +829,14 @@ class _DAWScreenState extends State<DAWScreen> {
       return;
     }
 
+    // Create default 4-bar empty clip for the new track
+    _createDefaultMidiClip(trackId);
+
     // Assign the instrument to the new track
     _onInstrumentSelected(trackId, instrument.id);
+
+    // Select the newly created track and its clip
+    _onTrackSelected(trackId);
 
     // Immediately refresh track widgets so the new track appears instantly
     _refreshTrackWidgets();
@@ -850,6 +886,9 @@ class _DAWScreenState extends State<DAWScreen> {
         return;
       }
 
+      // Create default 4-bar empty clip for the new track
+      _createDefaultMidiClip(trackId);
+
       // Load the VST3 plugin as a track instrument
       final effectId = _audioEngine!.addVst3EffectToTrack(trackId, plugin.path);
       if (effectId < 0) {
@@ -866,6 +905,9 @@ class _DAWScreenState extends State<DAWScreen> {
           effectId: effectId,
         );
       });
+
+      // Select the newly created track and its clip
+      _onTrackSelected(trackId);
 
       // Immediately refresh track widgets so the new track appears instantly
       _refreshTrackWidgets();
