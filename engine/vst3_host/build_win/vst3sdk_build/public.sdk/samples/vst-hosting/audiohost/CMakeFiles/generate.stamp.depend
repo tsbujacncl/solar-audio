@@ -1,0 +1,5 @@
+# CMake generation dependency list for this directory.
+C:/Program Files/CMake/share/cmake-4.2/Modules/FindPackageHandleStandardArgs.cmake
+C:/Program Files/CMake/share/cmake-4.2/Modules/FindPackageMessage.cmake
+C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/cmake/modules/SMTG_FindJack.cmake
+C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/public.sdk/samples/vst-hosting/audiohost/CMakeLists.txt

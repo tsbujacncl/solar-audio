@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\CMakeFiles\6152268f8f03d1ea2b601a6c369bba44\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{2B08C7EC-5EF7-3568-BE08-8EED65EFC15C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

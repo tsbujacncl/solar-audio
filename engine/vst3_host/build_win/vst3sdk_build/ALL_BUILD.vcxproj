@@ -1,0 +1,285 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ResolveNugetPackages>false</ResolveNugetPackages>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2DD11B42-8CF6-3BC9-81DE-EA49B948924B}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>ALL_BUILD</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeParseArguments.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakePrintHelpers.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckLanguage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CheckSourceCompiles.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AAXSupport.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddCommonOptions.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddSMTGLibrary.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddVST3Library.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddVST3Options.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_Bundle.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_CodeSign.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_ConfigureCmakeGenerator.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_CoreAudioSupport.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_CustomModuleTarget.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_DetectPlatform.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_ExportedSymbols.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_FindJack.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_Global.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_PlatformIOS.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_PlatformToolset.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_Platform_Windows.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_PrefixHeader.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_SetDebugExecutable.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_SetupVST3LibraryDefaultPath.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_UniversalBinary.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_VST3_SDK.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_VstGuiSupport.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeParseArguments.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakePrintHelpers.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckLanguage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CheckSourceCompiles.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AAXSupport.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddCommonOptions.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddSMTGLibrary.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddVST3Library.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_AddVST3Options.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_Bundle.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_CodeSign.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_ConfigureCmakeGenerator.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_CoreAudioSupport.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_CustomModuleTarget.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_DetectPlatform.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_ExportedSymbols.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_FindJack.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_Global.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_PlatformIOS.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_PlatformToolset.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_Platform_Windows.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_PrefixHeader.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_SetDebugExecutable.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_SetupVST3LibraryDefaultPath.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_UniversalBinary.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_VST3_SDK.cmake;C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\cmake\modules\SMTG_VstGuiSupport.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\ZERO_CHECK.vcxproj">
+      <Project>{269B9F78-069F-3B36-ACE3-96DF63DE5967}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst-hosting\inspectorapp\VST3Inspector.vcxproj">
+      <Project>{C5AF5316-D80B-3C05-9B86-5308C109AC2F}</Project>
+      <Name>VST3Inspector</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\adelay\adelay.vcxproj">
+      <Project>{D08899F7-FD5B-39D1-ABFE-CC3D7A86CF64}</Project>
+      <Name>adelay</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\again\again.vcxproj">
+      <Project>{272060A7-F6EF-3E11-B7CA-E6F75AE59BE7}</Project>
+      <Name>again</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\again_sampleaccurate\again-sample-accurate.vcxproj">
+      <Project>{5838E516-72E0-34C3-B1BE-44ABED616077}</Project>
+      <Name>again-sample-accurate</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\again\again-simple.vcxproj">
+      <Project>{AC469C9C-7369-3425-AA23-F977AC64E3C5}</Project>
+      <Name>again-simple</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\base.vcxproj">
+      <Project>{6BDDF9DD-8A4B-3137-B497-1B787A7136DA}</Project>
+      <Name>base</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\channelcontext\channel-context.vcxproj">
+      <Project>{54B2979A-948C-3C2E-8D80-72929C0D2916}</Project>
+      <Name>channel-context</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\dataexchange\data-exchange.vcxproj">
+      <Project>{B6189F2D-96CC-382C-B388-5DBE9ABD643F}</Project>
+      <Name>data-exchange</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst-hosting\editorhost\editorhost.vcxproj">
+      <Project>{143CE0C2-9A47-3C03-AB62-D751547C758E}</Project>
+      <Name>editorhost</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\hostchecker\host-checker.vcxproj">
+      <Project>{F6961F60-3995-3D76-BAB3-20C14527B817}</Project>
+      <Name>host-checker</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\legacymidiccout\legacy-midicc-out.vcxproj">
+      <Project>{CE4225A9-919A-3CF2-A6F9-1577F898A66A}</Project>
+      <Name>legacy-midicc-out</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\mda-vst3\mda-vst3.vcxproj">
+      <Project>{C562948C-A6DE-3464-965C-403D3E3CF73E}</Project>
+      <Name>mda-vst3</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst-utilities\moduleinfotool\moduleinfotool.vcxproj">
+      <Project>{87E52A11-16C7-3853-866B-DAECEE421D9F}</Project>
+      <Name>moduleinfotool</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\multiple_programchanges\multiple-program-changes.vcxproj">
+      <Project>{76CE5B3B-A9A9-3526-964B-E5FD410E4C72}</Project>
+      <Name>multiple-program-changes</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\note_expression_synth\note-expression-synth.vcxproj">
+      <Project>{D77D1681-D2FF-3416-979E-A85431494D56}</Project>
+      <Name>note-expression-synth</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\note_expression_text\note-expression-text.vcxproj">
+      <Project>{ED65CCDD-82FE-3F9E-9B29-D90F536EC21E}</Project>
+      <Name>note-expression-text</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\panner\panner.vcxproj">
+      <Project>{0EE35BF1-2490-35D3-AF52-1611EF9CF5F9}</Project>
+      <Name>panner</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\pitchnames\pitch-names.vcxproj">
+      <Project>{732E89EE-C1FD-3D98-BC59-6732BD322C86}</Project>
+      <Name>pitch-names</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\pluginterfaces.vcxproj">
+      <Project>{8C51CC98-D513-3270-8BDA-9FF21E93F922}</Project>
+      <Name>pluginterfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\prefetchablesupport\prefetchable.vcxproj">
+      <Project>{7F80DA7F-A41D-3964-AA16-5602A4924600}</Project>
+      <Name>prefetchable</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\programchange\program-change.vcxproj">
+      <Project>{A0195C2E-826C-39EE-B82D-1DEA6159A09B}</Project>
+      <Name>program-change</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\remap_paramid\remap-paramid.vcxproj">
+      <Project>{E57D530B-A0A2-372F-8BA1-BFC0B91EB57F}</Project>
+      <Name>remap-paramid</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\sdk.vcxproj">
+      <Project>{BD7B0B01-0881-3A28-A99F-731885A0B849}</Project>
+      <Name>sdk</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\sdk_common.vcxproj">
+      <Project>{F42C68D0-DA9D-3850-9A4B-FC17514E65F7}</Project>
+      <Name>sdk_common</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\sdk_hosting.vcxproj">
+      <Project>{3407DD97-9C72-3759-B04F-A11FFF841807}</Project>
+      <Name>sdk_hosting</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\syncdelay\sync-delay.vcxproj">
+      <Project>{86D64C3B-468A-3268-B140-225A05C297C2}</Project>
+      <Name>sync-delay</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst\utf16name\utf16-name.vcxproj">
+      <Project>{8C2F5C63-9E10-3255-8079-E6289BDBFEEA}</Project>
+      <Name>utf16-name</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\public.sdk\samples\vst-hosting\validator\validator.vcxproj">
+      <Project>{71D92836-EA1D-30C5-9029-37D6FBD5DAB9}</Project>
+      <Name>validator</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\vstgui.vcxproj">
+      <Project>{1CC68F8B-C295-321E-8B0C-0C38AF0B4A3D}</Project>
+      <Name>vstgui</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\standalone\vstgui_standalone.vcxproj">
+      <Project>{28379F12-97AC-3595-9238-96F71E7EB82B}</Project>
+      <Name>vstgui_standalone</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\vstgui_support.vcxproj">
+      <Project>{5AC61B40-98C3-36E8-BCBE-2B425353943D}</Project>
+      <Name>vstgui_support</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\uidescription\vstgui_uidescription.vcxproj">
+      <Project>{EC8BBC2A-BA97-3AC5-A930-C6FCA85DC175}</Project>
+      <Name>vstgui_uidescription</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\uidescription-scripting\vstgui_uiscripting.vcxproj">
+      <Project>{A24DA4BC-7BCC-34D5-A3F8-DFA3E0AA138F}</Project>
+      <Name>vstgui_uiscripting</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

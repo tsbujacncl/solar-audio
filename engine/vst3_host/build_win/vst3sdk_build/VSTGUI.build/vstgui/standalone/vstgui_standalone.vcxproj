@@ -1,0 +1,315 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseLTO|x64">
+      <Configuration>ReleaseLTO</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{28379F12-97AC-3595-9238-96F71E7EB82B}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>vstgui_standalone</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vstgui_standalone.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vstgui_standalone</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">vstgui_standalone.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">vstgui_standalone</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\lib\ReleaseLTO\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">vstgui_standalone.dir\ReleaseLTO\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">vstgui_standalone</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8 /Zc:__cplusplus /Zc:__cplusplus</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DisableSpecificWarnings>6031;6308;6330;6385;6386;28125;28251</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;VSTGUI_LIVE_EDITING;DEBUG;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;NDEBUG;RELEASE;_UNICODE;VSTGUI_UISCRIPTING;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;VSTGUI_LIVE_EDITING;DEBUG;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;NDEBUG;RELEASE;_UNICODE;VSTGUI_UISCRIPTING;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8 /Zc:__cplusplus /Zc:__cplusplus</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>6031;6308;6330;6385;6386;28125;28251</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>true</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;VSTGUI_UISCRIPTING;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;VSTGUI_UISCRIPTING;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8 /Zc:__cplusplus /Zc:__cplusplus</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>6031;6308;6330;6385;6386;28125;28251</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;VSTGUI_UISCRIPTING;CMAKE_INTDIR="ReleaseLTO"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;VSTGUI_UISCRIPTING;CMAKE_INTDIR=\"ReleaseLTO\"</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/vstgui4/vstgui/standalone/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/standalone/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\cmake\modules\vstgui_add_executable.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\standalone\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/vstgui4/vstgui/standalone/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/standalone/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\cmake\modules\vstgui_add_executable.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\standalone\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/vstgui4/vstgui/standalone/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/standalone/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\cmake\modules\vstgui_add_executable.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\standalone\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\appinit.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\doc.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\fwd.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\ialertbox.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iappdelegate.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iapplication.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iasync.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\icommand.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\icommondirectories.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\imenubuilder.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\interface.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\ipreference.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\ishareduiresources.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iuidescwindow.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\ivalue.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\ivaluelistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iwindow.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iwindowcontroller.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\iwindowlistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\appdelegate.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\async.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\menubuilder.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\preferences.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\value.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\valuelistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\windowcontroller.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\windowlistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\uidesc\modelbinding.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\include\helpers\uidesc\customization.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\application.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\application.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\async.cpp" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\genericalertbox.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\genericalertbox.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\shareduiresources.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\shareduiresources.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\uidescriptionwindowcontroller.cpp" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\window.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\window.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\iplatformwindow.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\helpers\value.cpp" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32application.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32commondirectories.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32commondirectories.cpp" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32menu.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32menu.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32preference.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32preference.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32window.cpp" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\standalone\source\platform\win32\win32window.h" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\ZERO_CHECK.vcxproj">
+      <Project>{269B9F78-069F-3B36-ACE3-96DF63DE5967}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

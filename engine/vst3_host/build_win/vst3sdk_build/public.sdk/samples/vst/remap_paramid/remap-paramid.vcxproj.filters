@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\remapparamidprocessor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\remapparamidcontroller.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\remapparamidentry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\source\main\dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\remapparamidcids.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\remapparamidprocessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\source\remapparamidcontroller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\public.sdk\samples\vst\remap_paramid\resource\info.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{F5423445-62FC-3D08-BCC4-FA257269F067}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{E38566F5-5798-3E9B-B048-23EBEA49AEED}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

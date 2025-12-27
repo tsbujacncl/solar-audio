@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\tiny-js\TinyJS_Functions.cpp">
+      <Filter>tiny-js</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\tiny-js\TinyJS_MathFunctions.cpp">
+      <Filter>tiny-js</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\tiny-js\TinyJS.cpp">
+      <Filter>tiny-js</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\drawcontextobject.cpp">
+      <Filter>detail</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\drawable.cpp">
+      <Filter>detail</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\scriptingviewfactory.cpp">
+      <Filter>detail</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\viewscriptobject.cpp">
+      <Filter>detail</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\uiscripting.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\tiny-js\TinyJS_Functions.h">
+      <Filter>tiny-js</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\tiny-js\TinyJS_MathFunctions.h">
+      <Filter>tiny-js</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\tiny-js\TinyJS.h">
+      <Filter>tiny-js</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\scriptobject.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\uidescscriptobject.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\converters.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\drawcontextobject.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\drawable.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\iscriptcontextinternal.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\scriptingviewfactory.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\detail\viewscriptobject.h">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\uiscripting.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\uidescription-scripting\uiscripting.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="detail">
+      <UniqueIdentifier>{7D2005DA-C74D-352C-BD9F-9F6D35A7E46E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tiny-js">
+      <UniqueIdentifier>{E574F503-F263-3CC2-91F7-8826642BD0A8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+^C:\USERS\TYRBU\DOCUMENTS\DEVELOPMENTS\2026\FLUTTER\BOOJY AUDIO\ENGINE\VST3_HOST\BUILD_WIN\CMAKEFILES\A7B84FEAEE3C4883985A5161F13BD0D2\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3_host.slnx"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

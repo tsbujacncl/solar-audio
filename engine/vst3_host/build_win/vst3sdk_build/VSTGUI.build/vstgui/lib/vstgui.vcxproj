@@ -1,0 +1,896 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseLTO|x64">
+      <Configuration>ReleaseLTO</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1CC68F8B-C295-321E-8B0C-0C38AF0B4A3D}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>vstgui</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vstgui.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vstgui</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">vstgui.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">vstgui</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\lib\ReleaseLTO\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">vstgui.dir\ReleaseLTO\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">vstgui</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8 /Zc:__cplusplus /Zc:__cplusplus</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DisableSpecificWarnings>6031;6308;6330;6385;6386;28125;28251</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/vstgui.dir/Debug//cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;VSTGUI_LIVE_EDITING;DEBUG;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;NDEBUG;RELEASE;_UNICODE;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;VSTGUI_LIVE_EDITING;DEBUG;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;NDEBUG;RELEASE;_UNICODE;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8 /Zc:__cplusplus /Zc:__cplusplus</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>6031;6308;6330;6385;6386;28125;28251</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>true</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/vstgui.dir/Release//cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8 /Zc:__cplusplus /Zc:__cplusplus</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>6031;6308;6330;6385;6386;28125;28251</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/vstgui.dir/ReleaseLTO//cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;CMAKE_INTDIR="ReleaseLTO"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SMTG_RENAME_ASSERT=1;_CRT_SECURE_NO_WARNINGS;RELEASE;VSTGUI_ENABLE_DEPRECATED_METHODS=1;VSTGUI_ENABLE_XML_PARSER=1;VSTGUI_OPENGL_SUPPORT=1;_UNICODE;CMAKE_INTDIR=\"ReleaseLTO\"</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/vstgui4/vstgui/lib/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/vstgui4/vstgui/lib/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">Building Custom Rule C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3sdk/vstgui4/vstgui/lib/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host" "-BC:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win" --check-stamp-file "C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\vstgui.dir\cmake_pch.cxx">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/vstgui.dir/Debug//cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/vstgui.dir/Release//cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/vstgui.dir/ReleaseLTO//cmake_pch.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\animations.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\animations.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\animator.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\animator.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\ianimationtarget.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\itimingfunction.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\timingfunctions.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\animation\timingfunctions.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\algorithm.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cbitmap.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cbitmap.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cbitmapfilter.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cbitmapfilter.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cbuttonstate.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cclipboard.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cclipboard.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ccolor.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ccolor.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdatabrowser.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdatabrowser.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdrawcontext.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdrawcontext.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdrawdefs.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdrawmethods.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdrawmethods.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdropsource.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cdropsource.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cexternalview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cexternalview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cfileselector.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cfileselector.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cfont.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cfont.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cframe.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cframe.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgradient.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgradient.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgradientview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgradientview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgraphicspath.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgraphicspath.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cgraphicstransform.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cinvalidrectlist.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\clayeredviewcontainer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\clayeredviewcontainer.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\clinestyle.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\clinestyle.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ctexteditor.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ctexteditor.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\coffscreencontext.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\coffscreencontext.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cautoanimation.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cautoanimation.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cbuttons.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cbuttons.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ccolorchooser.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ccolorchooser.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ccontrol.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ccontrol.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cfontchooser.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cfontchooser.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cknob.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cknob.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\clistcontrol.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\clistcontrol.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cmoviebitmap.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cmoviebitmap.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cmoviebutton.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cmoviebutton.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\coptionmenu.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\coptionmenu.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cparamdisplay.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cparamdisplay.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cscrollbar.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cscrollbar.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\csearchtextedit.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\csearchtextedit.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\csegmentbutton.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\csegmentbutton.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cslider.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cslider.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cspecialdigit.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cspecialdigit.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\csplashscreen.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\csplashscreen.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cstringlist.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cstringlist.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cswitch.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cswitch.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ctextedit.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ctextedit.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ctextlabel.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ctextlabel.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cvumeter.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cvumeter.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cxypad.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\cxypad.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\icommandmenuitemtarget.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\icontrollistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\ioptionmenulistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\itexteditlistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\controls\itextlabellistener.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\copenglview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\copenglview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cpoint.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cpoint.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\crect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\crect.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cresourcedescription.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\crowcolumnview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\crowcolumnview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cscrollview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cscrollview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cshadowviewcontainer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cshadowviewcontainer.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\csplitview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\csplitview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cstring.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cstring.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ctabview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ctabview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ctooltipsupport.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ctooltipsupport.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cviewcontainer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cviewcontainer.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cvstguitimer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\cvstguitimer.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\dragging.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\dispatchlist.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\enumbitset.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\events.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\events.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\finally.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\genericstringlistdatabrowsersource.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\genericstringlistdatabrowsersource.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\idatabrowserdelegate.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\idatapackage.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\idependency.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\iexternalview.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\ifocusdrawing.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\iscalefactorchangedlistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\itouchevent.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\iviewlayouter.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\iviewlistener.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\malloc.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\optional.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\pixelbuffer.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\pixelbuffer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformbitmap.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformgraphicsdevice.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformfileselector.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformfont.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformframe.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformframecallback.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformgradient.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformgraphicspath.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformopenglview.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformoptionmenu.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformresourceinputstream.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformstring.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformtaskexecutor.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformtextedit.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformtextinputclient.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformtimer.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\iplatformviewlayer.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platformfactory.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platformfactory.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platformfwd.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platform_macos.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platform_linux.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platform_wayland.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platform_win32.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\platform_x11.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\std_unorderedmap.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\fileresourceinputstream.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\fileresourceinputstream.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\genericoptionmenu.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\genericoptionmenu.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\generictextedit.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\generictextedit.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\gradientbase.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\common\threadpooltaskexecutor.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\viewlayouter\autosizeviewlayouter.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\viewlayouter\autosizeviewlayouter.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\viewlayouter\baseviewlayouter.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\viewlayouter\gridlayouter.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\viewlayouter\gridlayouter.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\viewlayouter\noviewlayouter.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\tasks.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\tasks.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstguibase.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstguidebug.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstguidebug.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstguifwd.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstguiinit.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstguiinit.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\vstkeycode.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2d.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dbitmap.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dbitmap.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dbitmapcache.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dbitmapcache.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dfont.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dfont.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dgradient.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dgradient.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dgraphicscontext.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dgraphicscontext.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dgraphicspath.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\direct2d\d2dgraphicspath.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32bitmapbase.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32taskexecutor.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32taskexecutor.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32dll.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32datapackage.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32datapackage.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32directcomposition.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32directcomposition.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32dragging.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32dragging.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32factory.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32factory.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32frame.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32frame.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32openglview.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32openglview.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32optionmenu.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32optionmenu.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32resourcestream.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32resourcestream.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32support.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32support.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32textedit.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32textedit.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32viewlayer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\win32viewlayer.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\winfileselector.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\winfileselector.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\winstring.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\winstring.h" />
+    <ClCompile Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\wintimer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseLTO|x64'">C:/Users/tyrbu/Documents/Developments/2026/Flutter/Boojy Audio/engine/vst3_host/build_win/vst3sdk_build/VSTGUI.build/vstgui/lib/CMakeFiles/vstgui.dir/ReleaseLTO/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3sdk\vstgui4\vstgui\lib\platform\win32\wintimer.h" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\vstgui.dir\Debug\cmake_pch.hxx" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\vstgui.dir\Release\cmake_pch.hxx" />
+    <ClInclude Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\vst3sdk_build\VSTGUI.build\vstgui\lib\CMakeFiles\vstgui.dir\ReleaseLTO\cmake_pch.hxx" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\tyrbu\Documents\Developments\2026\Flutter\Boojy Audio\engine\vst3_host\build_win\ZERO_CHECK.vcxproj">
+      <Project>{269B9F78-069F-3B36-ACE3-96DF63DE5967}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Solution>
+	<Configurations>
+		<BuildType Name="Debug"/>
+		<BuildType Name="Release"/>
+		<BuildType Name="MinSizeRel"/>
+		<BuildType Name="RelWithDebInfo"/>
+		<Platform Name="x64"/>
+	</Configurations>
+	<Project Path="vst3_host.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="7d13eb6c-2eec-3dd7-97ee-13d19f45938c">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<BuildDependency Project="vst3sdk_build/base.vcxproj"/>
+		<BuildDependency Project="vst3sdk_build/pluginterfaces.vcxproj"/>
+		<BuildDependency Project="vst3sdk_build/sdk.vcxproj"/>
+		<BuildDependency Project="vst3sdk_build/sdk_common.vcxproj"/>
+		<BuildDependency Project="vst3sdk_build/sdk_hosting.vcxproj"/>
+	</Project>
+	<Folder Name="/Libraries/">
+		<Project Path="vst3sdk_build/base.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="6bddf9dd-8a4b-3137-b497-1b787a7136da">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		</Project>
+		<Project Path="vst3sdk_build/pluginterfaces.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="8c51cc98-d513-3270-8bda-9ff21e93f922">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		</Project>
+		<Project Path="vst3sdk_build/sdk.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="bd7b0b01-0881-3a28-a99f-731885a0b849">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/base.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/pluginterfaces.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/sdk_common.vcxproj"/>
+		</Project>
+		<Project Path="vst3sdk_build/sdk_common.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="f42c68d0-da9d-3850-9a4b-fc17514e65f7">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/base.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/pluginterfaces.vcxproj"/>
+		</Project>
+		<Project Path="vst3sdk_build/sdk_hosting.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="3407dd97-9c72-3759-b04f-a11fff841807">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/base.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/pluginterfaces.vcxproj"/>
+			<BuildDependency Project="vst3sdk_build/sdk_common.vcxproj"/>
+		</Project>
+	</Folder>
+	<Folder Name="/Predefined/">
+		<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="2dd11b42-8cf6-3bc9-81de-ea49b948924b" DefaultStartup="true">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<BuildDependency Project="vst3_host.vcxproj"/>
+		</Project>
+		<Project Path="INSTALL.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="4597496a-d017-37ab-a073-f5f33568ff2c">
+			<BuildDependency Project="ALL_BUILD.vcxproj"/>
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<Build Solution="Debug|*" Project="false"/>
+			<Build Solution="Release|*" Project="false"/>
+			<Build Solution="MinSizeRel|*" Project="false"/>
+			<Build Solution="RelWithDebInfo|*" Project="false"/>
+		</Project>
+		<Project Path="ZERO_CHECK.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="269b9f78-069f-3b36-ace3-96df63de5967"/>
+	</Folder>
+</Solution>
